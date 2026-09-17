@@ -40,16 +40,20 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Apply IPTV player patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_player.py
+
       - name: Build APK
         working-directory: pimflextv-rebuild
         run: gradle :app:assembleDebug --no-daemon
 
       - name: Rename APK
-        run: cp pimflextv-rebuild/app/build/outputs/apk/debug/app-debug.apk PIMFLEX-TV-CLEAN-QA.apk
+        run: cp pimflextv-rebuild/app/build/outputs/apk/debug/app-debug.apk PIMFLEX-TV-PLAYER-FIX.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PIMFLEX-TV-CLEAN-QA
-          path: PIMFLEX-TV-CLEAN-QA.apk
+          name: PIMFLEX-TV-PLAYER-FIX
+          path: PIMFLEX-TV-PLAYER-FIX.apk
           if-no-files-found: error
