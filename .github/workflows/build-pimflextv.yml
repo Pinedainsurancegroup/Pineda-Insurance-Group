@@ -8,6 +8,12 @@ on:
     paths:
       - 'pimflextv-rebuild/**'
       - '.github/workflows/build-pimflextv.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'pimflextv-rebuild/**'
+      - '.github/workflows/build-pimflextv.yml'
 
 jobs:
   build:
