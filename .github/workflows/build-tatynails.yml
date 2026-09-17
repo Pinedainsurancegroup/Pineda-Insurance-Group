@@ -33,7 +33,7 @@ jobs:
 
       - name: Apply TatyNails v4 overlay
         run: |
-          cat             .tatynails_build/v4part00a.b64             .tatynails_build/v4part00b.b64             .tatynails_build/v4part01.b64             .tatynails_build/v4part02.b64             .tatynails_build/v4part03.b64             > /tmp/tatynails-v4-overlay.zip.b64
+          cat .tatynails_build/v4part00a.b64 .tatynails_build/v4part00b.b64 .tatynails_build/v4part01a.b64 .tatynails_build/v4part01b.b64 .tatynails_build/v4part02.b64 .tatynails_build/v4part03.b64 > /tmp/tatynails-v4-overlay.zip.b64
           base64 -d /tmp/tatynails-v4-overlay.zip.b64 > /tmp/tatynails-v4-overlay.zip
           unzip -t /tmp/tatynails-v4-overlay.zip
           unzip -q -o /tmp/tatynails-v4-overlay.zip -d /tmp/taty
