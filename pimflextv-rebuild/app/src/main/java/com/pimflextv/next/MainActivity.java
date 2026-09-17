@@ -8,20 +8,25 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
+import android.util.Base64;
 import android.view.Gravity;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.MediaController;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.VideoView;
+
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.common.Player;
+import androidx.media3.datasource.DefaultHttpDataSource;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
+import androidx.media3.ui.PlayerView;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -56,10 +61,12 @@ public class MainActivity extends Activity {
     private String password = "";
     private JSONObject accountInfo;
 
+    private ExoPlayer player;
+    private Runnable systemBack;
+
     private final int bg = Color.rgb(8, 10, 18);
     private final int panel = Color.rgb(20, 24, 38);
     private final int primary = Color.rgb(76, 201, 240);
-    private final int accent = Color.rgb(126, 87, 194);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,11 +76,22 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        releasePlayer();
         io.shutdownNow();
         super.onDestroy();
     }
 
+    @Override
+    public void onBackPressed() {
+        if (systemBack != null) {
+            systemBack.run();
+        } else {
+            super.onBackPressed();
+        }
+    }
+
     private void showLogin() {
+        systemBack = null;
         root = baseScreen();
         addTitle("PIMFLEX TV", 34);
         addSubtitle("Nueva edición independiente · Android + Android TV");
@@ -115,20 +133,17 @@ public class MainActivity extends Activity {
             return;
         }
 
-        setBusy("Conectando con el servidor…");
+        statusText.setText("Conectando con el servidor…");
         io.execute(() -> {
             try {
-                String body = request(null, null);
-                JSONObject json = new JSONObject(body);
+                JSONObject json = new JSONObject(request(null, null));
                 JSONObject user = json.optJSONObject("user_info");
                 if (user == null) throw new Exception("El servidor no devolvió user_info.");
-
                 String auth = String.valueOf(user.opt("auth"));
                 String status = user.optString("status", "");
                 if (!("1".equals(auth) || "Active".equalsIgnoreCase(status))) {
                     throw new Exception("Credenciales rechazadas. Estado: " + status);
                 }
-
                 accountInfo = user;
                 ui.post(this::showDashboard);
             } catch (Exception e) {
@@ -141,14 +156,14 @@ public class MainActivity extends Activity {
     }
 
     private void showDashboard() {
+        systemBack = this::showLogin;
         root = baseScreen();
         addTitle("PIMFLEX TV", 30);
         addSubtitle("Conectado como " + username);
 
         String status = accountInfo == null ? "" : accountInfo.optString("status", "");
         String exp = accountInfo == null ? "" : formatEpoch(accountInfo.optString("exp_date", ""));
-        TextView account = cardText("Cuenta: " + status + (exp.isEmpty() ? "" : "  ·  Expira: " + exp));
-        root.addView(account);
+        root.addView(cardText("Cuenta: " + status + (exp.isEmpty() ? "" : "  ·  Expira: " + exp)));
 
         Button live = actionButton("📺  LIVE TV");
         live.setOnClickListener(v -> loadCategories("live"));
@@ -176,25 +191,23 @@ public class MainActivity extends Activity {
     }
 
     private void loadCategories(String type) {
-        String action;
-        if ("live".equals(type)) action = "get_live_categories";
-        else if ("vod".equals(type)) action = "get_vod_categories";
-        else action = "get_series_categories";
-
+        String action = "live".equals(type) ? "get_live_categories" :
+                "vod".equals(type) ? "get_vod_categories" : "get_series_categories";
         showLoading("Cargando categorías…");
         io.execute(() -> {
             try {
                 JSONArray arr = new JSONArray(request(action, null));
                 ui.post(() -> showCategories(type, arr));
             } catch (Exception e) {
-                ui.post(() -> showErrorScreen("No se pudieron cargar las categorías", e, () -> showDashboard()));
+                ui.post(() -> showErrorScreen("No se pudieron cargar las categorías", e, this::showDashboard));
             }
         });
     }
 
     private void showCategories(String type, JSONArray arr) {
+        systemBack = this::showDashboard;
         root = baseScreen();
-        addBack(() -> showDashboard());
+        addBack(this::showDashboard);
         addTitle(typeTitle(type), 28);
         addSubtitle("Categorías disponibles: " + arr.length());
 
@@ -215,27 +228,24 @@ public class MainActivity extends Activity {
     }
 
     private void loadItems(String type, String categoryId, String categoryName) {
-        String action;
-        if ("live".equals(type)) action = "get_live_streams";
-        else if ("vod".equals(type)) action = "get_vod_streams";
-        else action = "get_series";
-
+        String action = "live".equals(type) ? "get_live_streams" :
+                "vod".equals(type) ? "get_vod_streams" : "get_series";
         showLoading("Cargando " + categoryName + "…");
         io.execute(() -> {
             try {
-                String extra = "category_id=" + enc(categoryId);
-                JSONArray arr = new JSONArray(request(action, extra));
+                JSONArray arr = new JSONArray(request(action, "category_id=" + enc(categoryId)));
                 ui.post(() -> showItems(type, categoryId, categoryName, arr));
             } catch (Exception e) {
-                ui.post(() -> showErrorScreen("No se pudo cargar el contenido", e,
-                        () -> loadCategories(type)));
+                ui.post(() -> showErrorScreen("No se pudo cargar el contenido", e, () -> loadCategories(type)));
             }
         });
     }
 
     private void showItems(String type, String categoryId, String categoryName, JSONArray arr) {
+        Runnable back = () -> loadCategories(type);
+        systemBack = back;
         root = baseScreen();
-        addBack(() -> loadCategories(type));
+        addBack(back);
         addTitle(categoryName, 26);
         addSubtitle("Elementos: " + arr.length());
 
@@ -248,14 +258,15 @@ public class MainActivity extends Activity {
 
             if ("live".equals(type)) {
                 String streamId = String.valueOf(item.opt("stream_id"));
-                b.setOnClickListener(v -> playStream(name,
-                        server + "/live/" + encPath(username) + "/" + encPath(password) + "/" + streamId + ".ts",
+                String ts = liveUrl(streamId, "ts");
+                String hls = liveUrl(streamId, "m3u8");
+                b.setOnClickListener(v -> playStream(name, ts, hls,
                         () -> showItems(type, categoryId, categoryName, arr)));
             } else if ("vod".equals(type)) {
                 String streamId = String.valueOf(item.opt("stream_id"));
-                String ext = item.optString("container_extension", "mp4");
-                b.setOnClickListener(v -> playStream(name,
-                        server + "/movie/" + encPath(username) + "/" + encPath(password) + "/" + streamId + "." + safeExt(ext),
+                String ext = safeExt(item.optString("container_extension", "mp4"));
+                String url = server + "/movie/" + encPath(username) + "/" + encPath(password) + "/" + streamId + "." + ext;
+                b.setOnClickListener(v -> playStream(name, url, null,
                         () -> showItems(type, categoryId, categoryName, arr)));
             } else {
                 String seriesId = String.valueOf(item.opt("series_id"));
@@ -263,13 +274,10 @@ public class MainActivity extends Activity {
             }
             root.addView(b);
         }
-
-        if (arr.length() > limit) {
-            root.addView(cardText("Mostrando los primeros " + limit + " elementos de " + arr.length() + "."));
-        }
     }
 
-    private void loadSeriesEpisodes(String seriesId, String seriesName, String categoryId, String categoryName, JSONArray parentList) {
+    private void loadSeriesEpisodes(String seriesId, String seriesName, String categoryId,
+                                    String categoryName, JSONArray parentList) {
         showLoading("Cargando episodios de " + seriesName + "…");
         io.execute(() -> {
             try {
@@ -282,9 +290,12 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void showSeriesEpisodes(String seriesName, JSONObject info, String categoryId, String categoryName, JSONArray parentList) {
+    private void showSeriesEpisodes(String seriesName, JSONObject info, String categoryId,
+                                    String categoryName, JSONArray parentList) {
+        Runnable back = () -> showItems("series", categoryId, categoryName, parentList);
+        systemBack = back;
         root = baseScreen();
-        addBack(() -> showItems("series", categoryId, categoryName, parentList));
+        addBack(back);
         addTitle(seriesName, 26);
         addSubtitle("Episodios");
 
@@ -314,10 +325,10 @@ public class MainActivity extends Activity {
                 if (ep == null) continue;
                 String id = String.valueOf(ep.opt("id"));
                 String title = ep.optString("title", "Episodio " + (i + 1));
-                String ext = ep.optString("container_extension", "mp4");
+                String ext = safeExt(ep.optString("container_extension", "mp4"));
+                String url = server + "/series/" + encPath(username) + "/" + encPath(password) + "/" + id + "." + ext;
                 Button b = listButton(title);
-                b.setOnClickListener(v -> playStream(title,
-                        server + "/series/" + encPath(username) + "/" + encPath(password) + "/" + id + "." + safeExt(ext),
+                b.setOnClickListener(v -> playStream(title, url, null,
                         () -> showSeriesEpisodes(seriesName, info, categoryId, categoryName, parentList)));
                 root.addView(b);
             }
@@ -337,6 +348,7 @@ public class MainActivity extends Activity {
     }
 
     private void showEpgChannels(JSONArray arr) {
+        systemBack = this::showDashboard;
         root = baseScreen();
         addBack(this::showDashboard);
         addTitle("TV GUIDE / EPG", 28);
@@ -367,8 +379,10 @@ public class MainActivity extends Activity {
     }
 
     private void showChannelEpg(String channelName, JSONObject obj, JSONArray parent) {
+        Runnable back = () -> showEpgChannels(parent);
+        systemBack = back;
         root = baseScreen();
-        addBack(() -> showEpgChannels(parent));
+        addBack(back);
         addTitle(channelName, 26);
         addSubtitle("Programación");
 
@@ -388,6 +402,7 @@ public class MainActivity extends Activity {
     }
 
     private void showAccount() {
+        systemBack = this::showDashboard;
         root = baseScreen();
         addBack(this::showDashboard);
         addTitle("MI CUENTA", 28);
@@ -395,7 +410,6 @@ public class MainActivity extends Activity {
             root.addView(cardText("No hay información de cuenta disponible."));
             return;
         }
-
         root.addView(cardText("Estado: " + accountInfo.optString("status", "—")));
         root.addView(cardText("Usuario: " + accountInfo.optString("username", username)));
         root.addView(cardText("Expiración: " + formatEpoch(accountInfo.optString("exp_date", ""))));
@@ -404,42 +418,101 @@ public class MainActivity extends Activity {
         root.addView(cardText("Servidor: " + server));
     }
 
-    private void playStream(String title, String url, Runnable back) {
-        setContentView(new LinearLayout(this));
+    private void playStream(String title, String primaryUrl, String fallbackUrl, Runnable back) {
+        releasePlayer();
+        systemBack = () -> {
+            releasePlayer();
+            back.run();
+        };
+
         LinearLayout screen = new LinearLayout(this);
         screen.setOrientation(LinearLayout.VERTICAL);
         screen.setBackgroundColor(Color.BLACK);
-        screen.setPadding(dp(10), dp(10), dp(10), dp(10));
+        screen.setPadding(dp(8), dp(8), dp(8), dp(8));
         setContentView(screen);
 
         Button backBtn = secondaryButton("← VOLVER");
-        backBtn.setOnClickListener(v -> back.run());
+        backBtn.setOnClickListener(v -> systemBack.run());
         screen.addView(backBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)));
 
         TextView name = label(title);
         name.setTextSize(18);
         name.setTextColor(Color.WHITE);
         name.setGravity(Gravity.CENTER_HORIZONTAL);
-        name.setPadding(0, dp(8), 0, dp(8));
+        name.setPadding(0, dp(6), 0, dp(6));
         screen.addView(name);
 
-        VideoView video = new VideoView(this);
-        LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        screen.addView(video, vp);
+        TextView state = label("Conectando al stream…");
+        state.setTextColor(Color.LTGRAY);
+        state.setGravity(Gravity.CENTER_HORIZONTAL);
+        screen.addView(state);
 
-        MediaController controls = new MediaController(this);
-        controls.setAnchorView(video);
-        video.setMediaController(controls);
-        video.setVideoURI(Uri.parse(url));
-        video.setOnPreparedListener(mp -> {
-            mp.setLooping(false);
-            video.start();
+        PlayerView playerView = new PlayerView(this);
+        playerView.setUseController(true);
+        playerView.setKeepScreenOn(true);
+        LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        screen.addView(playerView, vp);
+
+        DefaultHttpDataSource.Factory httpFactory = new DefaultHttpDataSource.Factory()
+                .setUserAgent("PIMFLEXTV/4.0.2 (Android)")
+                .setAllowCrossProtocolRedirects(true)
+                .setConnectTimeoutMs(15000)
+                .setReadTimeoutMs(30000);
+
+        DefaultMediaSourceFactory mediaSourceFactory = new DefaultMediaSourceFactory(this)
+                .setDataSourceFactory(httpFactory);
+
+        player = new ExoPlayer.Builder(this)
+                .setMediaSourceFactory(mediaSourceFactory)
+                .build();
+        playerView.setPlayer(player);
+
+        final boolean[] fallbackUsed = {false};
+        player.addListener(new Player.Listener() {
+            @Override
+            public void onPlaybackStateChanged(int playbackState) {
+                if (playbackState == Player.STATE_BUFFERING) {
+                    state.setText("Cargando…");
+                } else if (playbackState == Player.STATE_READY) {
+                    state.setText("");
+                } else if (playbackState == Player.STATE_ENDED) {
+                    state.setText("Reproducción finalizada");
+                }
+            }
+
+            @Override
+            public void onPlayerError(PlaybackException error) {
+                if (fallbackUrl != null && !fallbackUrl.isEmpty() && !fallbackUsed[0]) {
+                    fallbackUsed[0] = true;
+                    state.setText("Probando formato HLS…");
+                    player.setMediaItem(MediaItem.fromUri(Uri.parse(fallbackUrl)));
+                    player.prepare();
+                    player.play();
+                    return;
+                }
+                state.setText("No fue posible reproducir este stream");
+                String detail = error.getErrorCodeName();
+                Toast.makeText(MainActivity.this,
+                        "Error de reproducción: " + detail,
+                        Toast.LENGTH_LONG).show();
+            }
         });
-        video.setOnErrorListener((mp, what, extra) -> {
-            Toast.makeText(this, "Error de reproducción (" + what + "/" + extra + ")", Toast.LENGTH_LONG).show();
-            return true;
-        });
-        video.requestFocus();
+
+        player.setMediaItem(MediaItem.fromUri(Uri.parse(primaryUrl)));
+        player.prepare();
+        player.play();
+    }
+
+    private void releasePlayer() {
+        if (player != null) {
+            player.stop();
+            player.release();
+            player = null;
+        }
+    }
+
+    private String liveUrl(String streamId, String extension) {
+        return server + "/live/" + encPath(username) + "/" + encPath(password) + "/" + streamId + "." + extension;
     }
 
     private String request(String action, String extra) throws Exception {
@@ -454,7 +527,7 @@ public class MainActivity extends Activity {
         conn.setReadTimeout(20000);
         conn.setRequestMethod("GET");
         conn.setRequestProperty("Accept", "application/json, text/plain, */*");
-        conn.setRequestProperty("User-Agent", "PIMFLEXTV/1.0 (Android)");
+        conn.setRequestProperty("User-Agent", "PIMFLEXTV/4.0.2 (Android)");
         conn.setInstanceFollowRedirects(true);
 
         int code = conn.getResponseCode();
@@ -470,6 +543,7 @@ public class MainActivity extends Activity {
     }
 
     private LinearLayout baseScreen() {
+        releasePlayer();
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(bg);
         scroll.setFillViewport(true);
@@ -483,6 +557,7 @@ public class MainActivity extends Activity {
     }
 
     private void showLoading(String msg) {
+        systemBack = this::showDashboard;
         root = baseScreen();
         addTitle("PIMFLEX TV", 28);
         TextView t = cardText(msg);
@@ -491,12 +566,11 @@ public class MainActivity extends Activity {
     }
 
     private void showErrorScreen(String title, Exception e, Runnable back) {
+        systemBack = back;
         root = baseScreen();
         addTitle(title, 25);
         root.addView(cardText(cleanError(e)));
-        Button b = secondaryButton("← VOLVER");
-        b.setOnClickListener(v -> back.run());
-        root.addView(b);
+        addBack(back);
     }
 
     private void addBack(Runnable back) {
@@ -524,20 +598,39 @@ public class MainActivity extends Activity {
         root.addView(t);
     }
 
+    private TextView label(String text) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextSize(16);
+        t.setTextColor(Color.WHITE);
+        return t;
+    }
+
+    private TextView cardText(String text) {
+        TextView t = label(text);
+        t.setTextColor(Color.WHITE);
+        t.setBackgroundColor(panel);
+        t.setPadding(dp(16), dp(16), dp(16), dp(16));
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        p.setMargins(0, dp(6), 0, dp(6));
+        t.setLayoutParams(p);
+        return t;
+    }
+
     private EditText input(String hint, boolean passwordField) {
         EditText e = new EditText(this);
         e.setHint(hint);
-        e.setHintTextColor(Color.rgb(145, 150, 170));
+        e.setHintTextColor(Color.GRAY);
         e.setTextColor(Color.WHITE);
-        e.setTextSize(17);
         e.setSingleLine(true);
-        e.setPadding(dp(16), 0, dp(16), 0);
+        e.setFocusable(true);
         e.setBackgroundColor(panel);
-        e.setSelectAllOnFocus(false);
-        if (passwordField) e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        else e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        e.setPadding(dp(14), 0, dp(14), 0);
+        if (passwordField) {
+            e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        }
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(58));
-        p.setMargins(0, dp(7), 0, dp(7));
+        p.setMargins(0, dp(6), 0, dp(6));
         e.setLayoutParams(p);
         return e;
     }
@@ -545,14 +638,12 @@ public class MainActivity extends Activity {
     private Button actionButton(String text) {
         Button b = new Button(this);
         b.setText(text);
+        b.setTextSize(17);
         b.setTextColor(Color.WHITE);
-        b.setTextSize(18);
-        b.setTypeface(Typeface.DEFAULT_BOLD);
-        b.setAllCaps(false);
-        b.setBackgroundColor(accent);
+        b.setBackgroundColor(Color.rgb(55, 84, 170));
         b.setFocusable(true);
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(62));
-        p.setMargins(0, dp(8), 0, dp(8));
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(60));
+        p.setMargins(0, dp(7), 0, dp(7));
         b.setLayoutParams(p);
         return b;
     }
@@ -561,12 +652,10 @@ public class MainActivity extends Activity {
         Button b = new Button(this);
         b.setText(text);
         b.setTextColor(Color.WHITE);
-        b.setTextSize(15);
-        b.setAllCaps(false);
-        b.setBackgroundColor(Color.rgb(39, 45, 64));
+        b.setBackgroundColor(Color.rgb(42, 47, 62));
         b.setFocusable(true);
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
-        p.setMargins(0, dp(6), 0, dp(6));
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(54));
+        p.setMargins(0, dp(5), 0, dp(5));
         b.setLayoutParams(p);
         return b;
     }
@@ -575,38 +664,21 @@ public class MainActivity extends Activity {
         Button b = new Button(this);
         b.setText(text);
         b.setTextColor(Color.WHITE);
-        b.setTextSize(16);
+        b.setTextSize(15);
         b.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        b.setPadding(dp(18), 0, dp(18), 0);
-        b.setAllCaps(false);
+        b.setPadding(dp(16), 0, dp(12), 0);
         b.setBackgroundColor(panel);
         b.setFocusable(true);
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(58));
-        p.setMargins(0, dp(4), 0, dp(4));
+        p.setMargins(0, dp(3), 0, dp(3));
         b.setLayoutParams(p);
         return b;
     }
 
-    private TextView cardText(String text) {
-        TextView t = label(text);
-        t.setTextColor(Color.WHITE);
-        t.setTextSize(16);
-        t.setPadding(dp(16), dp(15), dp(16), dp(15));
-        t.setBackgroundColor(panel);
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        p.setMargins(0, dp(6), 0, dp(6));
-        t.setLayoutParams(p);
-        return t;
-    }
-
-    private TextView label(String text) {
-        TextView t = new TextView(this);
-        t.setText(text);
-        return t;
-    }
-
-    private void setBusy(String text) {
-        statusText.setText(text);
+    private String normalizeServer(String value) {
+        String s = value == null ? "" : value.trim();
+        while (s.endsWith("/")) s = s.substring(0, s.length() - 1);
+        return s;
     }
 
     private String typeTitle(String type) {
@@ -615,63 +687,58 @@ public class MainActivity extends Activity {
         return "SERIES";
     }
 
-    private String normalizeServer(String value) {
-        String s = value == null ? "" : value.trim();
-        while (s.endsWith("/")) s = s.substring(0, s.length() - 1);
-        if (!s.isEmpty() && !(s.startsWith("http://") || s.startsWith("https://"))) s = "http://" + s;
-        return s;
-    }
-
-    private String enc(String s) throws Exception {
-        return URLEncoder.encode(s == null ? "" : s, StandardCharsets.UTF_8.name());
-    }
-
-    private String encPath(String s) {
-        try {
-            return URLEncoder.encode(s == null ? "" : s, StandardCharsets.UTF_8.name()).replace("+", "%20");
-        } catch (Exception e) {
-            return s == null ? "" : s;
-        }
-    }
-
     private String safeExt(String ext) {
         if (ext == null || ext.isEmpty()) return "mp4";
         return ext.replaceAll("[^A-Za-z0-9]", "");
     }
 
+    private String enc(String s) {
+        try {
+            return URLEncoder.encode(s == null ? "" : s, StandardCharsets.UTF_8.name());
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private String encPath(String s) {
+        return Uri.encode(s == null ? "" : s);
+    }
+
     private String readAll(InputStream in) throws Exception {
         if (in == null) return "";
-        BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
         StringBuilder sb = new StringBuilder();
-        String line;
-        while ((line = br.readLine()) != null) sb.append(line);
-        br.close();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) sb.append(line);
+        }
         return sb.toString();
     }
 
     private String cleanError(Exception e) {
         String m = e.getMessage();
-        return m == null || m.trim().isEmpty() ? e.getClass().getSimpleName() : m;
+        if (m == null || m.trim().isEmpty()) return e.getClass().getSimpleName();
+        return m;
     }
 
     private String formatEpoch(String raw) {
-        if (raw == null || raw.isEmpty() || "null".equalsIgnoreCase(raw)) return "—";
         try {
-            long seconds = Long.parseLong(raw);
-            return DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault()).format(new Date(seconds * 1000L));
-        } catch (Exception ignored) {
-            return raw;
+            if (raw == null || raw.isEmpty() || "null".equalsIgnoreCase(raw)) return "";
+            long sec = Long.parseLong(raw);
+            return DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault()).format(new Date(sec * 1000L));
+        } catch (Exception e) {
+            return raw == null ? "" : raw;
         }
     }
 
-    private String decodeMaybeBase64(String s) {
-        if (s == null || s.isEmpty()) return "Programa";
+    private String decodeMaybeBase64(String value) {
+        if (value == null || value.isEmpty()) return "";
         try {
-            byte[] decoded = android.util.Base64.decode(s, android.util.Base64.DEFAULT);
-            String candidate = new String(decoded, StandardCharsets.UTF_8).trim();
-            if (!candidate.isEmpty() && candidate.chars().allMatch(c -> c == '\n' || c == '\r' || c == '\t' || c >= 32)) return candidate;
-        } catch (Exception ignored) { }
-        return s;
+            byte[] decoded = Base64.decode(value, Base64.DEFAULT);
+            String s = new String(decoded, StandardCharsets.UTF_8).trim();
+            if (!s.isEmpty()) return s;
+        } catch (Exception ignored) {
+        }
+        return value;
     }
 
     private int dp(int value) {
