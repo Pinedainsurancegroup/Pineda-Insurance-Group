@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace 'com.pimflextv.next'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId 'com.pimflextv.next'
