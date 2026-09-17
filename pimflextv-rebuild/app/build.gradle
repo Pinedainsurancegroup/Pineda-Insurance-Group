@@ -14,8 +14,21 @@ android {
         versionName '1.0.3'
     }
 
+    signingConfigs {
+        qa {
+            storeFile file('../qa-signing.jks')
+            storePassword 'PimflexQA2026'
+            keyAlias 'pimflexqa'
+            keyPassword 'PimflexQA2026'
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.qa
+        }
         release {
+            signingConfig signingConfigs.qa
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
