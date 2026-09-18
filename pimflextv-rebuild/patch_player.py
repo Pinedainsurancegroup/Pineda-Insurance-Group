@@ -20,6 +20,14 @@ new_play = r'''    private void playStream(String title, String primaryUrl, Stri
         screen.setPadding(dp(8), dp(8), dp(8), dp(8));
         setContentView(screen);
 
+        boolean immersive = prefs != null && prefs.getBoolean("immersive_player", true);
+        if (immersive) {
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        }
+
         Button backBtn = secondaryButton("← VOLVER");
         backBtn.setOnClickListener(v -> systemBack.run());
         screen.addView(backBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)));
@@ -46,6 +54,14 @@ new_play = r'''    private void playStream(String title, String primaryUrl, Stri
         vlcView.setVisibility(android.view.View.GONE);
         screen.addView(vlcView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
+        String playerMode = prefs == null ? "auto" : prefs.getString("player_mode", "auto");
+        int networkCache = prefs == null ? 2500 : prefs.getInt("network_cache_ms", 2500);
+
+        if ("vlc".equals(playerMode)) {
+            startVlcPlayback(vlcView, playerView, primaryUrl, networkCache, state);
+            return;
+        }
+
         DefaultHttpDataSource.Factory httpFactory = new DefaultHttpDataSource.Factory()
                 .setUserAgent("PIMFLEXTV/4.0.2 (Android)")
                 .setAllowCrossProtocolRedirects(true)
@@ -69,7 +85,7 @@ new_play = r'''    private void playStream(String title, String primaryUrl, Stri
             @Override
             public void onPlaybackStateChanged(int playbackState) {
                 if (playbackState == Player.STATE_BUFFERING) {
-                    state.setText(attempt[0] == 0 ? "Probando HLS…" : "Probando MPEG-TS…");
+                    state.setText(attempt[0] == 0 ? "Conectando…" : "Probando formato alternativo…");
                 } else if (playbackState == Player.STATE_READY) {
                     state.setText("");
                     applyPendingResume();
@@ -89,46 +105,61 @@ new_play = r'''    private void playStream(String title, String primaryUrl, Stri
                     return;
                 }
 
-                state.setText("Activando motor VLC compatible con IPTV…");
-                try {
-                    if (player != null) {
-                        player.stop();
-                        playerView.setPlayer(null);
-                        player.release();
-                        player = null;
-                    }
-                    playerView.setVisibility(android.view.View.GONE);
-                    vlcView.setVisibility(android.view.View.VISIBLE);
-
-                    java.util.ArrayList<String> options = new java.util.ArrayList<>();
-                    options.add("--network-caching=2500");
-                    options.add("--http-reconnect");
-                    options.add("--no-drop-late-frames");
-                    options.add("--no-skip-frames");
-                    libVLC = new LibVLC(MainActivity.this, options);
-                    vlcPlayer = new org.videolan.libvlc.MediaPlayer(libVLC);
-                    vlcPlayer.attachViews(vlcView, null, false, false);
-
-                    Media media = new Media(libVLC, Uri.parse(urls[attempt[0]]));
-                    media.setHWDecoderEnabled(true, false);
-                    media.addOption(":network-caching=2500");
-                    media.addOption(":http-user-agent=PIMFLEXTV/4.0.2 (Android)");
-                    vlcPlayer.setMedia(media);
-                    media.release();
-                    vlcPlayer.play();
-                    state.setText("");
-                } catch (Exception vlcError) {
-                    state.setText("No fue posible reproducir este stream");
+                if ("exo".equals(playerMode)) {
+                    state.setText("ExoPlayer no pudo reproducir este stream");
                     Toast.makeText(MainActivity.this,
-                            "Error de reproducción: " + error.getErrorCodeName() + " / VLC: " + vlcError.getClass().getSimpleName(),
+                            "Error: " + error.getErrorCodeName(),
                             Toast.LENGTH_LONG).show();
+                    return;
                 }
+
+                state.setText("Activando motor VLC compatible con IPTV…");
+                String url = urls[Math.min(attempt[0], urls.length - 1)];
+                startVlcPlayback(vlcView, playerView, url, networkCache, state);
             }
         };
         player.addListener(listener);
         player.setMediaItem(MediaItem.fromUri(Uri.parse(urls[0])));
         player.prepare();
         player.play();
+    }
+
+    private void startVlcPlayback(VLCVideoLayout vlcView, PlayerView playerView,
+                                  String url, int networkCache, TextView state) {
+        try {
+            if (player != null) {
+                player.stop();
+                playerView.setPlayer(null);
+                player.release();
+                player = null;
+            }
+            playerView.setVisibility(android.view.View.GONE);
+            vlcView.setVisibility(android.view.View.VISIBLE);
+
+            java.util.ArrayList<String> options = new java.util.ArrayList<>();
+            options.add("--network-caching=" + networkCache);
+            options.add("--http-reconnect");
+            options.add("--no-drop-late-frames");
+            options.add("--no-skip-frames");
+            libVLC = new LibVLC(MainActivity.this, options);
+            vlcPlayer = new org.videolan.libvlc.MediaPlayer(libVLC);
+            vlcPlayer.attachViews(vlcView, null, false, false);
+
+            Media media = new Media(libVLC, Uri.parse(url));
+            media.setHWDecoderEnabled(true, false);
+            media.addOption(":network-caching=" + networkCache);
+            media.addOption(":http-user-agent=PIMFLEXTV/4.0.2 (Android)");
+            vlcPlayer.setMedia(media);
+            media.release();
+            vlcPlayer.play();
+            state.setText("");
+            ui.postDelayed(this::applyPendingResume, 700);
+        } catch (Exception vlcError) {
+            state.setText("No fue posible reproducir este stream");
+            Toast.makeText(MainActivity.this,
+                    "VLC: " + vlcError.getClass().getSimpleName(),
+                    Toast.LENGTH_LONG).show();
+        }
     }
 
 '''
@@ -146,7 +177,7 @@ old_release = '''    private void releasePlayer() {
     }
 '''
 new_release = '''    private void releasePlayer() {
-        saveProgressNow();
+        if (player != null || vlcPlayer != null) saveProgressNow();
         if (player != null) {
             player.stop();
             player.release();
