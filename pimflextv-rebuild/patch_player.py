@@ -72,6 +72,7 @@ new_play = r'''    private void playStream(String title, String primaryUrl, Stri
                     state.setText(attempt[0] == 0 ? "Probando HLS…" : "Probando MPEG-TS…");
                 } else if (playbackState == Player.STATE_READY) {
                     state.setText("");
+                    applyPendingResume();
                 } else if (playbackState == Player.STATE_ENDED) {
                     state.setText("Reproducción finalizada");
                 }
@@ -137,6 +138,7 @@ if n != 1:
     raise SystemExit(f'playStream replacement count={n}')
 
 old_release = '''    private void releasePlayer() {
+        saveProgressNow();
         if (player != null) {
             player.stop();
             player.release();
