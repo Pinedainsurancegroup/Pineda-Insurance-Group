@@ -176,7 +176,7 @@ parental = r'''    private void showParentalSettings() {
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Guardar", (dialog, which) -> {
                     String pin = input.getText().toString().trim();
-                    if (!pin.matches("\d{4}")) {
+                    if (!pin.matches("\\d{4}")) {
                         Toast.makeText(this, "El PIN debe tener exactamente 4 dígitos.", Toast.LENGTH_LONG).show();
                         return;
                     }
