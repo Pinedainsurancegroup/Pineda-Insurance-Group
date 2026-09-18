@@ -138,7 +138,6 @@ if n != 1:
     raise SystemExit(f'playStream replacement count={n}')
 
 old_release = '''    private void releasePlayer() {
-        saveProgressNow();
         if (player != null) {
             player.stop();
             player.release();
@@ -147,6 +146,7 @@ old_release = '''    private void releasePlayer() {
     }
 '''
 new_release = '''    private void releasePlayer() {
+        saveProgressNow();
         if (player != null) {
             player.stop();
             player.release();
