@@ -13,7 +13,7 @@
 <div class="app">
 <header class="top"><div class="brand"><b>Pineda Agency Group</b><span>Pineda Insurance Group</span></div><button class="refresh" id="r">↻</button></header>
 <main class="main">
-<section class="hero"><p class="ey">PAG LEADS v1.2</p><h1>Centro de leads</h1><p class="muted" id="sync">Configura la conexión privada</p><span class="secure">Conexión privada · Google Apps Script</span></section>
+<section class="hero"><p class="ey">PAG LEADS v1.3</p><h1>Centro de leads</h1><p class="muted" id="sync">Configura la conexión privada</p><span class="secure">Conexión privada · Google Apps Script</span></section>
 <section class="stats"><div class="stat"><span>Nuevos hoy</span><b id="s0">0</b></div><div class="stat"><span>Agentes</span><b id="s1">0</b></div><div class="stat"><span>Clientes FE</span><b id="s2">0</b></div><div class="stat"><span>Seguimiento</span><b id="s3">0</b></div></section>
 <section class="tools"><input id="q" placeholder="Buscar nombre, teléfono o estado"><select id="sf"><option value="all">Todos los estados</option><option>Nuevo</option><option>Contactado</option><option>Cita</option><option>Seguimiento</option><option>Completado</option></select></section>
 <section class="card"><div class="tabs"><button class="tab on" data-t="agent">Agentes</button><button class="tab" data-t="client">Clientes</button><button class="tab" data-t="all">Todos</button></div><div id="list"></div><div class="empty" id="empty">Configura la conexión privada en Ajustes.</div></section>
@@ -37,7 +37,44 @@ async function getLeads(){const j=await api('list');return apply(j.leads||[])}
 async function refresh(){if(!st.set.url||!st.set.tok){sync.textContent='Configura la conexión privada en Ajustes';st.leads=[];render();return}sync.textContent='Actualizando…';try{st.leads=await getLeads();render();sync.textContent='Conexión privada activa · '+st.leads.length+' lead'+(st.leads.length===1?'':'s')+' · '+new Date().toLocaleTimeString('es-US',{hour:'numeric',minute:'2-digit'})}catch(e){sync.textContent='No se pudo actualizar';pop(e.message)}}
 function render(){const td=new Date().toDateString(),a=st.leads.filter(x=>x.type==='agent'),c=st.leads.filter(x=>x.type==='client');s0.textContent=st.leads.filter(x=>{const d=new Date(x.createdAt);return !isNaN(d)&&d.toDateString()===td&&x.status==='Nuevo'}).length;s1.textContent=a.length;s2.textContent=c.length;s3.textContent=st.leads.filter(x=>x.status==='Seguimiento').length;renderList()}
 function renderList(){const qv=q.value.toLowerCase(),sv=sf.value;const f=st.leads.filter(x=>(st.type==='all'||x.type===st.type)&&(sv==='all'||x.status===sv)&&(!qv||[x.name,x.phone,x.email,x.city,x.state].join(' ').toLowerCase().includes(qv))).sort((a,b)=>(Date.parse(b.createdAt)||0)-(Date.parse(a.createdAt)||0));list.innerHTML=f.map(x=>`<div class="lead" data-id="${esc(x.id)}"><div><div class="name">${esc(x.name||'Sin nombre')}</div><div class="meta">${esc([x.state,fmt(x.createdAt)].filter(Boolean).join(' · '))}</div><span class="tag">${x.type==='agent'?'Agente':'Cliente Final Expense'}</span></div><span class="badge ${esc(x.status||'Nuevo')}">${esc(x.status||'Nuevo')}</span></div>`).join('');empty.hidden=!!f.length;empty.textContent=st.set.url&&st.set.tok?'No hay leads para mostrar.':'Configura la conexión privada en Ajustes.';$$('.lead').forEach(e=>e.onclick=()=>openLead(e.dataset.id))}
-function openLead(id){const x=st.leads.find(v=>v.id===id);if(!x)return;st.sel=x;lt.textContent=x.type==='agent'?'AGENTE':'CLIENTE FINAL EXPENSE';ln.textContent=x.name||'Sin nombre';const rr=[['Teléfono',x.phone],['Email',x.email],['Estado',x.state],['Origen',x.source],['Recibido',fmt(x.createdAt)]];if(x.type==='agent')rr.push(['Licencia Life',x.license],['Experiencia',x.experience],['Motivación',x.motivation],['Comentarios',x.comments]);details.innerHTML=rr.map(([k,v])=>`<div class="d"><span>${esc(k)}</span><b>${esc(v||'—')}</b></div>`).join('');let p=dig(x.phone);if(p.length===10)p='1'+p;acts.innerHTML=`<a href="tel:+${p}">Llamar</a><a href="https://wa.me/${p}">WhatsApp</a><a href="mailto:${encodeURIComponent(x.email||'')}">Email</a>`;status.value=x.status||'Nuevo';note.value=x.note||'';leadDlg.showModal()}
+function parseMeta(raw){
+  raw=String(raw||'').trim();
+  const take=re=>{const m=raw.match(re);return m?m[1].trim():''};
+  return {
+    optin:take(/SMS\s*\/\s*WhatsApp opt-in:\s*(.*?)(?=\s+Idioma\s*\/\s*Language:|\s+Origen\s*\/\s*Source:|$)/i),
+    lang:take(/Idioma\s*\/\s*Language:\s*(.*?)(?=\s+Origen\s*\/\s*Source:|\s+SMS\s*\/\s*WhatsApp opt-in:|$)/i),
+    referral:take(/Origen\s*\/\s*Source:\s*(.*?)(?=\s+SMS\s*\/\s*WhatsApp opt-in:|\s+Idioma\s*\/\s*Language:|$)/i)
+  };
+}
+function cleanGoal(v){
+  const s=String(v||'').trim();
+  if(!s)return '';
+  const auto=[
+    'Solicitud de información sobre oportunidades en PAG / Request for information about PAG opportunities',
+    'Solicitud de información sobre oportunidades en PAG'
+  ];
+  return auto.includes(s)?'':s;
+}
+function openLead(id){
+  const x=st.leads.find(v=>v.id===id);if(!x)return;
+  st.sel=x;lt.textContent=x.type==='agent'?'AGENTE':'CLIENTE FINAL EXPENSE';ln.textContent=x.name||'Sin nombre';
+  const rr=[['Teléfono',x.phone],['Email',x.email],['Estado',x.state],['Recibido',fmt(x.createdAt)]];
+  if(x.type==='agent'){
+    const m=parseMeta(x.comments);
+    rr.push(
+      ['Licencia de seguros de vida',x.license],
+      ['Experiencia en ventas de seguros',x.experience],
+      ['¿Cómo conociste PAG?',m.referral],
+      ['¿Qué deseas lograr?',cleanGoal(x.motivation)],
+      ['Consentimiento SMS / WhatsApp',m.optin],
+      ['Idioma',m.lang]
+    );
+  }
+  details.innerHTML=rr.map(([k,v])=>`<div class="d"><span>${esc(k)}</span><b>${esc(v||'—')}</b></div>`).join('');
+  let p=dig(x.phone);if(p.length===10)p='1'+p;
+  acts.innerHTML=`<a href="tel:+${p}">Llamar</a><a href="https://wa.me/${p}">WhatsApp</a><a href="mailto:${encodeURIComponent(x.email||'')}">Email</a>`;
+  status.value=x.status||'Nuevo';note.value=x.note||'';leadDlg.showModal()
+}
 async function saveLead(){if(!st.sel)return;const p={status:status.value,note:note.value.trim(),updatedAt:new Date().toISOString()};const o=over();o[st.sel.id]={...(o[st.sel.id]||{}),...p};localStorage.setItem('pagov',JSON.stringify(o));leadDlg.close();await refresh();pop('Lead actualizado en este teléfono')}
 function type(t){st.type=t;$$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));renderList()}
 function pop(m){toast.textContent=m;toast.style.display='block';setTimeout(()=>toast.style.display='none',2400)}
