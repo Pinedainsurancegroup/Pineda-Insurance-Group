@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.pimflextv.next'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.pimflextv.next'
+        minSdk 21
+        targetSdk 35
+        versionCode 8
+        versionName '1.4.0'
+    }
+
+    signingConfigs {
+        qa {
+            storeFile file('../qa-signing.jks')
+            storePassword 'PimflexQA2026'
+            keyAlias 'pimflexqa'
+            keyPassword 'PimflexQA2026'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.qa
+        }
+        release {
+            signingConfig signingConfigs.qa
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.media3:media3-exoplayer:1.4.1'
+    implementation 'androidx.media3:media3-exoplayer-hls:1.4.1'
+    implementation 'androidx.media3:media3-ui:1.4.1'
+    implementation 'org.videolan.android:libvlc-all:3.7.6'
+}

@@ -1,0 +1,87 @@
+name: Build PIMFLEX TV Rebuild
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - pimflextv-rebuild
+    paths:
+      - 'pimflextv-rebuild/**'
+      - '.github/workflows/build-pimflextv.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'pimflextv-rebuild/**'
+      - '.github/workflows/build-pimflextv.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Restore QA signing key
+        shell: bash
+        run: base64 -d pimflextv-rebuild/qa-signing.jks.b64 > pimflextv-rebuild/qa-signing.jks
+
+      - name: Apply app feature patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_features.py
+
+      - name: Apply visual interface patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_visual.py
+
+      - name: Apply content details and history patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_content_core.py
+
+      - name: Apply family controls patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_parental.py
+
+      - name: Apply v1.4 settings and Catch-Up patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v14_settings.py
+
+      - name: Apply v1.4 saved accounts patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v14_accounts.py
+
+      - name: Apply IPTV player patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_player.py
+
+      - name: Build APK
+        working-directory: pimflextv-rebuild
+        run: gradle :app:assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: cp pimflextv-rebuild/app/build/outputs/apk/debug/app-debug.apk PIMFLEX-TV-v1.4.0.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PIMFLEX-TV-v1.4.0
+          path: PIMFLEX-TV-v1.4.0.apk
+          if-no-files-found: error
