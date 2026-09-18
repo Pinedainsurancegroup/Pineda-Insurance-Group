@@ -37,11 +37,11 @@ jobs:
         run: gradle :app:assembleDebug --no-daemon
 
       - name: Rename APK
-        run: cp pag-leads-android/app/build/outputs/apk/debug/app-debug.apk PAG-Leads-v1.2.apk
+        run: cp pag-leads-android/app/build/outputs/apk/debug/app-debug.apk PAG-Leads-v1.3.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PAG-Leads-v1.2-APK
-          path: PAG-Leads-v1.2.apk
+          name: PAG-Leads-v1.3-APK
+          path: PAG-Leads-v1.3.apk
           if-no-files-found: error
