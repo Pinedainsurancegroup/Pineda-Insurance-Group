@@ -48,6 +48,10 @@ jobs:
         working-directory: pimflextv-rebuild
         run: python3 patch_features.py
 
+      - name: Apply visual interface patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_visual.py
+
       - name: Apply IPTV player patch
         working-directory: pimflextv-rebuild
         run: python3 patch_player.py
@@ -57,11 +61,11 @@ jobs:
         run: gradle :app:assembleDebug --no-daemon
 
       - name: Rename APK
-        run: cp pimflextv-rebuild/app/build/outputs/apk/debug/app-debug.apk PIMFLEX-TV-v1.1.0.apk
+        run: cp pimflextv-rebuild/app/build/outputs/apk/debug/app-debug.apk PIMFLEX-TV-v1.2.0.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PIMFLEX-TV-v1.1.0
-          path: PIMFLEX-TV-v1.1.0.apk
+          name: PIMFLEX-TV-v1.2.0
+          path: PIMFLEX-TV-v1.2.0.apk
           if-no-files-found: error
