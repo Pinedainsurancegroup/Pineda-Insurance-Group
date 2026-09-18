@@ -116,12 +116,12 @@ dashboard_repl = r'''    private void showDashboard() {
         menu.setUseDefaultMargins(false);
         root.addView(menu);
 
-        addDashboardTile(menu, "📺\nLIVE TV", () -> loadCategories("live"), cols);
-        addDashboardTile(menu, "🎬\nMOVIES", () -> loadCategories("vod"), cols);
-        addDashboardTile(menu, "▶\nSERIES", () -> loadCategories("series"), cols);
-        addDashboardTile(menu, "★\nFAVORITOS", this::loadFavorites, cols);
-        addDashboardTile(menu, "🗓\nTV GUIDE", this::loadEpgChannels, cols);
-        addDashboardTile(menu, "👤\nMI CUENTA", this::showAccount, cols);
+        addDashboardTile(menu, "📺  LIVE TV", () -> loadCategories("live"), cols);
+        addDashboardTile(menu, "🎬  MOVIES", () -> loadCategories("vod"), cols);
+        addDashboardTile(menu, "▶  SERIES", () -> loadCategories("series"), cols);
+        addDashboardTile(menu, "★  FAVORITOS", this::loadFavorites, cols);
+        addDashboardTile(menu, "🗓  TV GUIDE", this::loadEpgChannels, cols);
+        addDashboardTile(menu, "👤  MI CUENTA", this::showAccount, cols);
 
         Button logout = secondaryButton("CAMBIAR CUENTA");
         logout.setOnClickListener(v -> {
