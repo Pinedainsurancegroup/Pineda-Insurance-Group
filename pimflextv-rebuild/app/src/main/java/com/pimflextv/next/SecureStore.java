@@ -23,28 +23,62 @@ final class SecureStore {
     private SecureStore() {}
 
     static void savePassword(Context context, SharedPreferences prefs, String password) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || password == null) {
-            clearPassword(prefs);
+        saveSecret(context, prefs, "current_password", password);
+        String cipher = prefs == null ? "" : prefs.getString(secretCipherKey("current_password"), "");
+        String iv = prefs == null ? "" : prefs.getString(secretIvKey("current_password"), "");
+        if (prefs != null) prefs.edit().putString(PREF_CIPHER, cipher).putString(PREF_IV, iv).apply();
+    }
+
+    static String loadPassword(Context context, SharedPreferences prefs) {
+        String value = loadSecret(context, prefs, "current_password");
+        if (!value.isEmpty()) return value;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || prefs == null) return "";
+        String encryptedText = prefs.getString(PREF_CIPHER, "");
+        String ivText = prefs.getString(PREF_IV, "");
+        return decryptStored(prefs, encryptedText, ivText);
+    }
+
+    static void clearPassword(SharedPreferences prefs) {
+        clearSecret(prefs, "current_password");
+        if (prefs != null) prefs.edit().remove(PREF_CIPHER).remove(PREF_IV).apply();
+    }
+
+    static void saveSecret(Context context, SharedPreferences prefs, String slot, String value) {
+        if (prefs == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M || value == null) {
+            clearSecret(prefs, slot);
             return;
         }
         try {
             SecretKey key = getOrCreateKey();
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, key);
-            byte[] encrypted = cipher.doFinal(password.getBytes(StandardCharsets.UTF_8));
+            byte[] encrypted = cipher.doFinal(value.getBytes(StandardCharsets.UTF_8));
             prefs.edit()
-                    .putString(PREF_CIPHER, Base64.encodeToString(encrypted, Base64.NO_WRAP))
-                    .putString(PREF_IV, Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP))
+                    .putString(secretCipherKey(slot), Base64.encodeToString(encrypted, Base64.NO_WRAP))
+                    .putString(secretIvKey(slot), Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP))
                     .apply();
         } catch (Exception e) {
-            clearPassword(prefs);
+            clearSecret(prefs, slot);
         }
     }
 
-    static String loadPassword(Context context, SharedPreferences prefs) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || prefs == null) return "";
-        String encryptedText = prefs.getString(PREF_CIPHER, "");
-        String ivText = prefs.getString(PREF_IV, "");
+    static String loadSecret(Context context, SharedPreferences prefs, String slot) {
+        if (prefs == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return "";
+        return decryptStored(
+                prefs,
+                prefs.getString(secretCipherKey(slot), ""),
+                prefs.getString(secretIvKey(slot), "")
+        );
+    }
+
+    static void clearSecret(SharedPreferences prefs, String slot) {
+        if (prefs != null) prefs.edit()
+                .remove(secretCipherKey(slot))
+                .remove(secretIvKey(slot))
+                .apply();
+    }
+
+    private static String decryptStored(SharedPreferences prefs, String encryptedText, String ivText) {
         if (encryptedText == null || encryptedText.isEmpty() || ivText == null || ivText.isEmpty()) return "";
         try {
             KeyStore ks = KeyStore.getInstance("AndroidKeyStore");
@@ -57,13 +91,21 @@ final class SecureStore {
             byte[] clear = cipher.doFinal(Base64.decode(encryptedText, Base64.NO_WRAP));
             return new String(clear, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            clearPassword(prefs);
             return "";
         }
     }
 
-    static void clearPassword(SharedPreferences prefs) {
-        if (prefs != null) prefs.edit().remove(PREF_CIPHER).remove(PREF_IV).apply();
+    private static String safeSlot(String slot) {
+        if (slot == null || slot.isEmpty()) return "default";
+        return slot.replaceAll("[^A-Za-z0-9_.-]", "_");
+    }
+
+    private static String secretCipherKey(String slot) {
+        return "secure_secret_" + safeSlot(slot) + "_cipher";
+    }
+
+    private static String secretIvKey(String slot) {
+        return "secure_secret_" + safeSlot(slot) + "_iv";
     }
 
     private static SecretKey getOrCreateKey() throws Exception {
