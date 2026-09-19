@@ -37,13 +37,13 @@ jobs:
         run: gradle :app:assembleDebug --no-daemon
 
       - name: Rename APK
-        run: cp pag-leads-android/app/build/outputs/apk/debug/app-debug.apk PAG-Leads-v1.3.apk
+        run: cp pag-leads-android/app/build/outputs/apk/debug/app-debug.apk PAG-Leads-v1.4.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PAG-Leads-v1.3-APK
-          path: PAG-Leads-v1.3.apk
+          name: PAG-Leads-v1.4-APK
+          path: PAG-Leads-v1.4.apk
           if-no-files-found: error
 
       - name: Build unsigned release APK
@@ -53,7 +53,7 @@ jobs:
       - name: Prepare unsigned APK and signing tools
         shell: bash
         run: |
-          cp pag-leads-android/app/build/outputs/apk/release/app-release-unsigned.apk PAG-Leads-v1.3-unsigned.apk
+          cp pag-leads-android/app/build/outputs/apk/release/app-release-unsigned.apk PAG-Leads-v1.4-unsigned.apk
           mkdir -p android-signing-tools/lib
           cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" android-signing-tools/
           cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" android-signing-tools/
@@ -63,8 +63,8 @@ jobs:
       - name: Upload unsigned APK
         uses: actions/upload-artifact@v4
         with:
-          name: PAG-Leads-v1.3-unsigned
-          path: PAG-Leads-v1.3-unsigned.apk
+          name: PAG-Leads-v1.4-unsigned
+          path: PAG-Leads-v1.4-unsigned.apk
           if-no-files-found: error
 
       - name: Upload Android signing tools
