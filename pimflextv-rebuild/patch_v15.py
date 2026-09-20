@@ -4,6 +4,7 @@ p = Path('app/src/main/java/com/pimflextv/next/MainActivity.java')
 s = p.read_text()
 
 s = s.replace('import android.app.Activity;\n', 'import android.app.Activity;\nimport android.app.PictureInPictureParams;\n')
+s = s.replace('import android.os.Bundle;\n', 'import android.os.Bundle;\nimport android.os.Build;\n')
 s = s.replace('import android.content.SharedPreferences;\n', 'import android.content.SharedPreferences;\nimport android.content.Intent;\n')
 s = s.replace('import android.util.LruCache;\n', 'import android.util.LruCache;\nimport android.util.Rational;\n')
 
