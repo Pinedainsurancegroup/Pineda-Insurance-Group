@@ -39,6 +39,15 @@ jobs:
           unzip -q -o /tmp/tatynails-v4-overlay.zip -d /tmp/taty
           grep -q "versionCode 4" /tmp/taty/TatyNailsAndroid/app/build.gradle
 
+      - name: Apply TatyNails v4.1 overlay
+        run: |
+          cat .tatynails_build/v41part00.b64 .tatynails_build/v41part01.b64 .tatynails_build/v41part02.b64 .tatynails_build/v41part03.b64 > /tmp/tatynails-v41-overlay.zip.b64
+          base64 -d /tmp/tatynails-v41-overlay.zip.b64 > /tmp/tatynails-v41-overlay.zip
+          unzip -t /tmp/tatynails-v41-overlay.zip
+          unzip -q -o /tmp/tatynails-v41-overlay.zip -d /tmp/taty
+          grep -q "versionCode 5" /tmp/taty/TatyNailsAndroid/app/build.gradle
+          grep -q "versionName '4.1'" /tmp/taty/TatyNailsAndroid/app/build.gradle
+
       - name: Prepare Android SDK 35
         run: |
           SDKMANAGER="$(find "$ANDROID_SDK_ROOT/cmdline-tools" -type f -name sdkmanager | sort | head -1)"
@@ -59,13 +68,15 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TatyNails-v4-debug-apk
+          name: TatyNails-v4.1-debug-apk
           path: /tmp/taty/TatyNailsAndroid/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      - name: Upload APK signer tool
+      - name: Upload Android signing tools
         uses: actions/upload-artifact@v4
         with:
-          name: Android-apksigner-35
-          path: /usr/local/lib/android/sdk/build-tools/35.0.0/lib/apksigner.jar
+          name: Android-build-tools-35-signing
+          path: |
+            /usr/local/lib/android/sdk/build-tools/35.0.0/lib/apksigner.jar
+            /usr/local/lib/android/sdk/build-tools/35.0.0/zipalign
           if-no-files-found: error
