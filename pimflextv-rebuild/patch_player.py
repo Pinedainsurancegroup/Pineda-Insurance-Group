@@ -19,6 +19,7 @@ new_play = r'''    private void playStream(String title, String primaryUrl, Stri
         screen.setBackgroundColor(Color.BLACK);
         screen.setPadding(dp(8), dp(8), dp(8), dp(8));
         setContentView(screen);
+        activePlaybackUrl = primaryUrl == null ? "" : primaryUrl;
 
         boolean immersive = prefs != null && prefs.getBoolean("immersive_player", true);
         if (immersive) {
@@ -38,6 +39,33 @@ new_play = r'''    private void playStream(String title, String primaryUrl, Stri
         name.setGravity(Gravity.CENTER_HORIZONTAL);
         name.setPadding(0, dp(6), 0, dp(6));
         screen.addView(name);
+
+        LinearLayout tools = new LinearLayout(this);
+        tools.setOrientation(LinearLayout.HORIZONTAL);
+        tools.setGravity(Gravity.CENTER);
+
+        Button pipButton = secondaryButton("▣ PiP");
+        LinearLayout.LayoutParams toolParams = new LinearLayout.LayoutParams(0, dp(48), 1f);
+        toolParams.setMargins(dp(2), dp(2), dp(2), dp(2));
+        pipButton.setLayoutParams(toolParams);
+        pipButton.setOnClickListener(v -> enterPipMode());
+        tools.addView(pipButton);
+
+        Button externalButton = secondaryButton("↗ EXTERNO");
+        LinearLayout.LayoutParams extParams = new LinearLayout.LayoutParams(0, dp(48), 1f);
+        extParams.setMargins(dp(2), dp(2), dp(2), dp(2));
+        externalButton.setLayoutParams(extParams);
+        externalButton.setOnClickListener(v -> openExternalPlayer());
+        tools.addView(externalButton);
+
+        Button sleepButton = secondaryButton(sleepTimerLabel());
+        LinearLayout.LayoutParams sleepParams = new LinearLayout.LayoutParams(0, dp(48), 1f);
+        sleepParams.setMargins(dp(2), dp(2), dp(2), dp(2));
+        sleepButton.setLayoutParams(sleepParams);
+        sleepButton.setOnClickListener(v -> showSleepTimerDialog());
+        tools.addView(sleepButton);
+
+        screen.addView(tools);
 
         TextView state = label("Conectando al stream…");
         state.setTextColor(Color.LTGRAY);
@@ -193,6 +221,12 @@ new_release = '''    private void releasePlayer() {
             try { libVLC.release(); } catch (Exception ignored) {}
             libVLC = null;
         }
+        activePlaybackUrl = "";
+        if (sleepTimerRunnable != null) {
+            ui.removeCallbacks(sleepTimerRunnable);
+            sleepTimerRunnable = null;
+        }
+        sleepTimerMinutes = 0;
     }
 '''
 if old_release not in s:
