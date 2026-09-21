@@ -425,7 +425,7 @@ settings_repl = r'''    private void showSettings() {
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType("text/plain");
             intent.putExtra(Intent.EXTRA_SUBJECT, "PIMFLEX TV Feedback");
-            intent.putExtra(Intent.EXTRA_TEXT, "PIMFLEX TV v2.3.0\n\n");
+            intent.putExtra(Intent.EXTRA_TEXT, "PIMFLEX TV v2.3.0\\n\\n");
             startActivity(Intent.createChooser(intent, "Enviar feedback"));
         } catch (Exception e) {
             Toast.makeText(this, "No hay una aplicación disponible para enviar feedback.", Toast.LENGTH_LONG).show();
