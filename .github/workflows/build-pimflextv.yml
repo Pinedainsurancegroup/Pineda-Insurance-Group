@@ -172,20 +172,28 @@ jobs:
         working-directory: pimflextv-rebuild
         run: python3 patch_v27_version.py
 
+      - name: Apply v2.8 tracks and automation patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v28_tracks_automation.py
+
+      - name: Apply v2.8 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v28_version.py
+
       - name: Build release APK and AAB
         working-directory: pimflextv-rebuild
         run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
 
       - name: Rename release artifacts
         run: |
-          cp pimflextv-rebuild/app/build/outputs/apk/release/app-release.apk PIMFLEX-TV-v2.7.0.apk
-          cp pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab PIMFLEX-TV-v2.7.0.aab
+          cp pimflextv-rebuild/app/build/outputs/apk/release/app-release.apk PIMFLEX-TV-v2.8.0.apk
+          cp pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab PIMFLEX-TV-v2.8.0.aab
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PIMFLEX-TV-v2.7.0
+          name: PIMFLEX-TV-v2.8.0
           path: |
-            PIMFLEX-TV-v2.7.0.apk
-            PIMFLEX-TV-v2.7.0.aab
+            PIMFLEX-TV-v2.8.0.apk
+            PIMFLEX-TV-v2.8.0.aab
           if-no-files-found: error
