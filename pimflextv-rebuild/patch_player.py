@@ -40,6 +40,33 @@ new_play = r'''    private void playStream(String title, String primaryUrl, Stri
         name.setPadding(0, dp(6), 0, dp(6));
         screen.addView(name);
 
+        if (zappingChannels != null && zappingChannels.length() > 1) {
+            LinearLayout zapTools = new LinearLayout(this);
+            zapTools.setOrientation(LinearLayout.HORIZONTAL);
+            zapTools.setGravity(Gravity.CENTER);
+
+            Button previousChannel = secondaryButton("◀ CH-");
+            LinearLayout.LayoutParams zapPrevParams = new LinearLayout.LayoutParams(0, dp(46), 1f);
+            zapPrevParams.setMargins(dp(2), dp(2), dp(2), dp(2));
+            previousChannel.setLayoutParams(zapPrevParams);
+            previousChannel.setOnClickListener(v -> zapPreviousChannel());
+            zapTools.addView(previousChannel);
+
+            TextView zapPosition = label((zappingIndex + 1) + " / " + zappingChannels.length());
+            zapPosition.setGravity(Gravity.CENTER);
+            zapPosition.setTextColor(Color.LTGRAY);
+            zapTools.addView(zapPosition, new LinearLayout.LayoutParams(0, dp(46), 1f));
+
+            Button nextChannel = secondaryButton("CH+ ▶");
+            LinearLayout.LayoutParams zapNextParams = new LinearLayout.LayoutParams(0, dp(46), 1f);
+            zapNextParams.setMargins(dp(2), dp(2), dp(2), dp(2));
+            nextChannel.setLayoutParams(zapNextParams);
+            nextChannel.setOnClickListener(v -> zapNextChannel());
+            zapTools.addView(nextChannel);
+
+            screen.addView(zapTools);
+        }
+
         LinearLayout tools = new LinearLayout(this);
         tools.setOrientation(LinearLayout.HORIZONTAL);
         tools.setGravity(Gravity.CENTER);
