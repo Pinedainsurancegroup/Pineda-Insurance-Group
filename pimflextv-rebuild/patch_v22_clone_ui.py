@@ -722,8 +722,8 @@ settings_repl = r'''    private void showSettings() {
         boolean immersive = prefs != null && prefs.getBoolean("immersive_player", true);
 
         root.addView(cardText("Reproductor: " + playerModeLabel(mode)
-                + "\nCaché de red: " + cache + " ms"
-                + "\nModo inmersivo: " + (immersive ? "Sí" : "No")));
+                + "\\nCaché de red: " + cache + " ms"
+                + "\\nModo inmersivo: " + (immersive ? "Sí" : "No")));
 
         Button auto = actionButton(("auto".equals(mode) ? "✓  " : "") + "AUTOMÁTICO · EXO + VLC");
         auto.setOnClickListener(v -> setPlayerMode("auto"));
