@@ -72,20 +72,56 @@ jobs:
         working-directory: pimflextv-rebuild
         run: python3 patch_v15.py
 
+      - name: Apply v2 account scoped data patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_scope.py
+
+      - name: Apply v2 global search patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_search.py
+
+      - name: Apply v2 multi-screen patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_multiscreen.py
+
+      - name: Apply v2 extras patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_extras.py
+
+      - name: Apply v2 M3U patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_m3u.py
+
+      - name: Apply v2 live zapping patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_zapping.py
+
+      - name: Apply v2 Now/Next guide patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_guide.py
+
+      - name: Apply v2 Chromecast patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_cast.py
+
       - name: Apply IPTV player patch
         working-directory: pimflextv-rebuild
         run: python3 patch_player.py
 
-      - name: Build APK
+      - name: Build release APK and AAB
         working-directory: pimflextv-rebuild
-        run: gradle :app:assembleDebug --no-daemon
+        run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
 
-      - name: Rename APK
-        run: cp pimflextv-rebuild/app/build/outputs/apk/debug/app-debug.apk PIMFLEX-TV-v1.5.0.apk
+      - name: Rename release artifacts
+        run: |
+          cp pimflextv-rebuild/app/build/outputs/apk/release/app-release.apk PIMFLEX-TV-v2.0.0.apk
+          cp pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab PIMFLEX-TV-v2.0.0.aab
 
-      - name: Upload APK
+      - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PIMFLEX-TV-v1.5.0
-          path: PIMFLEX-TV-v1.5.0.apk
+          name: PIMFLEX-TV-v2.0.0
+          path: |
+            PIMFLEX-TV-v2.0.0.apk
+            PIMFLEX-TV-v2.0.0.aab
           if-no-files-found: error
