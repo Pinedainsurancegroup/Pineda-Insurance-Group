@@ -13,6 +13,9 @@
         android:label="PIMFLEX TV"
         android:theme="@style/Theme.PimFlex"
         android:usesCleartextTraffic="true">
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.pimflextv.next.CastOptionsProvider" />
         <activity
             android:name=".MainActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
