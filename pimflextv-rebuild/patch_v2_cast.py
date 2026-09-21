@@ -3,7 +3,7 @@ from pathlib import Path
 p = Path('app/src/main/java/com/pimflextv/next/MainActivity.java')
 s = p.read_text()
 
-s = s.replace('import androidx.media3.ui.PlayerView;\n', '''import androidx.media3.ui.PlayerView;\nimport androidx.mediarouter.app.MediaRouteButton;\n\nimport com.google.android.gms.cast.MediaInfo;\nimport com.google.android.gms.cast.MediaMetadata;\nimport com.google.android.gms.cast.framework.CastButtonFactory;\nimport com.google.android.gms.cast.framework.CastContext;\nimport com.google.android.gms.cast.framework.CastSession;\nimport com.google.android.gms.cast.framework.media.RemoteMediaClient;\nimport com.google.android.gms.cast.framework.media.MediaLoadRequestData;\n''')
+s = s.replace('import androidx.media3.ui.PlayerView;\n', '''import androidx.media3.ui.PlayerView;\nimport androidx.mediarouter.app.MediaRouteButton;\n\nimport com.google.android.gms.cast.MediaInfo;\nimport com.google.android.gms.cast.MediaMetadata;\nimport com.google.android.gms.cast.framework.CastButtonFactory;\nimport com.google.android.gms.cast.framework.CastContext;\nimport com.google.android.gms.cast.framework.CastSession;\nimport com.google.android.gms.cast.framework.media.RemoteMediaClient;\nimport com.google.android.gms.cast.MediaLoadRequestData;\n''')
 
 marker = '    private void enterPipMode() {\n'
 methods = r'''    private void castActiveStream(String title) {
