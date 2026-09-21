@@ -6,8 +6,9 @@ s = p.read_text()
 # Imports for recordings/local files.
 s = s.replace('import java.io.InputStreamReader;\n',
               'import java.io.InputStreamReader;\nimport java.io.BufferedInputStream;\nimport java.io.File;\nimport java.io.FileOutputStream;\n')
-s = s.replace('import java.text.DateFormat;\n',
-              'import java.text.DateFormat;\nimport java.text.SimpleDateFormat;\n')
+if 'import java.text.SimpleDateFormat;' not in s:
+    s = s.replace('import java.text.DateFormat;\n',
+                  'import java.text.DateFormat;\nimport java.text.SimpleDateFormat;\n')
 
 # Fields.
 field = '    private JSONArray cloneCategoryArray = new JSONArray();\n'
@@ -26,6 +27,7 @@ if 'private ExoPlayer livePreviewPlayer;' not in s:
 old_destroy = '''    protected void onDestroy() {
         releasePlayer();
         io.shutdownNow();
+        imageIo.shutdownNow();
         super.onDestroy();
     }
 '''
@@ -35,6 +37,7 @@ new_destroy = '''    protected void onDestroy() {
         releasePlayer();
         recorderIo.shutdownNow();
         io.shutdownNow();
+        imageIo.shutdownNow();
         super.onDestroy();
     }
 '''
