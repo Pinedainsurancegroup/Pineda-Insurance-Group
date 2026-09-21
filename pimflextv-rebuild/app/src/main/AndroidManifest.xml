@@ -8,6 +8,7 @@
 
     <application
         android:allowBackup="true"
+        android:banner="@drawable/tv_banner"
         android:icon="@drawable/ic_launcher_pimflex"
         android:roundIcon="@drawable/ic_launcher_pimflex"
         android:label="PIMFLEX TV"
