@@ -92,20 +92,6 @@ new_play = r'''    private void playStream(String title, String primaryUrl, Stri
         sleepButton.setOnClickListener(v -> showSleepTimerDialog());
         tools.addView(sleepButton);
 
-        MediaRouteButton routeButton = new MediaRouteButton(this);
-        CastButtonFactory.setUpMediaRouteButton(this, routeButton);
-        LinearLayout.LayoutParams routeParams = new LinearLayout.LayoutParams(dp(48), dp(48));
-        routeParams.setMargins(dp(2), dp(2), dp(2), dp(2));
-        routeButton.setLayoutParams(routeParams);
-        tools.addView(routeButton);
-
-        Button castButton = secondaryButton("CAST ▶");
-        LinearLayout.LayoutParams castParams = new LinearLayout.LayoutParams(0, dp(48), 1f);
-        castParams.setMargins(dp(2), dp(2), dp(2), dp(2));
-        castButton.setLayoutParams(castParams);
-        castButton.setOnClickListener(v -> castActiveStream(title));
-        tools.addView(castButton);
-
         screen.addView(tools);
 
         TextView state = label("Conectando al stream…");
