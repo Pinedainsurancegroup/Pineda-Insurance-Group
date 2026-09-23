@@ -13,9 +13,12 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import org.json.JSONObject;
+
 public class MainActivity extends Activity {
     private static final int REQ_NOTIFICATIONS = 1401;
     private WebView webView;
+    private boolean pageReady = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,12 +48,45 @@ public class MainActivity extends Activity {
                 }
                 return false;
             }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                pageReady = true;
+                view.evaluateJavascript("window.PAGAutoStart && window.PAGAutoStart();", null);
+            }
         });
 
         webView.loadUrl("file:///android_asset/index.html");
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (pageReady && webView != null) {
+            webView.evaluateJavascript("window.PAGAutoStart && window.PAGAutoStart();", null);
+        }
+    }
+
     private class PAGNativeBridge {
+        @JavascriptInterface
+        public String getSettingsJson() {
+            SharedPreferences p = getSharedPreferences("pag_native", MODE_PRIVATE);
+            try {
+                JSONObject j = new JSONObject();
+                j.put("url", p.getString("url", ""));
+                j.put("tok", p.getString("token", ""));
+                j.put("auto", p.getBoolean("auto", true));
+                j.put("notify", p.getBoolean("notifications", true));
+                j.put("configured",
+                        !p.getString("url", "").trim().isEmpty() &&
+                        !p.getString("token", "").trim().isEmpty());
+                return j.toString();
+            } catch (Exception ignored) {
+                return "{}";
+            }
+        }
+
         @JavascriptInterface
         public void saveSettings(String url, String token, boolean autoRefresh, boolean notificationsEnabled) {
             SharedPreferences p = getSharedPreferences("pag_native", MODE_PRIVATE);

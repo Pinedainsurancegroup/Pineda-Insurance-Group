@@ -13,15 +13,15 @@
 <div class="app">
 <header class="top"><div class="brand"><b>Pineda Agency Group</b><span>Pineda Insurance Group</span></div><button class="refresh" id="r">↻</button></header>
 <main class="main">
-<section class="hero"><p class="ey">PAG LEADS v1.5</p><h1>Centro de leads</h1><p class="muted" id="sync">Configura la conexión privada</p><span class="secure">Conexión privada · Google Apps Script</span></section>
+<section class="hero"><p class="ey">PAG LEADS v1.6</p><h1>Centro de leads</h1><p class="muted" id="sync">Conectando automáticamente…</p><span class="secure">Conexión privada automática · Google Apps Script</span></section>
 <section class="stats"><div class="stat"><span>Nuevos hoy</span><b id="s0">0</b></div><div class="stat"><span>Agentes</span><b id="s1">0</b></div><div class="stat"><span>Clientes FE</span><b id="s2">0</b></div><div class="stat"><span>Seguimiento</span><b id="s3">0</b></div></section>
 <section class="tools"><input id="q" placeholder="Buscar nombre, teléfono o estado"><select id="sf"><option value="all">Todos los estados</option><option>Nuevo</option><option>Contactado</option><option>Cita</option><option>Seguimiento</option><option>Completado</option></select></section>
-<section class="card"><div class="tabs"><button class="tab on" data-t="agent">Agentes</button><button class="tab" data-t="client">Clientes</button><button class="tab" data-t="all">Todos</button></div><div id="list"></div><div class="empty" id="empty">Configura la conexión privada en Ajustes.</div></section>
+<section class="card"><div class="tabs"><button class="tab on" data-t="agent">Agentes</button><button class="tab" data-t="client">Clientes</button><button class="tab" data-t="all">Todos</button></div><div id="list"></div><div class="empty" id="empty">Conectando con PAG Leads…</div></section>
 </main>
 <nav class="bottom"><button class="nav on" data-v="all"><span>⌂</span>Inicio</button><button class="nav" data-v="agent"><span>♙</span>Agentes</button><button class="nav" data-v="client"><span>◆</span>Clientes</button><button class="nav" id="settings"><span>⚙</span>Ajustes</button></nav>
 </div>
 <dialog id="leadDlg"><div class="dlg"><div class="head"><div><p class="ey" id="lt">LEAD</p><h2 id="ln"></h2></div><button class="x" onclick="leadDlg.close()">×</button></div><div class="grid" id="details"></div><div class="acts" id="acts"></div><label class="field">Estado<select id="status"><option>Nuevo</option><option>Contactado</option><option>Cita</option><option>Seguimiento</option><option>Completado</option></select></label><label class="field">Nota interna<textarea id="note" rows="3"></textarea></label><button class="btn wide" id="save">Guardar cambios</button></div></dialog>
-<dialog id="setDlg"><div class="dlg"><div class="head"><div><p class="ey">AJUSTES</p><h2>Conexión privada</h2></div><button class="x" onclick="setDlg.close()">×</button></div><p class="note">La hoja de respuestas permanece privada. La app accede únicamente mediante un endpoint de Google Apps Script protegido con token.</p><label class="field">URL privada de Apps Script<input id="url" placeholder="https://script.google.com/macros/s/.../exec"></label><label class="field">Token privado<input id="tok" type="password" placeholder="Token de PAG Leads"></label><label class="switch"><span>Actualizar automáticamente cada minuto</span><input id="auto" type="checkbox"></label><label class="switch"><span>Notificaciones de nuevos leads</span><input id="notify" type="checkbox"></label><div class="row"><button class="btn" id="test">Probar conexión</button><button class="btn" id="saveSet">Guardar</button></div><p class="note" id="result"></p><p class="note">La URL y el token se guardan solamente en este teléfono. Los estados y notas también se conservan localmente y no modifican Google Sheets.</p></div></dialog>
+<dialog id="setDlg"><div class="dlg"><div class="head"><div><p class="ey">AJUSTES</p><h2>PAG Leads</h2></div><button class="x" onclick="setDlg.close()">×</button></div><div id="connBox" style="border:1px solid var(--l);border-radius:14px;padding:14px;margin:14px 0;background:#f8fafc"><b id="connState" style="display:block;color:var(--n)">Conexión automática</b><span id="connDetail" class="note">Comprobando conexión privada…</span></div><label class="switch"><span>Actualizar automáticamente cada minuto</span><input id="auto" type="checkbox"></label><label class="switch"><span>Notificaciones de nuevos leads</span><input id="notify" type="checkbox"></label><p class="note">La conexión privada se administra automáticamente en este teléfono. No necesitas probarla ni guardarla manualmente. Los estados y notas permanecen locales y no modifican Google Sheets.</p></div></dialog><dialog id="adminDlg"><div class="dlg"><div class="head"><div><p class="ey">RECUPERACIÓN TÉCNICA</p><h2>Reactivar conexión</h2></div><button class="x" onclick="adminDlg.close()">×</button></div><p class="note">Uso excepcional para cambio de teléfono o rotación de credenciales.</p><label class="field">URL privada de Apps Script<input id="adminUrl" placeholder="https://script.google.com/macros/s/.../exec"></label><label class="field">Token privado<input id="adminTok" type="password" placeholder="Token de PAG Leads"></label><div class="row"><button class="btn" id="adminTest">Probar</button><button class="btn" id="adminSave">Guardar y conectar</button></div><p class="note" id="adminResult"></p></div></dialog>
 <div class="toast" id="toast"></div>
 <script>
 const st={leads:[],type:'agent',sel:null,set:{url:'',tok:'',auto:true,notify:true}};
@@ -29,14 +29,58 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 const dig=s=>String(s||'').replace(/\D/g,'');
 function fmt(i){try{return new Intl.DateTimeFormat('es-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(i))}catch{return i||''}}
-function nativeSync(){try{if(window.PAGNative&&PAGNative.saveSettings)PAGNative.saveSettings(st.set.url||'',st.set.tok||'',st.set.auto!==false,st.set.notify!==false)}catch{}} function loadSet(){try{st.set={...st.set,...JSON.parse(localStorage.getItem('pagset12')||'{}')}}catch{} url.value=st.set.url||'';tok.value=st.set.tok||'';auto.checked=st.set.auto!==false;notify.checked=st.set.notify!==false;setTimeout(nativeSync,800)}
+let reconnectTimer=null,connecting=false,unlockTaps=0,unlockTimer=null;
+function nativeSync(){try{if(window.PAGNative&&PAGNative.saveSettings)PAGNative.saveSettings(st.set.url||'',st.set.tok||'',st.set.auto!==false,st.set.notify!==false)}catch{}}
+function readNativeSet(){try{if(window.PAGNative&&PAGNative.getSettingsJson)return JSON.parse(PAGNative.getSettingsJson()||'{}')}catch{}return {}}
+function readLocalSet(){try{return JSON.parse(localStorage.getItem('pagset12')||'{}')}catch{return {}}}
+function persistSet(){try{localStorage.setItem('pagset12',JSON.stringify(st.set))}catch{}nativeSync()}
+function loadSet(){
+  const local=readLocalSet(),native=readNativeSet();
+  const url=String(native.url||local.url||'').trim();
+  const tok=String(native.tok||local.tok||'').trim();
+  const av=typeof native.auto==='boolean'?native.auto:(typeof local.auto==='boolean'?local.auto:true);
+  const nv=typeof native.notify==='boolean'?native.notify:(typeof local.notify==='boolean'?local.notify:true);
+  st.set={url,tok,auto:av,notify:nv};
+  auto.checked=st.set.auto!==false;notify.checked=st.set.notify!==false;
+  try{localStorage.setItem('pagset12',JSON.stringify(st.set))}catch{}
+  if(url&&tok&&(!native.url||!native.tok))setTimeout(nativeSync,250);
+  return !!(url&&tok);
+}
+function setConn(ok,msg){
+  if(!connState||!connDetail)return;
+  connState.textContent=ok?'✓ Conectado automáticamente':'Conexión automática';
+  connDetail.textContent=msg|| (ok?'PAG Leads Private API':'Comprobando conexión privada…');
+}
 function over(){try{return JSON.parse(localStorage.getItem('pagov')||'{}')}catch{return {}}}
 function apply(a){const o=over();return a.map(x=>({...x,...(o[x.id]||{})}))}
 async function api(action){if(!st.set.url||!st.set.tok)throw new Error('Falta configurar URL y token');const r=await fetch(st.set.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,token:st.set.tok}),cache:'no-store'});const j=await r.json();if(!r.ok||j.ok===false)throw new Error(j.error||'Conexión rechazada');return j}
 async function getLeads(){const j=await api('list');return apply(j.leads||[])}
-async function refresh(){if(!st.set.url||!st.set.tok){sync.textContent='Configura la conexión privada en Ajustes';st.leads=[];render();return}sync.textContent='Actualizando…';try{st.leads=await getLeads();render();sync.textContent='Conexión privada activa · '+st.leads.length+' lead'+(st.leads.length===1?'':'s')+' · '+new Date().toLocaleTimeString('es-US',{hour:'numeric',minute:'2-digit'})}catch(e){sync.textContent='No se pudo actualizar';pop(e.message)}}
+function scheduleReconnect(){clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>refresh({ping:true,silent:true}),10000)}
+async function refresh(opts={}){
+  if(connecting)return;
+  if(!st.set.url||!st.set.tok){
+    sync.textContent='Conexión privada requiere reactivación';
+    setConn(false,'Configuración privada no disponible en este teléfono.');
+    st.leads=[];render();return;
+  }
+  connecting=true;clearTimeout(reconnectTimer);
+  sync.textContent='Conectando automáticamente…';
+  try{
+    let ping=null;
+    if(opts.ping!==false)ping=await api('ping');
+    st.leads=await getLeads();render();
+    const when=new Date().toLocaleTimeString('es-US',{hour:'numeric',minute:'2-digit'});
+    sync.textContent='Conexión privada activa · '+st.leads.length+' lead'+(st.leads.length===1?'':'s')+' · '+when;
+    setConn(true,(ping&&ping.version?ping.version:'PAG Leads Private API')+' · última conexión '+when);
+  }catch(e){
+    sync.textContent='Reconectando automáticamente…';
+    setConn(false,'Sin conexión. PAG Leads volverá a intentarlo automáticamente.');
+    scheduleReconnect();
+    if(!opts.silent)pop('Reconectando automáticamente');
+  }finally{connecting=false}
+}
 function render(){const td=new Date().toDateString(),a=st.leads.filter(x=>x.type==='agent'),c=st.leads.filter(x=>x.type==='client');s0.textContent=st.leads.filter(x=>{const d=new Date(x.createdAt);return !isNaN(d)&&d.toDateString()===td&&x.status==='Nuevo'}).length;s1.textContent=a.length;s2.textContent=c.length;s3.textContent=st.leads.filter(x=>x.status==='Seguimiento').length;renderList()}
-function renderList(){const qv=q.value.toLowerCase(),sv=sf.value;const f=st.leads.filter(x=>(st.type==='all'||x.type===st.type)&&(sv==='all'||x.status===sv)&&(!qv||[x.name,x.phone,x.email,x.city,x.state].join(' ').toLowerCase().includes(qv))).sort((a,b)=>(Date.parse(b.createdAt)||0)-(Date.parse(a.createdAt)||0));list.innerHTML=f.map(x=>`<div class="lead" data-id="${esc(x.id)}"><div><div class="name">${esc(x.name||'Sin nombre')}</div><div class="meta">${esc([x.state,fmt(x.createdAt)].filter(Boolean).join(' · '))}</div><span class="tag">${x.type==='agent'?'Agente':'Cliente Final Expense'}</span></div><span class="badge ${esc(x.status||'Nuevo')}">${esc(x.status||'Nuevo')}</span></div>`).join('');empty.hidden=!!f.length;empty.textContent=st.set.url&&st.set.tok?'No hay leads para mostrar.':'Configura la conexión privada en Ajustes.';$$('.lead').forEach(e=>e.onclick=()=>openLead(e.dataset.id))}
+function renderList(){const qv=q.value.toLowerCase(),sv=sf.value;const f=st.leads.filter(x=>(st.type==='all'||x.type===st.type)&&(sv==='all'||x.status===sv)&&(!qv||[x.name,x.phone,x.email,x.city,x.state].join(' ').toLowerCase().includes(qv))).sort((a,b)=>(Date.parse(b.createdAt)||0)-(Date.parse(a.createdAt)||0));list.innerHTML=f.map(x=>`<div class="lead" data-id="${esc(x.id)}"><div><div class="name">${esc(x.name||'Sin nombre')}</div><div class="meta">${esc([x.state,fmt(x.createdAt)].filter(Boolean).join(' · '))}</div><span class="tag">${x.type==='agent'?'Agente':'Cliente Final Expense'}</span></div><span class="badge ${esc(x.status||'Nuevo')}">${esc(x.status||'Nuevo')}</span></div>`).join('');empty.hidden=!!f.length;empty.textContent=st.set.url&&st.set.tok?'No hay leads para mostrar.':'La conexión privada necesita reactivación.';$$('.lead').forEach(e=>e.onclick=()=>openLead(e.dataset.id))}
 function parseMeta(raw){
   raw=String(raw||'').trim();
   const take=re=>{const m=raw.match(re);return m?m[1].trim():''};
@@ -78,9 +122,16 @@ function openLead(id){
 async function saveLead(){if(!st.sel)return;const p={status:status.value,note:note.value.trim(),updatedAt:new Date().toISOString()};const o=over();o[st.sel.id]={...(o[st.sel.id]||{}),...p};localStorage.setItem('pagov',JSON.stringify(o));leadDlg.close();await refresh();pop('Lead actualizado en este teléfono')}
 function type(t){st.type=t;$$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));renderList()}
 function pop(m){toast.textContent=m;toast.style.display='block';setTimeout(()=>toast.style.display='none',2400)}
-r.onclick=refresh;q.oninput=renderList;sf.onchange=renderList;$$('.tab').forEach(b=>b.onclick=()=>type(b.dataset.t));$$('.nav[data-v]').forEach(b=>b.onclick=()=>{$$('.nav').forEach(x=>x.classList.remove('on'));b.classList.add('on');type(b.dataset.v)});settings.onclick=()=>setDlg.showModal();save.onclick=saveLead;
-saveSet.onclick=()=>{st.set={url:url.value.trim(),tok:tok.value.trim(),auto:auto.checked,notify:notify.checked};localStorage.setItem('pagset12',JSON.stringify(st.set));nativeSync();setDlg.close();refresh();pop('Conexión y notificaciones guardadas')};
-test.onclick=async()=>{result.textContent='Probando…';const old={...st.set};st.set={url:url.value.trim(),tok:tok.value.trim(),auto:auto.checked,notify:notify.checked};try{const j=await api('ping');result.textContent='✓ Conexión privada correcta'+(j.version?' · '+j.version:'')}catch(e){result.textContent='✕ '+e.message}finally{st.set=old}};
-loadSet();refresh();setInterval(()=>{if(st.set.auto)refresh()},60000);
+r.onclick=()=>refresh({ping:true});q.oninput=renderList;sf.onchange=renderList;$('.tab').forEach(b=>b.onclick=()=>type(b.dataset.t));$('.nav[data-v]').forEach(b=>b.onclick=()=>{$('.nav').forEach(x=>x.classList.remove('on'));b.classList.add('on');type(b.dataset.v)});settings.onclick=()=>setDlg.showModal();save.onclick=saveLead;
+function savePrefs(){st.set.auto=auto.checked;st.set.notify=notify.checked;persistSet();pop('Preferencias actualizadas')}
+auto.onchange=savePrefs;notify.onchange=savePrefs;
+connBox.onclick=()=>{unlockTaps++;clearTimeout(unlockTimer);unlockTimer=setTimeout(()=>unlockTaps=0,3500);if(unlockTaps>=7){unlockTaps=0;adminUrl.value=st.set.url||'';adminTok.value='';adminResult.textContent='';adminDlg.showModal()}};
+adminTest.onclick=async()=>{adminResult.textContent='Probando…';const old={...st.set};st.set={...st.set,url:adminUrl.value.trim(),tok:adminTok.value.trim()||old.tok};try{const j=await api('ping');adminResult.textContent='✓ Conexión correcta'+(j.version?' · '+j.version:'')}catch(e){adminResult.textContent='✕ '+e.message}finally{st.set=old}};
+adminSave.onclick=()=>{const u=adminUrl.value.trim(),t=adminTok.value.trim();if(u)st.set.url=u;if(t)st.set.tok=t;persistSet();adminDlg.close();refresh({ping:true});pop('Conexión reactivada')};
+async function autoStart(){loadSet();nativeSync();await refresh({ping:true,silent:true})}
+window.PAGAutoStart=autoStart;
+window.addEventListener('online',()=>refresh({ping:true,silent:true}));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh({ping:true,silent:true})});
+autoStart();setInterval(()=>{if(st.set.auto)refresh({ping:true,silent:true})},60000);
 </script>
 </body></html>
