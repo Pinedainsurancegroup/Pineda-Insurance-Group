@@ -13,7 +13,7 @@
 <div class="app">
 <header class="top"><div class="brand"><b>Pineda Agency Group</b><span>Pineda Insurance Group</span></div><button class="refresh" id="r">↻</button></header>
 <main class="main">
-<section class="hero"><p class="ey">PAG LEADS v1.6</p><h1>Centro de leads</h1><p class="muted" id="sync">Conectando automáticamente…</p><span class="secure">Conexión privada automática · Google Apps Script</span></section>
+<section class="hero"><p class="ey">PAG LEADS v1.7</p><h1>Centro de leads</h1><p class="muted" id="sync">Conectando automáticamente…</p><span class="secure">Conexión privada automática · Google Apps Script</span></section>
 <section class="stats"><div class="stat"><span>Nuevos hoy</span><b id="s0">0</b></div><div class="stat"><span>Agentes</span><b id="s1">0</b></div><div class="stat"><span>Clientes FE</span><b id="s2">0</b></div><div class="stat"><span>Seguimiento</span><b id="s3">0</b></div></section>
 <section class="tools"><input id="q" placeholder="Buscar nombre, teléfono o estado"><select id="sf"><option value="all">Todos los estados</option><option>Nuevo</option><option>Contactado</option><option>Cita</option><option>Seguimiento</option><option>Completado</option></select></section>
 <section class="card"><div class="tabs"><button class="tab on" data-t="agent">Agentes</button><button class="tab" data-t="client">Clientes</button><button class="tab" data-t="all">Todos</button></div><div id="list"></div><div class="empty" id="empty">Conectando con PAG Leads…</div></section>
@@ -30,10 +30,10 @@ const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 const dig=s=>String(s||'').replace(/\D/g,'');
 function fmt(i){try{return new Intl.DateTimeFormat('es-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(i))}catch{return i||''}}
 let reconnectTimer=null,connecting=false,unlockTaps=0,unlockTimer=null;
-function nativeSync(){try{if(window.PAGNative&&PAGNative.saveSettings)PAGNative.saveSettings(st.set.url||'',st.set.tok||'',st.set.auto!==false,st.set.notify!==false)}catch{}}
+function nativeSync(){if(!st.set.url||!st.set.tok)return;try{if(window.PAGNative&&PAGNative.saveSettings)PAGNative.saveSettings(st.set.url,st.set.tok,st.set.auto!==false,st.set.notify!==false)}catch{}}
 function readNativeSet(){try{if(window.PAGNative&&PAGNative.getSettingsJson)return JSON.parse(PAGNative.getSettingsJson()||'{}')}catch{}return {}}
 function readLocalSet(){try{return JSON.parse(localStorage.getItem('pagset12')||'{}')}catch{return {}}}
-function persistSet(){try{localStorage.setItem('pagset12',JSON.stringify(st.set))}catch{}nativeSync()}
+function persistSet(){try{localStorage.setItem('pagset12',JSON.stringify(st.set))}catch{}if(st.set.url&&st.set.tok)nativeSync()}
 function loadSet(){
   const local=readLocalSet(),native=readNativeSet();
   const url=String(native.url||local.url||'').trim();
@@ -128,7 +128,7 @@ auto.onchange=savePrefs;notify.onchange=savePrefs;
 connBox.onclick=()=>{unlockTaps++;clearTimeout(unlockTimer);unlockTimer=setTimeout(()=>unlockTaps=0,3500);if(unlockTaps>=7){unlockTaps=0;adminUrl.value=st.set.url||'';adminTok.value='';adminResult.textContent='';adminDlg.showModal()}};
 adminTest.onclick=async()=>{adminResult.textContent='Probando…';const old={...st.set};st.set={...st.set,url:adminUrl.value.trim(),tok:adminTok.value.trim()||old.tok};try{const j=await api('ping');adminResult.textContent='✓ Conexión correcta'+(j.version?' · '+j.version:'')}catch(e){adminResult.textContent='✕ '+e.message}finally{st.set=old}};
 adminSave.onclick=()=>{const u=adminUrl.value.trim(),t=adminTok.value.trim();if(u)st.set.url=u;if(t)st.set.tok=t;persistSet();adminDlg.close();refresh({ping:true});pop('Conexión reactivada')};
-async function autoStart(){loadSet();nativeSync();await refresh({ping:true,silent:true})}
+async function autoStart(){loadSet();if(st.set.url&&st.set.tok)nativeSync();await refresh({ping:true,silent:true})}
 window.PAGAutoStart=autoStart;
 window.addEventListener('online',()=>refresh({ping:true,silent:true}));
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh({ping:true,silent:true})});
