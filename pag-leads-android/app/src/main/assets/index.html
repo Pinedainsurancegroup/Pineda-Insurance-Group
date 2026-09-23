@@ -122,7 +122,7 @@ function openLead(id){
 async function saveLead(){if(!st.sel)return;const p={status:status.value,note:note.value.trim(),updatedAt:new Date().toISOString()};const o=over();o[st.sel.id]={...(o[st.sel.id]||{}),...p};localStorage.setItem('pagov',JSON.stringify(o));leadDlg.close();await refresh();pop('Lead actualizado en este teléfono')}
 function type(t){st.type=t;$$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));renderList()}
 function pop(m){toast.textContent=m;toast.style.display='block';setTimeout(()=>toast.style.display='none',2400)}
-r.onclick=()=>refresh({ping:true});q.oninput=renderList;sf.onchange=renderList;$('.tab').forEach(b=>b.onclick=()=>type(b.dataset.t));$('.nav[data-v]').forEach(b=>b.onclick=()=>{$('.nav').forEach(x=>x.classList.remove('on'));b.classList.add('on');type(b.dataset.v)});settings.onclick=()=>setDlg.showModal();save.onclick=saveLead;
+r.onclick=()=>refresh({ping:true});q.oninput=renderList;sf.onchange=renderList;$$('.tab').forEach(b=>b.onclick=()=>type(b.dataset.t));$$('.nav[data-v]').forEach(b=>b.onclick=()=>{$$('.nav').forEach(x=>x.classList.remove('on'));b.classList.add('on');type(b.dataset.v)});settings.onclick=()=>setDlg.showModal();save.onclick=saveLead;
 function savePrefs(){st.set.auto=auto.checked;st.set.notify=notify.checked;persistSet();pop('Preferencias actualizadas')}
 auto.onchange=savePrefs;notify.onchange=savePrefs;
 connBox.onclick=()=>{unlockTaps++;clearTimeout(unlockTimer);unlockTimer=setTimeout(()=>unlockTaps=0,3500);if(unlockTaps>=7){unlockTaps=0;adminUrl.value=st.set.url||'';adminTok.value='';adminResult.textContent='';adminDlg.showModal()}};
