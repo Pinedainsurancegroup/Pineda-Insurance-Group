@@ -1,0 +1,140 @@
+name: PIMFLEX TV Production Hardening
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - pimflextv-production-hardening
+    paths:
+      - 'pimflextv-rebuild/**'
+      - '.github/workflows/build-pimflextv-production.yml'
+
+jobs:
+  validate-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Apply release patches
+        working-directory: pimflextv-rebuild
+        run: bash apply_release_patches.sh
+
+      - name: Build unsigned production candidate
+        working-directory: pimflextv-rebuild
+        run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
+
+      - name: Validate unsigned candidate
+        shell: bash
+        run: |
+          test -f pimflextv-rebuild/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -f pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging pimflextv-rebuild/app/build/outputs/apk/release/app-release-unsigned.apk | head -n 25
+          sha256sum             pimflextv-rebuild/app/build/outputs/apk/release/app-release-unsigned.apk             pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab             > PIMFLEX-TV-v3.1.0-PRODUCTION-UNSIGNED-SHA256.txt
+
+      - name: Upload validation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PIMFLEX-TV-v3.1.0-UNSIGNED-NOT-FOR-INSTALL
+          path: |
+            pimflextv-rebuild/app/build/outputs/apk/release/app-release-unsigned.apk
+            pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab
+            PIMFLEX-TV-v3.1.0-PRODUCTION-UNSIGNED-SHA256.txt
+          if-no-files-found: error
+
+  production-release:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: validate-source
+    runs-on: ubuntu-latest
+    env:
+      PIMFLEX_RELEASE_STORE_PASSWORD: ${{ secrets.PIMFLEX_RELEASE_STORE_PASSWORD }}
+      PIMFLEX_RELEASE_KEY_ALIAS: ${{ secrets.PIMFLEX_RELEASE_KEY_ALIAS }}
+      PIMFLEX_RELEASE_KEY_PASSWORD: ${{ secrets.PIMFLEX_RELEASE_KEY_PASSWORD }}
+      PIMFLEX_RELEASE_KEYSTORE_B64: ${{ secrets.PIMFLEX_RELEASE_KEYSTORE_B64 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preflight production signing secrets
+        shell: bash
+        run: |
+          test -n "$PIMFLEX_RELEASE_KEYSTORE_B64" || { echo "Missing PIMFLEX_RELEASE_KEYSTORE_B64"; exit 1; }
+          test -n "$PIMFLEX_RELEASE_STORE_PASSWORD" || { echo "Missing PIMFLEX_RELEASE_STORE_PASSWORD"; exit 1; }
+          test -n "$PIMFLEX_RELEASE_KEY_ALIAS" || { echo "Missing PIMFLEX_RELEASE_KEY_ALIAS"; exit 1; }
+          test -n "$PIMFLEX_RELEASE_KEY_PASSWORD" || { echo "Missing PIMFLEX_RELEASE_KEY_PASSWORD"; exit 1; }
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Restore production signing key
+        shell: bash
+        run: |
+          printf '%s' "$PIMFLEX_RELEASE_KEYSTORE_B64" | base64 -d > "$GITHUB_WORKSPACE/pimflextv-rebuild/release-signing.jks"
+          chmod 600 "$GITHUB_WORKSPACE/pimflextv-rebuild/release-signing.jks"
+          echo "PIMFLEX_RELEASE_KEYSTORE=$GITHUB_WORKSPACE/pimflextv-rebuild/release-signing.jks" >> "$GITHUB_ENV"
+
+      - name: Apply release patches
+        working-directory: pimflextv-rebuild
+        run: bash apply_release_patches.sh
+
+      - name: Build signed production APK and AAB
+        working-directory: pimflextv-rebuild
+        run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
+
+      - name: Package signed production release
+        shell: bash
+        run: |
+          test -f pimflextv-rebuild/app/build/outputs/apk/release/app-release.apk
+          test -f pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab
+          cp pimflextv-rebuild/app/build/outputs/apk/release/app-release.apk PIMFLEX-TV-v3.1.0-PRODUCTION.apk
+          cp pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab PIMFLEX-TV-v3.1.0-PRODUCTION.aab
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs PIMFLEX-TV-v3.1.0-PRODUCTION.apk
+          sha256sum PIMFLEX-TV-v3.1.0-PRODUCTION.apk PIMFLEX-TV-v3.1.0-PRODUCTION.aab > PIMFLEX-TV-v3.1.0-PRODUCTION-SHA256.txt
+
+      - name: Remove signing key from runner
+        if: always()
+        shell: bash
+        run: rm -f "$GITHUB_WORKSPACE/pimflextv-rebuild/release-signing.jks"
+
+      - name: Upload signed production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PIMFLEX-TV-v3.1.0-PRODUCTION
+          path: |
+            PIMFLEX-TV-v3.1.0-PRODUCTION.apk
+            PIMFLEX-TV-v3.1.0-PRODUCTION.aab
+            PIMFLEX-TV-v3.1.0-PRODUCTION-SHA256.txt
+          if-no-files-found: error
