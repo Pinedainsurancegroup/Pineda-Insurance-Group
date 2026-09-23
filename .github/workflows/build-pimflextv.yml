@@ -196,20 +196,45 @@ jobs:
         working-directory: pimflextv-rebuild
         run: python3 patch_v30_version.py
 
+      - name: Apply v3.1 official branding and polish patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v31_brand.py
+
+      - name: Apply v3.1 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v31_version.py
+
       - name: Build release APK and AAB
         working-directory: pimflextv-rebuild
         run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
 
       - name: Rename release artifacts
         run: |
-          cp pimflextv-rebuild/app/build/outputs/apk/release/app-release.apk PIMFLEX-TV-v3.0.0.apk
-          cp pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab PIMFLEX-TV-v3.0.0.aab
+          cp pimflextv-rebuild/app/build/outputs/apk/release/app-release.apk PIMFLEX-TV-v3.1.0.apk
+          cp pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab PIMFLEX-TV-v3.1.0.aab
+
+      - name: Verify release APK
+        shell: bash
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose PIMFLEX-TV-v3.1.0.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging PIMFLEX-TV-v3.1.0.apk | head -n 25
+          sha256sum PIMFLEX-TV-v3.1.0.apk PIMFLEX-TV-v3.1.0.aab > PIMFLEX-TV-v3.1.0-SHA256.txt
+          cat > PIMFLEX-TV-v3.1.0-RELEASE.txt <<'EOF'
+          PIMFLEX TV v3.1.0
+          Final visual polish based on the device-confirmed stable v3.0.0 core.
+          - User-approved PIMFLEX TV logo integrated into splash, login, app icon, headers and Android TV banner.
+          - Playback core preserved from v3.0.0.
+          - Release APK signature verified during build.
+          - APK and AAB checksums included.
+          EOF
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PIMFLEX-TV-v3.0.0
+          name: PIMFLEX-TV-v3.1.0
           path: |
-            PIMFLEX-TV-v3.0.0.apk
-            PIMFLEX-TV-v3.0.0.aab
+            PIMFLEX-TV-v3.1.0.apk
+            PIMFLEX-TV-v3.1.0.aab
+            PIMFLEX-TV-v3.1.0-SHA256.txt
+            PIMFLEX-TV-v3.1.0-RELEASE.txt
           if-no-files-found: error
