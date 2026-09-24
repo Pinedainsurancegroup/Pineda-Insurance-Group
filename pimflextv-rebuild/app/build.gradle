@@ -14,21 +14,31 @@ android {
         versionName '2.1.1'
     }
 
+    def releaseKeystore = System.getenv('PIMFLEX_RELEASE_KEYSTORE')
+    def releaseStorePassword = System.getenv('PIMFLEX_RELEASE_STORE_PASSWORD')
+    def releaseKeyAlias = System.getenv('PIMFLEX_RELEASE_KEY_ALIAS')
+    def releaseKeyPassword = System.getenv('PIMFLEX_RELEASE_KEY_PASSWORD')
+    def hasReleaseSigning = releaseKeystore && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+
     signingConfigs {
-        qa {
-            storeFile file('../qa-signing.jks')
-            storePassword 'PimflexQA2026'
-            keyAlias 'pimflexqa'
-            keyPassword 'PimflexQA2026'
+        if (hasReleaseSigning) {
+            production {
+                storeFile file(releaseKeystore)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
         }
     }
 
     buildTypes {
         debug {
-            signingConfig signingConfigs.qa
+            // Use the standard Android debug key. Production credentials are never used for debug builds.
         }
         release {
-            signingConfig signingConfigs.qa
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.production
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
