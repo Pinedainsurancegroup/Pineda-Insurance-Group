@@ -35,3 +35,12 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Local Firebase and Android signing credentials
+**/google-services.json
+**/*.jks
+**/*.keystore
+**/local.properties
+**/service-account*.json
+**/firebase-admin*.json
+**/.env*
