@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function active() {
+      return signedIn() && profile().data.active == true &&
+        profile().data.suspended != true;
+    }
+    function owner() { return active() && profile().data.role == 'owner'; }
+    function agent() { return active() && profile().data.role == 'agent'; }
+    function leader() { return active() && profile().data.role == 'leader'; }
+    function clientAccess() {
+      return owner() || (active() && resource.data.assignedTo == request.auth.uid) ||
+        (leader() && resource.data.teamId is string &&
+          resource.data.teamId in profile().data.get('authorizedTeamIds', []));
+    }
+
+    // The first owner record is provisioned through the Firebase console or a
+    // trusted admin process after verifying Juan's Auth UID. Clients cannot
+    // create or change users, roles, suspension or team grants.
+    match /users/{uid} {
+      allow get: if active() && (owner() || request.auth.uid == uid);
+      allow list: if owner();
+      allow create, update, delete: if false;
+      match /preferences/{prefId} {
+        allow read: if active() && (owner() || request.auth.uid == uid);
+        allow create, update: if active() && request.auth.uid == uid &&
+          prefId == 'operational' && request.resource.data.keys().hasOnly([
+            'autoRefresh', 'notifications', 'updatedAt'
+          ]) && request.resource.data.autoRefresh is bool &&
+          request.resource.data.notifications is bool &&
+          request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
+      match /devices/{deviceId} {
+        allow read: if active() && (owner() || request.auth.uid == uid);
+        // FCM tokens and device authorization are managed by a trusted server.
+        allow write: if false;
+      }
+    }
+
+    // Recruitment stays owner-only. Sheets/Apps Script remains the source.
+    // A trusted server may mirror identifiers after deduplication; the app
+    // cannot import recruitment PII into this collection directly.
+    match /recruitment/{leadId} {
+      allow read: if owner();
+      allow write: if false;
+      match /activity/{eventId} {
+        allow read: if owner();
+        allow write: if false;
+      }
+    }
+
+    // Clients FE are empty for now. A trusted admin process owns canonical
+    // classification, assignment and reassignment. LEAD -> B_LEAD edits the
+    // same document; assignment history is append-only, server-written.
+    match /clients/{clientId} {
+      allow get, list: if clientAccess();
+      allow create, update, delete: if false;
+      match /assignments/{assignmentId} {
+        allow read: if active() && (owner() ||
+          get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid);
+        allow write: if false;
+      }
+      match /activity/{eventId} {
+        allow read: if active() && (owner() ||
+          get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid);
+        allow create: if active() &&
+          (owner() || (agent() &&
+            get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid)) &&
+          request.resource.data.keys().hasOnly(['actorUid', 'kind', 'status', 'note', 'createdAt']) &&
+          request.resource.data.actorUid == request.auth.uid &&
+          request.resource.data.kind in ['status', 'note', 'result'] &&
+          request.resource.data.status is string && request.resource.data.status.size() <= 80 &&
+          request.resource.data.note is string && request.resource.data.note.size() <= 4000 &&
+          request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+
+    match /{path=**} { allow read, write: if false; }
+  }
+}
