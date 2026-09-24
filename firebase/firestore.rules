@@ -15,6 +15,14 @@ service cloud.firestore {
         (leader() && resource.data.teamId is string &&
           resource.data.teamId in profile().data.get('authorizedTeamIds', []));
     }
+    function canReadClient(clientId) {
+      return active() && (owner() ||
+        get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid ||
+        (leader() &&
+          get(/databases/$(database)/documents/clients/$(clientId)).data.teamId is string &&
+          get(/databases/$(database)/documents/clients/$(clientId)).data.teamId in
+            profile().data.get('authorizedTeamIds', [])));
+    }
 
     // The first owner record is provisioned through the Firebase console or a
     // trusted admin process after verifying Juan's Auth UID. Clients cannot
@@ -59,15 +67,13 @@ service cloud.firestore {
       allow get, list: if clientAccess();
       allow create, update, delete: if false;
       match /assignments/{assignmentId} {
-        allow read: if active() && (owner() ||
-          get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid);
+        allow read: if canReadClient(clientId);
         allow write: if false;
       }
       match /activity/{eventId} {
-        allow read: if active() && (owner() ||
-          get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid);
+        allow read: if canReadClient(clientId);
         allow create: if active() &&
-          (owner() || (agent() &&
+          (owner() || ((agent() || leader()) &&
             get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid)) &&
           request.resource.data.keys().hasOnly(['actorUid', 'kind', 'status', 'note', 'createdAt']) &&
           request.resource.data.actorUid == request.auth.uid &&
