@@ -1,14 +1,14 @@
 # PAG Leads v1.8 — Firebase Cloud Messaging
 
-Estado al 24/09/2026: proyecto Firebase `pag-leads-8c6ef` y app Android registrados; proveedor Google habilitado; SHA-1 y SHA-256 del APK v1.7 estable registrados. Firestore creado en `nam5`, reglas publicadas y probadas localmente, acceso Google preparado en código sin compilar, clave privada de firma aún no localizada y push real no probado. No instalar en producción. Ver `../firebase/ARCHITECTURE_v1.8.md` y `../firebase/firestore.rules`.
+Estado al 24/09/2026: proyecto Firebase `pag-leads-8c6ef` y app Android registrados; proveedor Google habilitado; SHA-1 y SHA-256 del APK v1.7 estable registrados. Firestore creado en `nam5`, reglas publicadas y probadas localmente y en GitHub Actions. El acceso Google y la configuración pública de Firebase compilaron en GitHub Actions; clave privada estable aún no localizada, inicio de sesión y push real no probados. No instalar en producción. Ver `../firebase/ARCHITECTURE_v1.8.md` y `../firebase/firestore.rules`.
 
 ## Objetivo
 Mantener Google Forms → Google Sheets privada → Apps Script como sistema de registro y usar Firebase Cloud Messaging únicamente para avisar al teléfono cuando entra un lead nuevo.
 
 ## Firebase Console
 1. Comprobar que la clave de firma estable disponible corresponda a las huellas del APK v1.7; nunca publicar el almacén de claves.
-2. Descargar la configuración Android actualizada tras habilitar Google. Completar los valores públicos de `firebase_config.xml` y el ID del cliente web requerido por Credential Manager. Nunca añadir claves administrativas al repositorio.
-3. Completar inicio de sesión, verificar UID de Juan y provisionar su perfil owner en un canal administrativo antes de habilitar lectura.
+2. La configuración Android pública y el ID de cliente web de Credential Manager ya están en `firebase_config.xml`; el `google-services.json` descargado y las credenciales administrativas siguen excluidos del repositorio. Confirmar las restricciones de la clave Firebase en Google Cloud antes de distribución.
+3. El código de inicio de sesión está preparado. Iniciar sesión con Juan en una compilación de prueba, cotejar su UID en Firebase Authentication y provisionar su perfil owner por un canal administrativo antes de habilitar lectura.
 4. Firestore ya está creado en `nam5` y sus reglas publicadas; las pruebas con identidades sintéticas pasaron en el emulador. Falta la prueba real con el UID de Juan. La región es permanente.
 5. Integrar el emisor FCM en el proceso privado existente con credenciales fuera del repositorio. Verificar Cloud Messaging HTTP v1 y autenticar cada registro de dispositivo.
 
