@@ -161,9 +161,7 @@ public class LeadMonitorService extends Service {
             if (id.isEmpty() || seen.contains(id)) continue;
 
             String type = lead.optString("type", "agent");
-            String name = lead.optString("name", "Nuevo lead");
-            String state = lead.optString("state", "");
-            notifyLead(id, type, name, state);
+            notifyLead(id, type);
             seen.add(id);
         }
 
@@ -179,7 +177,7 @@ public class LeadMonitorService extends Service {
         prefs.edit().putStringSet("seen_ids", new HashSet<>(seen)).apply();
     }
 
-    private void notifyLead(String id, String type, String name, String state) {
+    private void notifyLead(String id, String type) {
         Intent open = new Intent(this, MainActivity.class);
         open.putExtra("lead_id", id);
         open.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -195,9 +193,7 @@ public class LeadMonitorService extends Service {
                 ? "PAG Leads — Nuevo cliente"
                 : "PAG Leads — Nuevo agente";
 
-        String text = state == null || state.trim().isEmpty()
-                ? name
-                : name + " · " + state;
+        String text = "Nuevo lead recibido. Toca para abrir PAG Leads.";
 
         Notification.Builder b = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? new Notification.Builder(this, CH_NEW)
@@ -206,6 +202,7 @@ public class LeadMonitorService extends Service {
         Notification n = b.setContentTitle(title)
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.stat_notify_more)
+                .setVisibility(Notification.VISIBILITY_PRIVATE)
                 .setAutoCancel(true)
                 .setContentIntent(pi)
                 .build();
