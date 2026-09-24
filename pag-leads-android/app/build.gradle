@@ -13,6 +13,15 @@ android {
         versionCode 9
         versionName '1.8'
     }
+
+    // Install QA beside the stable app; the release application ID stays unchanged.
+    buildTypes {
+        qa {
+            initWith release
+            applicationIdSuffix '.qa'
+            versionNameSuffix '-QA'
+        }
+    }
 }
 
 dependencies {
