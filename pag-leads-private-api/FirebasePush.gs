@@ -49,6 +49,14 @@ function onPagLeadFormSubmit(e) {
   });
 }
 
+function testPagFcmPush() {
+  return sendPagFcm_({
+    title: 'PAG Leads — Prueba Firebase',
+    body: 'La notificación push de Firebase funciona correctamente.',
+    type: 'test'
+  });
+}
+
 function sendPagFcm_(data) {
   const props = PropertiesService.getScriptProperties();
   let tokens = [];
