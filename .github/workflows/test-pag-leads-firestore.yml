@@ -1,0 +1,31 @@
+name: Test PAG Leads Firestore rules
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'firebase/**'
+      - '.github/workflows/test-pag-leads-firestore.yml'
+  pull_request:
+    paths:
+      - 'firebase/**'
+      - '.github/workflows/test-pag-leads-firestore.yml'
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test dependencies
+        working-directory: firebase
+        run: npm install --no-package-lock --ignore-scripts
+      - name: Check role isolation and suspension
+        working-directory: firebase
+        run: npm run test:rules
