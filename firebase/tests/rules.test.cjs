@@ -1,0 +1,46 @@
+const fs = require('fs');
+const path = require('path');
+const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
+const { doc, getDoc, getDocs, collection, query, where, serverTimestamp, setDoc, updateDoc } = require('firebase/firestore');
+(async () => {
+  const env = await initializeTestEnvironment({projectId:'demo-pag-leads',firestore:{host:'127.0.0.1',port:8085,rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
+  try {
+    await env.withSecurityRulesDisabled(async c => {
+      const d = c.firestore();
+      await setDoc(doc(d,'users/juan'),{role:'owner',active:true,suspended:false});
+      await setDoc(doc(d,'users/maria'),{role:'agent',active:true,suspended:false});
+      await setDoc(doc(d,'users/carlos'),{role:'agent',active:true,suspended:false});
+      await setDoc(doc(d,'users/lider'),{role:'leader',active:true,suspended:false,authorizedTeamIds:['team1']});
+      await setDoc(doc(d,'recruitment/r1'),{name:'test'});
+      await setDoc(doc(d,'clients/c1'),{assignedTo:'maria',teamId:'team1',classification:'LEAD'});
+      await setDoc(doc(d,'clients/c2'),{assignedTo:'carlos',teamId:'team2',classification:'B_LEAD'});
+      await setDoc(doc(d,'clients/c1/assignments/a1'),{assignedTo:'maria'});
+      await setDoc(doc(d,'clients/c2/assignments/a1'),{assignedTo:'carlos'});
+      await setDoc(doc(d,'clients/c1/activity/e1'),{kind:'status',actorUid:'maria'});
+    });
+    const db = uid => env.authenticatedContext(uid).firestore();
+    await assertSucceeds(getDoc(doc(db('juan'),'recruitment/r1')));
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(),'recruitment/r1')));
+    await assertSucceeds(getDocs(collection(db('juan'),'clients')));
+    await assertFails(getDocs(collection(db('maria'),'clients')));
+    await assertSucceeds(getDocs(query(collection(db('maria'),'clients'),where('assignedTo','==','maria'))));
+    await assertSucceeds(getDocs(query(collection(db('lider'),'clients'),where('teamId','==','team1'))));
+    await assertSucceeds(getDoc(doc(db('juan'),'clients/c2')));
+    await assertFails(getDoc(doc(db('maria'),'recruitment/r1')));
+    await assertSucceeds(getDoc(doc(db('maria'),'clients/c1')));
+    await assertFails(getDoc(doc(db('maria'),'clients/c2')));
+    await assertSucceeds(getDoc(doc(db('lider'),'clients/c1')));
+    await assertFails(getDoc(doc(db('lider'),'clients/c2')));
+    await assertSucceeds(getDoc(doc(db('lider'),'clients/c1/assignments/a1')));
+    await assertSucceeds(getDoc(doc(db('lider'),'clients/c1/activity/e1')));
+    await assertFails(getDoc(doc(db('lider'),'clients/c2/assignments/a1')));
+    await assertFails(getDoc(doc(db('carlos'),'clients/c1/assignments/a1')));
+    await assertFails(setDoc(doc(db('maria'),'users/maria'),{role:'owner',active:true,suspended:false}));
+    await assertFails(updateDoc(doc(db('maria'),'clients/c1'),{assignedTo:'maria',classification:'B_LEAD'}));
+    await assertSucceeds(setDoc(doc(db('maria'),'users/maria/preferences/operational'),{autoRefresh:true,notifications:true,updatedAt:serverTimestamp()}));
+    await assertFails(setDoc(doc(db('maria'),'users/juan/preferences/operational'),{autoRefresh:true,notifications:true,updatedAt:serverTimestamp()}));
+    await env.withSecurityRulesDisabled(async c => { await updateDoc(doc(c.firestore(),'users/maria'),{suspended:true}); });
+    await assertFails(getDoc(doc(db('maria'),'clients/c1')));
+    console.log('PASS owner, isolation, leader grant, privilege denial, suspended old session');
+  } finally { await env.cleanup(); }
+})().catch(e=>{console.error(e);process.exitCode=1});
