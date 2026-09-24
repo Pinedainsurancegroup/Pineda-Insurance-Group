@@ -44,7 +44,8 @@ public class MainActivity extends Activity {
     private void openRecruitment() {
         FirebasePushManager.initialize(this);
         SharedPreferences p = getSharedPreferences("pag_native", MODE_PRIVATE);
-        if (p.getBoolean("notifications", true) && !p.getString("url", "").isEmpty() &&
+        if (!getResources().getBoolean(R.bool.pag_qa_build) &&
+                p.getBoolean("notifications", true) && !p.getString("url", "").isEmpty() &&
                 !p.getString("token", "").isEmpty()) {
             Intent monitor = new Intent(this, LeadMonitorService.class);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(monitor);
@@ -155,7 +156,7 @@ public class MainActivity extends Activity {
             FirebasePushManager.syncRegistration(MainActivity.this);
 
             runOnUiThread(() -> {
-                if (notificationsEnabled) {
+                if (notificationsEnabled && !getResources().getBoolean(R.bool.pag_qa_build)) {
                     requestNotificationPermissionIfNeeded();
                     Intent i = new Intent(MainActivity.this, LeadMonitorService.class);
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(i);
