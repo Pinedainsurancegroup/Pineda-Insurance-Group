@@ -6,6 +6,12 @@ import android.content.SharedPreferences;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Source;
+import com.google.android.gms.tasks.Tasks;
 
 import org.json.JSONObject;
 
@@ -16,6 +22,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 public final class FirebasePushManager {
     private static final String PREFS = "pag_native";
@@ -62,6 +69,11 @@ public final class FirebasePushManager {
         registerAsync(app, fcmToken.trim());
     }
 
+    public static boolean ensureInitialized(Context context) {
+        if (!initialized) initialized = initFirebase(context.getApplicationContext());
+        return initialized;
+    }
+
     private static boolean initFirebase(Context context) {
         try {
             if (!FirebaseApp.getApps(context).isEmpty()) return true;
@@ -99,6 +111,14 @@ public final class FirebasePushManager {
 
         new Thread(() -> {
             try {
+                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                if (user == null) return;
+                DocumentSnapshot profile = Tasks.await(FirebaseFirestore.getInstance()
+                        .collection("users").document(user.getUid()).get(Source.SERVER),
+                        20, TimeUnit.SECONDS);
+                if (!profile.exists() || !"owner".equals(profile.getString("role")) ||
+                        !Boolean.TRUE.equals(profile.getBoolean("active")) ||
+                        Boolean.TRUE.equals(profile.getBoolean("suspended"))) return;
                 JSONObject body = new JSONObject();
                 body.put("action", "registerDevice");
                 body.put("token", apiToken.trim());
