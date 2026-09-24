@@ -26,9 +26,12 @@ jobs:
         run: gradle :app:assembleDebug :app:assembleQa --no-daemon
       - name: Sign QA with disposable Android debug identity
         run: |
+          keytool -genkeypair -noprompt -keystore /tmp/pag-qa-test.jks \
+            -storepass android -keypass android -alias qa-debug \
+            -dname 'CN=QA Install Test' -keyalg RSA -keysize 2048 -validity 2
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
-            --ks "$HOME/.android/debug.keystore" \
-            --ks-key-alias androiddebugkey \
+            --ks /tmp/pag-qa-test.jks \
+            --ks-key-alias qa-debug \
             --ks-pass pass:android --key-pass pass:android \
             --out /tmp/pag-leads-qa-install-check.apk \
             pag-leads-android/app/build/outputs/apk/qa/app-qa-unsigned.apk
