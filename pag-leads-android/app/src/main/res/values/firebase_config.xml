@@ -5,4 +5,5 @@
     <string name="pag_firebase_application_id"></string>
     <string name="pag_firebase_api_key"></string>
     <string name="pag_firebase_sender_id"></string>
+    <string name="pag_firebase_web_client_id"></string>
 </resources>
