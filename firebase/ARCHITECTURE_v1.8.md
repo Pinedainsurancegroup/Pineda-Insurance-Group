@@ -5,7 +5,7 @@ Status: code and rules prepared; Firestore has not been created or deployed. v1.
 ## Current system and rollout
 
 - Google Form → private Google Sheet → private Apps Script → PAG Leads remains the recruitment source. No client FE import or dual-write has been enabled.
-- Firebase project `pag-leads-8c6ef` and Android app `com.pinedaagencygroup.leads` registered. Google provider enabled. Android release SHA-1 and Auth UID still require verification. Firestore region selection and deployment remain pending.
+- Firebase project `pag-leads-8c6ef` and Android app `com.pinedaagencygroup.leads` registered. Google provider enabled. Release SHA-1 and SHA-256 were read from the v1.7 HOTFIX APK certificate and registered in Firebase. The private signing key and Auth UID still require verification. Firestore region selection and deployment remain pending.
 - Existing v1.8 FCM scaffolding requires server-side registration, credentials outside GitHub, and a real-device test. Keep the one-minute monitor. Do not ship a build with blank Firebase config as STABLE.
 
 ## Access and data model
