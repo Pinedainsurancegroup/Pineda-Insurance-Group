@@ -73,3 +73,14 @@ jobs:
           name: PAG-Android-signing-tools-35
           path: android-signing-tools
           if-no-files-found: error
+
+      - name: Build side-by-side QA APK
+        working-directory: pag-leads-android
+        run: gradle :app:assembleQa --no-daemon
+
+      - name: Upload unsigned QA APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PAG-Leads-v1.8-QA-unsigned
+          path: pag-leads-android/app/build/outputs/apk/qa/app-qa-unsigned.apk
+          if-no-files-found: error
