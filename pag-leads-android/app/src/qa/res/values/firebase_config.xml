@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Public Firebase app ID for the side-by-side QA package. -->
+    <string name="pag_firebase_application_id">1:880973015225:android:b39a6142f9bcb8a3b21368</string>
+</resources>
