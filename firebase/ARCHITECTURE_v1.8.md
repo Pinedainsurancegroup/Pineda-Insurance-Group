@@ -5,7 +5,7 @@ Status: Firestore created in nam5; security rules published and tested in the lo
 ## Current system and rollout
 
 - Google Form → private Google Sheet → private Apps Script → PAG Leads remains the recruitment source. No client FE import or dual-write has been enabled.
-- Firebase project `pag-leads-8c6ef` and Android app `com.pinedaagencygroup.leads` registered. Google provider enabled. Release SHA-1 and SHA-256 were read from the v1.7 HOTFIX APK certificate and registered in Firebase. The private signing key and Auth UID still require verification. Firestore `(default)` Standard edition in `nam5 (United States)` is created and the latest security rules are published. The owner Auth UID and release signing key remain pending.
+- Firebase project `pag-leads-8c6ef` and Android app `com.pinedaagencygroup.leads` registered. Google provider enabled. Release SHA-1 and SHA-256 were read from the v1.7 HOTFIX APK certificate and registered in Firebase. The private stable signing identity was recovered from a private backup, and its certificate matches v1.7; the owner Auth UID remains unverified. Firestore `(default)` Standard edition in `nam5 (United States)` is created and the latest security rules are published. The owner Auth UID and live release validation remain pending.
 - Existing v1.8 FCM scaffolding requires server-side authenticated registration, administrative credentials outside GitHub, and a real-device push test. The public Firebase client IDs are populated. Keep the one-minute monitor. Do not ship v1.8 as STABLE before stable signing and device tests.
 
 ## Access and data model
@@ -30,4 +30,4 @@ Disable Firestore offline persistence on clients when enabling it. Previously do
 
 ## Release gates
 
-Verify Google sign-in with Juan, exact Auth UID and owner profile; Firestore read/write and rules tests; FCM token registration and a real generic push; source lead loading, navigation and controls; same signing certificate and successful update over v1.7 preserving local settings. Only then sign and label v1.8 STABLE and test the update on Juan's phone. No client FE production records or other user accounts in this phase.
+A locally signed candidate from the CI unsigned release matches v1.7 certificate and increments versionCode 8 to 9, but has not been installed. Verify Google sign-in with Juan, exact Auth UID and owner profile; Firestore read/write and rules tests; FCM token registration and a real generic push; source lead loading, navigation and controls; same signing certificate and successful update over v1.7 preserving local settings. Only then sign and label v1.8 STABLE and test the update on Juan's phone. No client FE production records or other user accounts in this phase.
