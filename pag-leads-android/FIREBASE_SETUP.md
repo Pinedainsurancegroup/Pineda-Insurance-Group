@@ -6,7 +6,7 @@ Estado al 24/09/2026: proyecto Firebase `pag-leads-8c6ef` y app Android registra
 Mantener Google Forms → Google Sheets privada → Apps Script como sistema de registro y usar Firebase Cloud Messaging únicamente para avisar al teléfono cuando entra un lead nuevo.
 
 ## Firebase Console
-1. Comprobar que la clave de firma estable disponible corresponda a las huellas del APK v1.7; nunca publicar el almacén de claves.
+1. La firma estable se recuperó de un respaldo privado y su certificado coincide con v1.7. Se firmó solo una compilación candidata local; conservar el almacén y contraseñas fuera del repositorio y no distribuirla como STABLE.
 2. La configuración Android pública y el ID de cliente web de Credential Manager ya están en `firebase_config.xml`; el `google-services.json` descargado y las credenciales administrativas siguen excluidos del repositorio. Confirmar las restricciones de la clave Firebase en Google Cloud antes de distribución.
 3. El código de inicio de sesión está preparado. Iniciar sesión con Juan en una compilación de prueba, cotejar su UID en Firebase Authentication y provisionar su perfil owner por un canal administrativo antes de habilitar lectura.
 4. Firestore ya está creado en `nam5` y sus reglas publicadas; las pruebas con identidades sintéticas pasaron en el emulador. Falta la prueba real con el UID de Juan. La región es permanente.
