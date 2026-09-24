@@ -24,15 +24,11 @@ public class PAGFirebaseMessagingService extends FirebaseMessagingService {
         super.onMessageReceived(message);
         createChannel();
 
-        String title = message.getData().get("title");
-        String body = message.getData().get("body");
-        String leadId = message.getData().get("lead_id");
-
-        if (title == null || title.trim().isEmpty()) title = "PAG Leads — Nuevo agente";
-        if (body == null || body.trim().isEmpty()) body = "Nuevo lead recibido. Toca para abrir PAG Leads.";
+        // Never render server-supplied lead fields on the lock screen.
+        String title = "PAG Leads — Nuevo agente";
+        String body = "Nuevo lead recibido. Toca para abrir PAG Leads.";
 
         Intent open = new Intent(this, MainActivity.class);
-        if (leadId != null && !leadId.trim().isEmpty()) open.putExtra("lead_id", leadId);
         open.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
         PendingIntent pi = PendingIntent.getActivity(
@@ -47,6 +43,7 @@ public class PAGFirebaseMessagingService extends FirebaseMessagingService {
         Notification n = b.setContentTitle(title)
                 .setContentText(body)
                 .setSmallIcon(R.drawable.ic_launcher)
+                .setVisibility(Notification.VISIBILITY_PRIVATE)
                 .setAutoCancel(true)
                 .setContentIntent(pi)
                 .build();
