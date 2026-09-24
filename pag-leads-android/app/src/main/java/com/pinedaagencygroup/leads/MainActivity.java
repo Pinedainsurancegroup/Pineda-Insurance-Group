@@ -20,7 +20,7 @@ public class MainActivity extends Activity {
     private WebView webView;
     private boolean pageReady = false;
     private PAGAuthGate authGate;
-    private boolean ownerVerified = false;
+    private volatile boolean ownerVerified = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,13 +34,8 @@ public class MainActivity extends Activity {
             @Override public void onAccessRevoked() {
                 ownerVerified = false;
                 stopService(new Intent(MainActivity.this, LeadMonitorService.class));
-                if (webView != null) {
-                    webView.loadUrl("about:blank");
-                    webView.clearCache(true);
-                    webView = null;
-                    pageReady = false;
-                }
                 setContentView(authGate.view());
+                discardRecruitmentView();
             }
         });
         setContentView(authGate.view());
@@ -91,6 +86,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
+                if (!ownerVerified || view != webView || !"file:///android_asset/index.html".equals(url)) return;
                 pageReady = true;
                 view.evaluateJavascript("window.PAGAutoStart && window.PAGAutoStart();", null);
             }
@@ -103,8 +99,26 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         // Recheck against the server before showing data after every return to the app.
+        ownerVerified = false;
         setContentView(authGate.view());
+        discardRecruitmentView();
         authGate.verify();
+    }
+
+    @Override
+    protected void onPause() {
+        ownerVerified = false;
+        super.onPause();
+    }
+
+    private void discardRecruitmentView() {
+        if (webView == null) return;
+        webView.stopLoading();
+        webView.loadUrl("about:blank");
+        webView.clearCache(true);
+        webView.destroy();
+        webView = null;
+        pageReady = false;
     }
 
     private class PAGNativeBridge {
@@ -162,7 +176,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) webView.goBack();
+        if (ownerVerified && webView != null && webView.canGoBack()) webView.goBack();
         else super.onBackPressed();
     }
 }
