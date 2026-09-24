@@ -10,6 +10,13 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.IBinder;
 
+import com.google.android.gms.tasks.Tasks;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Source;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -118,6 +125,20 @@ public class LeadMonitorService extends Service {
 
     private void poll() throws Exception {
         if (!prefs.getBoolean("notifications", true)) return;
+        // The legacy endpoint still accepts its old token. Never fetch it from a
+        // suspended or unverified session; require a fresh server role check.
+        if (!FirebasePushManager.ensureInitialized(this)) return;
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) { stopSelf(); return; }
+        DocumentSnapshot profile = Tasks.await(FirebaseFirestore.getInstance()
+                .collection("users").document(user.getUid()).get(Source.SERVER),
+                20, TimeUnit.SECONDS);
+        if (!profile.exists() || !"owner".equals(profile.getString("role")) ||
+                !Boolean.TRUE.equals(profile.getBoolean("active")) ||
+                Boolean.TRUE.equals(profile.getBoolean("suspended"))) {
+            stopSelf();
+            return;
+        }
 
         String endpoint = prefs.getString("url", "");
         String token = prefs.getString("token", "");
