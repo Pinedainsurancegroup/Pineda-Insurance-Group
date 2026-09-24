@@ -50,6 +50,17 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging pimflextv-rebuild/app/build/outputs/apk/release/app-release-unsigned.apk | head -n 25
           sha256sum             pimflextv-rebuild/app/build/outputs/apk/release/app-release-unsigned.apk             pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab             > PIMFLEX-TV-v3.1.0-PRODUCTION-UNSIGNED-SHA256.txt
 
+      - name: Create safe source backup
+        shell: bash
+        run: |
+          mkdir -p backup/PIMFLEXTV-v3.1.0
+          rsync -a --delete             --exclude '.git/'             --exclude '**/build/'             --exclude '*.jks'             --exclude '*.keystore'             --exclude '*.p12'             --exclude '*signing*.b64'             pimflextv-rebuild/ backup/PIMFLEXTV-v3.1.0/pimflextv-rebuild/
+          cp .github/workflows/build-pimflextv-production.yml backup/PIMFLEXTV-v3.1.0/
+          cp pimflextv-rebuild/PRODUCTION_RELEASE.md backup/PIMFLEXTV-v3.1.0/
+          cp pimflextv-rebuild/PRODUCTION_CERT_SHA256.txt backup/PIMFLEXTV-v3.1.0/
+          printf '%s\n'             'PIMFLEX TV v3.1.0 safe source backup'             'Branch: pimflextv-production-hardening'             'Signing keys and signing secrets are intentionally excluded.'             'Stable runtime baseline: v3.1.0 device-confirmed.'             > backup/PIMFLEXTV-v3.1.0/BACKUP_MANIFEST.txt
+          (cd backup && zip -qr ../PIMFLEXTV-v3.1.0-SAFE-SOURCE-BACKUP.zip PIMFLEXTV-v3.1.0)
+
       - name: Upload validation artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -58,6 +69,13 @@ jobs:
             pimflextv-rebuild/app/build/outputs/apk/release/app-release-unsigned.apk
             pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab
             PIMFLEX-TV-v3.1.0-PRODUCTION-UNSIGNED-SHA256.txt
+          if-no-files-found: error
+
+      - name: Upload safe source backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: PIMFLEXTV-v3.1.0-SAFE-SOURCE-BACKUP
+          path: PIMFLEXTV-v3.1.0-SAFE-SOURCE-BACKUP.zip
           if-no-files-found: error
 
   production-release:
