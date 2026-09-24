@@ -1,12 +1,12 @@
 # PAG Leads v1.8 — Firebase architecture (draft, 2026-09-24)
 
-Status: Firestore created in nam5; security rules published and tested in the local emulator. Android Google sign-in gate staged but not built or tested. v1.7 remains the production app. Do not install v1.8 over it until release checks pass.
+Status: Firestore created in nam5; security rules published and tested in the local emulator. Android Google sign-in gate and public Firebase client configuration compiled in GitHub Actions, but login and device behavior remain untested. v1.7 remains the production app. Do not install v1.8 over it until release checks pass.
 
 ## Current system and rollout
 
 - Google Form → private Google Sheet → private Apps Script → PAG Leads remains the recruitment source. No client FE import or dual-write has been enabled.
 - Firebase project `pag-leads-8c6ef` and Android app `com.pinedaagencygroup.leads` registered. Google provider enabled. Release SHA-1 and SHA-256 were read from the v1.7 HOTFIX APK certificate and registered in Firebase. The private signing key and Auth UID still require verification. Firestore `(default)` Standard edition in `nam5 (United States)` is created and the latest security rules are published. The owner Auth UID and release signing key remain pending.
-- Existing v1.8 FCM scaffolding requires server-side registration, credentials outside GitHub, and a real-device test. Keep the one-minute monitor. Do not ship a build with blank Firebase config as STABLE.
+- Existing v1.8 FCM scaffolding requires server-side authenticated registration, administrative credentials outside GitHub, and a real-device push test. The public Firebase client IDs are populated. Keep the one-minute monitor. Do not ship v1.8 as STABLE before stable signing and device tests.
 
 ## Access and data model
 
