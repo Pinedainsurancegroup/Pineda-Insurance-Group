@@ -79,7 +79,7 @@ jobs:
           if-no-files-found: error
 
   production-release:
-    if: ${{ github.event_name == 'workflow_dispatch' || hashFiles('pimflextv-rebuild/ENABLE_PRODUCTION_SIGNING') != '' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     needs: validate-source
     runs-on: ubuntu-latest
     env:
