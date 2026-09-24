@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Valores públicos del proyecto Firebase. Se completan al crear PAG Leads en Firebase Console. -->
+    <string name="pag_firebase_project_id"></string>
+    <string name="pag_firebase_application_id"></string>
+    <string name="pag_firebase_api_key"></string>
+    <string name="pag_firebase_sender_id"></string>
+</resources>

@@ -23,7 +23,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        webView = new WebView(this);
+        FirebasePushManager.initialize(this);\n        webView = new WebView(this);
         setContentView(webView);
 
         WebSettings s = webView.getSettings();
@@ -63,7 +63,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (pageReady && webView != null) {
+        FirebasePushManager.syncRegistration(this);\n        if (pageReady && webView != null) {
             webView.evaluateJavascript("window.PAGAutoStart && window.PAGAutoStart();", null);
         }
     }
