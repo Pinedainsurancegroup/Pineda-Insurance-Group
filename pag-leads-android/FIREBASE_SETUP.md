@@ -1,21 +1,19 @@
 # PAG Leads v1.8 — Firebase Cloud Messaging
 
-Estado: código preparado en rama `pag-leads-v1.8-fcm`. No instalar en producción hasta completar Firebase y validar un push real.
+Estado al 24/09/2026: proyecto Firebase `pag-leads-8c6ef` y app Android registrados; proveedor Google habilitado. Firestore no creado, reglas no desplegadas, SHA-1 estable no registrado y push real no probado. No instalar en producción. Ver `../firebase/ARCHITECTURE_v1.8.md` y `../firebase/firestore.rules`.
 
 ## Objetivo
 Mantener Google Forms → Google Sheets privada → Apps Script como sistema de registro y usar Firebase Cloud Messaging únicamente para avisar al teléfono cuando entra un lead nuevo.
 
 ## Firebase Console
-1. Crear proyecto: `PAG Leads`.
-2. Registrar Android app con package `com.pinedaagencygroup.leads`.
-3. Tomar del proyecto los valores públicos: Project ID, Android App ID, Web API Key y Sender ID/Project Number.
-4. Colocarlos en `app/src/main/res/values/firebase_config.xml`.
-5. En Settings → Service accounts, generar una clave JSON exclusiva para el envío FCM.
-6. Guardar el JSON únicamente en Script Properties del proyecto Apps Script como `FCM_SERVICE_ACCOUNT_JSON`. Nunca subirlo a GitHub.
-7. Confirmar que Firebase Cloud Messaging API (HTTP v1) esté habilitada.
+1. Registrar la SHA-1 del certificado de firma estable de PAG (y la SHA-256 si corresponde) sin publicar el almacén de claves.
+2. Descargar la configuración Android actualizada tras habilitar Google. Completar los valores públicos de `firebase_config.xml` y el ID del cliente web requerido por Credential Manager. Nunca añadir claves administrativas al repositorio.
+3. Completar inicio de sesión, verificar UID de Juan y provisionar su perfil owner en un canal administrativo antes de habilitar lectura.
+4. Crear Firestore en la ubicación aprobada, desplegar y probar las reglas. La región es permanente.
+5. Integrar el emisor FCM en el proceso privado existente con credenciales fuera del repositorio. Verificar Cloud Messaging HTTP v1 y autenticar cada registro de dispositivo.
 
 ## Apps Script
-Integrar `FirebasePush.gs` en el proyecto privado actual y añadir en `doPost`, después de validar API_TOKEN:
+El código `FirebasePush.gs` es una preparación, no una integración comprobada. No añadir el registro de dispositivos al Apps Script privado hasta validar identidad y suspensión. El fragmento siguiente refleja el diseño anterior y no debe desplegarse sin autenticar usuario/dispositivo:
 
 ```javascript
 if (body.action === 'registerDevice') {
@@ -23,7 +21,7 @@ if (body.action === 'registerDevice') {
 }
 ```
 
-Luego ejecutar una sola vez `setupFirebasePushTriggerOnce()` para crear el trigger de nuevas respuestas.
+Después de completar la validación de identidad y el emisor, instalar el trigger una vez y comprobar que no duplique avisos.
 
 ## Privacidad
 La notificación push no incluye nombre, teléfono, email ni otros datos personales. Solo avisa que existe un nuevo lead; la app obtiene los datos completos desde la API privada existente.
