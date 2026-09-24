@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Valores públicos del proyecto Firebase. Se completan al crear PAG Leads en Firebase Console. -->
-    <string name="pag_firebase_project_id"></string>
-    <string name="pag_firebase_application_id"></string>
-    <string name="pag_firebase_api_key"></string>
-    <string name="pag_firebase_sender_id"></string>
-    <string name="pag_firebase_web_client_id"></string>
+    <!-- Public Firebase client identifiers; authorization is enforced by Firestore rules. -->
+    <string name="pag_firebase_project_id">pag-leads-8c6ef</string>
+    <string name="pag_firebase_application_id">1:880973015225:android:3d38baba1e2af4b5b21368</string>
+    <string name="pag_firebase_api_key">AIzaSyD4I7G-jeMX21MOJfTMsQTuRB8YkA_QW9A</string>
+    <string name="pag_firebase_sender_id">880973015225</string>
+    <string name="pag_firebase_web_client_id">880973015225-4q7rrccutn38n8su95l533og6ogbtbq4.apps.googleusercontent.com</string>
 </resources>
