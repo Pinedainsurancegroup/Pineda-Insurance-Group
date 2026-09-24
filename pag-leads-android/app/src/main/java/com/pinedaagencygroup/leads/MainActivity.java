@@ -23,7 +23,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        FirebasePushManager.initialize(this);\n        webView = new WebView(this);
+        FirebasePushManager.initialize(this);
+
+        webView = new WebView(this);
         setContentView(webView);
 
         WebSettings s = webView.getSettings();
@@ -40,7 +42,8 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if (url == null) return false;
-                if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("https://wa.me/") || url.startsWith("https://api.whatsapp.com/")) {
+                if (url.startsWith("tel:") || url.startsWith("mailto:") ||
+                    url.startsWith("https://wa.me/") || url.startsWith("https://api.whatsapp.com/")) {
                     try {
                         startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
                     } catch (Exception ignored) {}
@@ -63,7 +66,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        FirebasePushManager.syncRegistration(this);\n        if (pageReady && webView != null) {
+        FirebasePushManager.syncRegistration(this);
+        if (pageReady && webView != null) {
             webView.evaluateJavascript("window.PAGAutoStart && window.PAGAutoStart();", null);
         }
     }
@@ -96,6 +100,8 @@ public class MainActivity extends Activity {
                 .putBoolean("auto", autoRefresh)
                 .putBoolean("notifications", notificationsEnabled)
                 .apply();
+
+            FirebasePushManager.syncRegistration(MainActivity.this);
 
             runOnUiThread(() -> {
                 if (notificationsEnabled) {
