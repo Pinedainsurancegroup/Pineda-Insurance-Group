@@ -19,11 +19,47 @@ public class MainActivity extends Activity {
     private static final int REQ_NOTIFICATIONS = 1401;
     private WebView webView;
     private boolean pageReady = false;
+    private PAGAuthGate authGate;
+    private boolean ownerVerified = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        authGate = new PAGAuthGate(this, new PAGAuthGate.Listener() {
+            @Override public void onOwnerVerified() {
+                ownerVerified = true;
+                openRecruitment();
+            }
+
+            @Override public void onAccessRevoked() {
+                ownerVerified = false;
+                stopService(new Intent(MainActivity.this, LeadMonitorService.class));
+                if (webView != null) {
+                    webView.loadUrl("about:blank");
+                    webView.clearCache(true);
+                    webView = null;
+                    pageReady = false;
+                }
+                setContentView(authGate.view());
+            }
+        });
+        setContentView(authGate.view());
+    }
+
+    private void openRecruitment() {
         FirebasePushManager.initialize(this);
+        SharedPreferences p = getSharedPreferences("pag_native", MODE_PRIVATE);
+        if (p.getBoolean("notifications", true) && !p.getString("url", "").isEmpty() &&
+                !p.getString("token", "").isEmpty()) {
+            Intent monitor = new Intent(this, LeadMonitorService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(monitor);
+            else startService(monitor);
+        }
+        if (webView != null) {
+            setContentView(webView);
+            if (pageReady) webView.evaluateJavascript("window.PAGAutoStart && window.PAGAutoStart();", null);
+            return;
+        }
 
         webView = new WebView(this);
         setContentView(webView);
@@ -66,15 +102,15 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        FirebasePushManager.syncRegistration(this);
-        if (pageReady && webView != null) {
-            webView.evaluateJavascript("window.PAGAutoStart && window.PAGAutoStart();", null);
-        }
+        // Recheck against the server before showing data after every return to the app.
+        setContentView(authGate.view());
+        authGate.verify();
     }
 
     private class PAGNativeBridge {
         @JavascriptInterface
         public String getSettingsJson() {
+            if (!ownerVerified) return "{}";
             SharedPreferences p = getSharedPreferences("pag_native", MODE_PRIVATE);
             try {
                 JSONObject j = new JSONObject();
@@ -93,6 +129,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void saveSettings(String url, String token, boolean autoRefresh, boolean notificationsEnabled) {
+            if (!ownerVerified) return;
             SharedPreferences p = getSharedPreferences("pag_native", MODE_PRIVATE);
             p.edit()
                 .putString("url", url == null ? "" : url.trim())
