@@ -29,3 +29,9 @@ jobs:
       - name: Check role isolation and suspension
         working-directory: firebase
         run: npm run test:rules
+      - name: Check owner recruitment gateway
+        working-directory: firebase/functions
+        run: |
+          npm ci --ignore-scripts
+          npm test
+          node -e 'require("./index.js")'

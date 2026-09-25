@@ -20,7 +20,9 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.Source;
+import com.google.firebase.functions.FirebaseFunctions;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -122,15 +124,18 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if (url == null) return false;
-                if (url.startsWith("tel:") || url.startsWith("mailto:") ||
-                    url.startsWith("https://wa.me/") || url.startsWith("https://api.whatsapp.com/")) {
+                if ("file:///android_asset/index.html".equals(url)) return false;
+                if (url == null) return true;
+                Uri target = Uri.parse(url);
+                String scheme = target.getScheme();
+                // Never let remote pages acquire the PAGNative bridge or private credentials.
+                if ("tel".equals(scheme) || "mailto".equals(scheme) ||
+                        "https".equals(scheme)) {
                     try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                        startActivity(new Intent(Intent.ACTION_VIEW, target));
                     } catch (Exception ignored) {}
-                    return true;
                 }
-                return false;
+                return true;
             }
 
             @Override
@@ -172,6 +177,24 @@ public class MainActivity extends Activity {
     }
 
     private class PAGNativeBridge {
+        @JavascriptInterface
+        public void requestRecruitment(String action, String requestId) {
+            if (!ownerVerified || webView == null || !pageReady ||
+                    !("ping".equals(action) || "list".equals(action)) ||
+                    requestId == null || !requestId.matches("[0-9]{1,12}")) return;
+            FirebaseFunctions.getInstance("us-central1").getHttpsCallable("ownerRecruitment")
+                    .call(Collections.singletonMap("action", action))
+                    .addOnCompleteListener(MainActivity.this, task -> {
+                        if (!ownerVerified || webView == null || !pageReady) return;
+                        boolean ok = task.isSuccessful() && task.getResult() != null &&
+                                task.getResult().getData() instanceof Map;
+                        String payload = ok ? new JSONObject((Map<?, ?>) task.getResult().getData()).toString() : "{}";
+                        webView.evaluateJavascript("window.PAGNativeRecruitmentResult && " +
+                                "window.PAGNativeRecruitmentResult(" + JSONObject.quote(requestId) + "," +
+                                ok + "," + JSONObject.quote(payload) + ");", null);
+                    });
+        }
+
         @JavascriptInterface
         public String getBuildLabel() {
             return getResources().getBoolean(R.bool.pag_qa_build)

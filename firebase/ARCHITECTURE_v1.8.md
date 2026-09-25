@@ -1,11 +1,12 @@
 # PAG Leads v1.8 — Firebase architecture (draft, 2026-09-24)
 
-Status: Firestore created in nam5; current security rules published and tested in the local emulator. Juan signed in with Google on the separate QA installation and passed the owner gate. That QA installation lacks the private Apps Script connection and has not loaded the existing leads. FCM registration, a real push, and release update tests remain pending. v1.7 remains the production app.
+Status: Firestore created in nam5; security rules published and tested in the emulator. Juan signed in with Google on the separate QA installation and passed the owner gate. A generic Firebase Console push reached his Android phone on 2026-09-25; this does not verify an automatic sender. The QA installation lacks the private Apps Script connection and has not loaded the existing leads. Release update tests remain pending. v1.7 remains the production app.
 
 ## Current system and rollout
 
 - Google Form → private Google Sheet → private Apps Script → PAG Leads remains the recruitment source. No client FE import or dual-write has been enabled.
 - Firebase project `pag-leads-8c6ef` and Android app `com.pinedaagencygroup.leads` registered. Google provider enabled. Release SHA-1 and SHA-256 match the v1.7 HOTFIX certificate and are registered in Firebase. The private stable signing identity was recovered from a private backup and kept outside GitHub. Juan's owner Auth UID is verified in the separate QA app; live release validation remains pending.
+- A staged callable `ownerRecruitment` in `firebase/functions` reads the existing Apps Script with URL/token from Cloud Secret Manager after checking the caller's current Firestore owner profile. Only `ping` and `list` are supported, and list responses are limited to recruitment agents. The Android bridge calls it when this installation has no local legacy connection. Existing locally configured URL/token keep using the current path, so v1.7 and existing installs are not migrated by deploying the gateway. This code is not deployed or tested with the real private source yet. Deploying Cloud Functions requires the Firebase project to use the Blaze billing plan; confirm project billing, provision the two secrets directly in the project without chat or GitHub, then test owner access and suspension before installing a new QA. Never put the legacy token or source URL in APK or Firestore.
 - Existing v1.8 FCM scaffolding requires server-side authenticated registration, administrative credentials outside GitHub, and a real-device push test. The public Firebase client IDs are populated. Keep the one-minute monitor. Do not ship v1.8 as STABLE before stable signing and device tests.
 
 ## Access and data model
