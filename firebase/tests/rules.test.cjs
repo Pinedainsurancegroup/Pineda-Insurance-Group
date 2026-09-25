@@ -39,8 +39,18 @@ const { doc, getDoc, getDocs, collection, query, where, serverTimestamp, setDoc,
     await assertFails(updateDoc(doc(db('maria'),'clients/c1'),{assignedTo:'maria',classification:'B_LEAD'}));
     await assertSucceeds(setDoc(doc(db('maria'),'users/maria/preferences/operational'),{autoRefresh:true,notifications:true,updatedAt:serverTimestamp()}));
     await assertFails(setDoc(doc(db('maria'),'users/juan/preferences/operational'),{autoRefresh:true,notifications:true,updatedAt:serverTimestamp()}));
+    const requestPath='users/maria/deviceRequests/1234567890abcdef';
+    const request={fcmToken:'FCM-device-registration-token-example',platform:'android',appVersion:'1.8-QA',updatedAt:serverTimestamp()};
+    await assertSucceeds(setDoc(doc(db('maria'),requestPath),request));
+    await assertSucceeds(getDoc(doc(db('maria'),requestPath)));
+    await assertFails(getDoc(doc(db('carlos'),requestPath)));
+    await assertFails(setDoc(doc(db('maria'),'users/juan/deviceRequests/1234567890abcdef'),request));
+    await assertFails(setDoc(doc(db('maria'),'users/maria/devices/1234567890abcdef'),request));
+    await assertFails(setDoc(doc(db('maria'),'users/maria/deviceRequests/short'),request));
+    await assertFails(setDoc(doc(db('maria'),'users/maria/deviceRequests/1234567890abcdeg'),{...request,role:'owner'}));
     await env.withSecurityRulesDisabled(async c => { await updateDoc(doc(c.firestore(),'users/maria'),{suspended:true}); });
     await assertFails(getDoc(doc(db('maria'),'clients/c1')));
-    console.log('PASS owner, isolation, leader grant, privilege denial, suspended old session');
+    await assertFails(setDoc(doc(db('maria'),requestPath),request));
+    console.log('PASS owner, isolation, leader grant, privilege denial, device request, suspended old session');
   } finally { await env.cleanup(); }
 })().catch(e=>{console.error(e);process.exitCode=1});
