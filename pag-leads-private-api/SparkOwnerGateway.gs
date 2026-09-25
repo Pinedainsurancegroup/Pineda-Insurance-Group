@@ -20,13 +20,27 @@ function doPost(e) {
     if (action === 'ping') return pagJson_({ok: true, version: 'PAG Leads Owner Gateway Spark v1'});
 
     const name = props.getProperty('SHEET_NAME') || 'Respuestas de formulario 1';
-    const sheet = SpreadsheetApp.openById(sheetId).getSheetByName(name);
-    if (!sheet) return pagJson_({ok: false, error: 'Fuente no disponible'});
-    return pagJson_({ok: true, leads: pagRecruitmentRows_(sheet.getDataRange().getDisplayValues())});
+    return pagJson_({ok: true, leads: pagRecruitmentRows_(pagSheetValues_(sheetId, name))});
   } catch (_) {
     // Never log an ID token or prospect data from an untrusted request.
     return pagJson_({ok: false, error: 'Fuente no disponible'});
   }
+}
+
+function pagSheetValues_(sheetId, name) {
+  // The Sheets REST API accepts a read-only OAuth scope. SpreadsheetApp.openById
+  // would request edit access to every spreadsheet in Juan's Google account.
+  const range = "'" + name.replace(/'/g, "''") + "'!A:ZZ";
+  const url = 'https://sheets.googleapis.com/v4/spreadsheets/' +
+    encodeURIComponent(sheetId) + '/values/' + encodeURIComponent(range) +
+    '?valueRenderOption=FORMATTED_VALUE';
+  const result = UrlFetchApp.fetch(url, {
+    method: 'get',
+    headers: {Authorization: 'Bearer ' + ScriptApp.getOAuthToken()},
+    muteHttpExceptions: true
+  });
+  if (result.getResponseCode() !== 200) throw new Error('Fuente no disponible');
+  return JSON.parse(result.getContentText()).values || [];
 }
 
 function pagOwnerAllowed_(ownerUid, idToken) {
