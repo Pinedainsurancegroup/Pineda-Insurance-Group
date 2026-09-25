@@ -54,7 +54,7 @@ function setConn(ok,msg){
 function over(){try{return JSON.parse(localStorage.getItem('pagov')||'{}')}catch{return {}}}
 function apply(a){const o=over();return a.map(x=>({...x,...(o[x.id]||{})}))}
 const pendingRecruitment=new Map();let requestSequence=0;
-function hasPrivateAccess(){return !!(st.set.url&&st.set.tok)||!!(window.PAGNative&&PAGNative.requestRecruitment)}
+function hasPrivateAccess(){return !!(st.set.url&&st.set.tok)||!!(window.PAGNative&&PAGNative.hasOwnerGateway&&PAGNative.hasOwnerGateway())}
 window.PAGNativeRecruitmentResult=(id,ok,payload)=>{const done=pendingRecruitment.get(id);if(!done)return;pendingRecruitment.delete(id);clearTimeout(done.timer);if(!ok){done.reject(new Error('Conexión privada no disponible'));return}try{done.resolve(JSON.parse(payload))}catch{done.reject(new Error('Respuesta privada no válida'))}};
 function privateGateway(action){return new Promise((resolve,reject)=>{const id=String(++requestSequence),timer=setTimeout(()=>{pendingRecruitment.delete(id);reject(new Error('Tiempo de espera agotado'))},20000);pendingRecruitment.set(id,{resolve,reject,timer});try{PAGNative.requestRecruitment(action,id)}catch(e){pendingRecruitment.delete(id);clearTimeout(timer);reject(e)}})}
 async function api(action){

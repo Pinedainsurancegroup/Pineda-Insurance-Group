@@ -5,10 +5,12 @@ on:
   push:
     paths:
       - 'firebase/**'
+      - 'pag-leads-private-api/SparkOwnerGateway*'
       - '.github/workflows/test-pag-leads-firestore.yml'
   pull_request:
     paths:
       - 'firebase/**'
+      - 'pag-leads-private-api/SparkOwnerGateway*'
       - '.github/workflows/test-pag-leads-firestore.yml'
 
 jobs:
@@ -16,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check no-cost owner gateway
+        run: node --test pag-leads-private-api/SparkOwnerGateway.test.cjs
       - uses: actions/setup-java@v5
         with:
           distribution: temurin

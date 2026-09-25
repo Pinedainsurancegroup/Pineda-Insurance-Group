@@ -20,9 +20,12 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.Source;
-import com.google.firebase.functions.FirebaseFunctions;
-
-import java.util.Collections;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -176,23 +179,119 @@ public class MainActivity extends Activity {
         pageReady = false;
     }
 
+    private URL gatewayUrl() {
+        try {
+            URL url = new URL(getString(R.string.pag_owner_gateway_url).trim());
+            if ("https".equals(url.getProtocol()) && "script.google.com".equals(url.getHost()) &&
+                    url.getPath().matches("/macros/s/[^/]+/exec")) return url;
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private void deliverRecruitment(String requestId, boolean ok, String payload) {
+        if (!ownerVerified || webView == null || !pageReady) return;
+        webView.evaluateJavascript("window.PAGNativeRecruitmentResult && " +
+                "window.PAGNativeRecruitmentResult(" + JSONObject.quote(requestId) + "," +
+                ok + "," + JSONObject.quote(payload) + ");", null);
+    }
+
+    // Apps Script ContentService redirects its JSON response to a Google content host.
+    // The ID token stays exclusively in the initial POST body, never in a redirect.
+    private String readGatewayResponse(HttpURLConnection initial) throws Exception {
+        HttpURLConnection connection = initial;
+        try {
+            for (int redirect = 0; redirect <= 2; redirect++) {
+                int status = connection.getResponseCode();
+                if (status == 200) {
+                    try (InputStream in = connection.getInputStream();
+                         ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+                        byte[] buffer = new byte[4096];
+                        int read;
+                        while ((read = in.read(buffer)) != -1) {
+                            if (output.size() + read > 2_000_000) throw new IllegalStateException("Response too large");
+                            output.write(buffer, 0, read);
+                        }
+                        return output.toString("UTF-8");
+                    }
+                }
+                if (status != 302 && status != 303) throw new IllegalStateException("Gateway unavailable");
+                URL next = new URL(connection.getHeaderField("Location"));
+                if (!"https".equals(next.getProtocol()) ||
+                        !("script.googleusercontent.com".equals(next.getHost()) ||
+                                "script.google.com".equals(next.getHost())))
+                    throw new IllegalStateException("Unexpected redirect");
+                connection.disconnect();
+                connection = (HttpURLConnection) next.openConnection();
+                connection.setInstanceFollowRedirects(false);
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(10000);
+            }
+            throw new IllegalStateException("Too many redirects");
+        } finally {
+            connection.disconnect();
+        }
+    }
+
     private class PAGNativeBridge {
+        @JavascriptInterface
+        public boolean hasOwnerGateway() {
+            return ownerVerified && gatewayUrl() != null;
+        }
+
         @JavascriptInterface
         public void requestRecruitment(String action, String requestId) {
             if (!ownerVerified || webView == null || !pageReady ||
                     !("ping".equals(action) || "list".equals(action)) ||
                     requestId == null || !requestId.matches("[0-9]{1,12}")) return;
-            FirebaseFunctions.getInstance("us-central1").getHttpsCallable("ownerRecruitment")
-                    .call(Collections.singletonMap("action", action))
-                    .addOnCompleteListener(MainActivity.this, task -> {
-                        if (!ownerVerified || webView == null || !pageReady) return;
-                        boolean ok = task.isSuccessful() && task.getResult() != null &&
-                                task.getResult().getData() instanceof Map;
-                        String payload = ok ? new JSONObject((Map<?, ?>) task.getResult().getData()).toString() : "{}";
-                        webView.evaluateJavascript("window.PAGNativeRecruitmentResult && " +
-                                "window.PAGNativeRecruitmentResult(" + JSONObject.quote(requestId) + "," +
-                                ok + "," + JSONObject.quote(payload) + ");", null);
+            URL endpoint = gatewayUrl();
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            if (endpoint == null || user == null) {
+                runOnUiThread(() -> deliverRecruitment(requestId, false, "{}"));
+                return;
+            }
+            final String uid = user.getUid();
+            user.getIdToken(true).addOnCompleteListener(MainActivity.this, task -> {
+                FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
+                if (!ownerVerified || current == null || !uid.equals(current.getUid()) ||
+                        !task.isSuccessful() || task.getResult() == null ||
+                        task.getResult().getToken() == null) {
+                    deliverRecruitment(requestId, false, "{}"); return;
+                }
+                final String token = task.getResult().getToken();
+                new Thread(() -> {
+                    String response = "{}";
+                    boolean ok = false;
+                    HttpURLConnection connection = null;
+                    try {
+                        connection = (HttpURLConnection) endpoint.openConnection();
+                        connection.setRequestMethod("POST");
+                        connection.setRequestProperty("Content-Type", "text/plain;charset=utf-8");
+                        connection.setConnectTimeout(10000);
+                        connection.setReadTimeout(10000);
+                        connection.setDoOutput(true);
+                        connection.setInstanceFollowRedirects(false);
+                        JSONObject request = new JSONObject();
+                        request.put("action", action);
+                        request.put("idToken", token);
+                        byte[] body = request.toString().getBytes(StandardCharsets.UTF_8);
+                        connection.setFixedLengthStreamingMode(body.length);
+                        try (OutputStream out = connection.getOutputStream()) { out.write(body); }
+                        response = readGatewayResponse(connection);
+                        ok = new JSONObject(response).optBoolean("ok", false);
+                    } catch (Exception ignored) {
+                        // No credentials, server data or private URL in logs.
+                    } finally {
+                        if (connection != null) connection.disconnect();
+                    }
+                    final boolean success = ok;
+                    final String payload = response;
+                    runOnUiThread(() -> {
+                        FirebaseUser latest = FirebaseAuth.getInstance().getCurrentUser();
+                        if (ownerVerified && latest != null && uid.equals(latest.getUid()))
+                            deliverRecruitment(requestId, success, payload);
                     });
+                }).start();
+            });
         }
 
         @JavascriptInterface
