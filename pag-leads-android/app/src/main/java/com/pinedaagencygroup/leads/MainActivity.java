@@ -15,6 +15,15 @@ import android.webkit.WebViewClient;
 
 import org.json.JSONObject;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.Source;
+
+import java.util.HashMap;
+import java.util.Map;
+
 public class MainActivity extends Activity {
     private static final int REQ_NOTIFICATIONS = 1401;
     private WebView webView;
@@ -29,7 +38,7 @@ public class MainActivity extends Activity {
             @Override public void onOwnerVerified() {
                 ownerVerified = true;
                 requestNotificationPermissionIfNeeded();
-                openRecruitment();
+                loadOperationalPreferences();
             }
 
             @Override public void onAccessRevoked() {
@@ -40,6 +49,45 @@ public class MainActivity extends Activity {
             }
         });
         setContentView(authGate.view());
+    }
+
+    private void loadOperationalPreferences() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) { ownerVerified = false; authGate.verify(); return; }
+        String uid = user.getUid();
+        FirebaseFirestore.getInstance().collection("users").document(uid)
+                .collection("preferences").document("operational").get(Source.SERVER)
+                .addOnCompleteListener(this, task -> {
+                    FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
+                    if (!ownerVerified || current == null || !uid.equals(current.getUid())) return;
+                    SharedPreferences prefs = getSharedPreferences("pag_native", MODE_PRIVATE);
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        if (task.getResult().exists()) {
+                            Boolean auto = task.getResult().getBoolean("autoRefresh");
+                            Boolean notifications = task.getResult().getBoolean("notifications");
+                            if (auto != null && notifications != null) {
+                                prefs.edit().putBoolean("auto", auto)
+                                        .putBoolean("notifications", notifications).apply();
+                            }
+                        } else {
+                            // First login transfers only nonsecret operational preferences.
+                            saveOperationalPreferences(prefs.getBoolean("auto", true),
+                                    prefs.getBoolean("notifications", true));
+                        }
+                    }
+                    openRecruitment();
+                });
+    }
+
+    private void saveOperationalPreferences(boolean auto, boolean notifications) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (!ownerVerified || user == null) return;
+        Map<String, Object> fields = new HashMap<>();
+        fields.put("autoRefresh", auto);
+        fields.put("notifications", notifications);
+        fields.put("updatedAt", FieldValue.serverTimestamp());
+        FirebaseFirestore.getInstance().collection("users").document(user.getUid())
+                .collection("preferences").document("operational").set(fields);
     }
 
     private void openRecruitment() {
@@ -150,6 +198,27 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void savePreferences(boolean autoRefresh, boolean notificationsEnabled) {
+            if (!ownerVerified) return;
+            SharedPreferences prefs = getSharedPreferences("pag_native", MODE_PRIVATE);
+            prefs.edit().putBoolean("auto", autoRefresh)
+                    .putBoolean("notifications", notificationsEnabled).apply();
+            saveOperationalPreferences(autoRefresh, notificationsEnabled);
+            runOnUiThread(() -> {
+                if (getResources().getBoolean(R.bool.pag_qa_build)) return;
+                if (notificationsEnabled && !prefs.getString("url", "").isEmpty()
+                        && !prefs.getString("token", "").isEmpty()) {
+                    requestNotificationPermissionIfNeeded();
+                    Intent monitor = new Intent(MainActivity.this, LeadMonitorService.class);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(monitor);
+                    else startService(monitor);
+                } else {
+                    stopService(new Intent(MainActivity.this, LeadMonitorService.class));
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void saveSettings(String url, String token, boolean autoRefresh, boolean notificationsEnabled) {
             if (!ownerVerified) return;
             SharedPreferences p = getSharedPreferences("pag_native", MODE_PRIVATE);
@@ -161,6 +230,7 @@ public class MainActivity extends Activity {
                 .apply();
 
             FirebasePushManager.syncRegistration(MainActivity.this);
+            saveOperationalPreferences(autoRefresh, notificationsEnabled);
 
             runOnUiThread(() -> {
                 if (notificationsEnabled && !getResources().getBoolean(R.bool.pag_qa_build)) {
