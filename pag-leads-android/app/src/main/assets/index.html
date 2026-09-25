@@ -29,7 +29,7 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 const dig=s=>String(s||'').replace(/\D/g,'');
 function fmt(i){try{return new Intl.DateTimeFormat('es-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(i))}catch{return i||''}}
-let reconnectTimer=null,connecting=false,unlockTaps=0,unlockTimer=null;
+let reconnectTimer=null,connecting=false,reconnectFailures=0,unlockTaps=0,unlockTimer=null;
 function nativeSync(){if(!st.set.url||!st.set.tok)return;try{if(window.PAGNative&&PAGNative.saveSettings)PAGNative.saveSettings(st.set.url,st.set.tok,st.set.auto!==false,st.set.notify!==false)}catch{}}
 function readNativeSet(){try{if(window.PAGNative&&PAGNative.getSettingsJson)return JSON.parse(PAGNative.getSettingsJson()||'{}')}catch{}return {}}
 function readLocalSet(){try{return JSON.parse(localStorage.getItem('pagset12')||'{}')}catch{return {}}}
@@ -62,7 +62,7 @@ async function api(action){
   const r=await fetch(st.set.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,token:st.set.tok}),cache:'no-store'});const j=await r.json();if(!r.ok||j.ok===false)throw new Error(j.error||'Conexión rechazada');return j
 }
 async function getLeads(){const j=await api('list');return apply(j.leads||[])}
-function scheduleReconnect(){clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>refresh({ping:true,silent:true}),10000)}
+function scheduleReconnect(){clearTimeout(reconnectTimer);const gateway=!(st.set.url&&st.set.tok);const delay=gateway?Math.min(300000,30000*2**Math.min(reconnectFailures++,4)):10000;reconnectTimer=setTimeout(()=>refresh({ping:!gateway,silent:true}),delay)}
 async function refresh(opts={}){
   if(connecting)return;
   if(!hasPrivateAccess()){
@@ -76,7 +76,7 @@ async function refresh(opts={}){
   try{
     let ping=null;
     if(opts.ping!==false)ping=await api('ping');
-    st.leads=await getLeads();render();
+    st.leads=await getLeads();reconnectFailures=0;render();
     const when=new Date().toLocaleTimeString('es-US',{hour:'numeric',minute:'2-digit'});
     sync.textContent='Conexión privada activa · '+st.leads.length+' lead'+(st.leads.length===1?'':'s')+' · '+when;
     setConn(true,(ping&&ping.version?ping.version:'PAG Leads Private API')+' · última conexión '+when);
@@ -140,6 +140,6 @@ async function autoStart(){try{if(window.PAGNative&&PAGNative.getBuildLabel)buil
 window.PAGAutoStart=autoStart;
 window.addEventListener('online',()=>refresh({ping:true,silent:true}));
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh({ping:true,silent:true})});
-autoStart();setInterval(()=>{if(st.set.auto)refresh({ping:true,silent:true})},60000);
+autoStart();setInterval(()=>{if(st.set.auto&&(!reconnectFailures||st.set.url&&st.set.tok))refresh({ping:!!(st.set.url&&st.set.tok),silent:true})},60000);
 </script>
 </body></html>
