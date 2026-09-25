@@ -28,6 +28,7 @@ public class MainActivity extends Activity {
         authGate = new PAGAuthGate(this, new PAGAuthGate.Listener() {
             @Override public void onOwnerVerified() {
                 ownerVerified = true;
+                requestNotificationPermissionIfNeeded();
                 openRecruitment();
             }
 
