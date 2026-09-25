@@ -46,6 +46,23 @@ service cloud.firestore {
         // FCM tokens and device authorization are managed by a trusted server.
         allow write: if false;
       }
+      // A client may submit its current FCM token for later administrative
+      // approval. This request is never an authorized device or a send target.
+      match /deviceRequests/{deviceId} {
+        allow read: if active() && (owner() || request.auth.uid == uid);
+        allow create, update: if active() && request.auth.uid == uid &&
+          deviceId.size() >= 16 && deviceId.size() <= 80 &&
+          request.resource.data.keys().hasAll(['fcmToken', 'platform', 'appVersion', 'updatedAt']) &&
+          request.resource.data.keys().hasOnly(['fcmToken', 'platform', 'appVersion', 'updatedAt']) &&
+          request.resource.data.fcmToken is string &&
+          request.resource.data.fcmToken.size() >= 20 &&
+          request.resource.data.fcmToken.size() <= 4096 &&
+          request.resource.data.platform == 'android' &&
+          request.resource.data.appVersion is string &&
+          request.resource.data.appVersion.size() <= 40 &&
+          request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
     }
 
     // Recruitment stays owner-only. Sheets/Apps Script remains the source.
