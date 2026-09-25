@@ -1,24 +1,24 @@
 # PAG Leads v1.8 — Firebase architecture (draft, 2026-09-24)
 
-Status: Firestore created in nam5; security rules published and tested in the local emulator. Android Google sign-in gate and public Firebase client configuration compiled in GitHub Actions, but login and device behavior remain untested. v1.7 remains the production app. Do not install v1.8 over it until release checks pass.
+Status: Firestore created in nam5; current security rules published and tested in the local emulator. Juan signed in with Google on the separate QA installation and passed the owner gate. That QA installation lacks the private Apps Script connection and has not loaded the existing leads. FCM registration, a real push, and release update tests remain pending. v1.7 remains the production app.
 
 ## Current system and rollout
 
 - Google Form → private Google Sheet → private Apps Script → PAG Leads remains the recruitment source. No client FE import or dual-write has been enabled.
-- Firebase project `pag-leads-8c6ef` and Android app `com.pinedaagencygroup.leads` registered. Google provider enabled. Release SHA-1 and SHA-256 were read from the v1.7 HOTFIX APK certificate and registered in Firebase. The private stable signing identity was recovered from a private backup, and its certificate matches v1.7; the owner Auth UID remains unverified. Firestore `(default)` Standard edition in `nam5 (United States)` is created and the latest security rules are published. The owner Auth UID and live release validation remain pending.
+- Firebase project `pag-leads-8c6ef` and Android app `com.pinedaagencygroup.leads` registered. Google provider enabled. Release SHA-1 and SHA-256 match the v1.7 HOTFIX certificate and are registered in Firebase. The private stable signing identity was recovered from a private backup and kept outside GitHub. Juan's owner Auth UID is verified in the separate QA app; live release validation remains pending.
 - Existing v1.8 FCM scaffolding requires server-side authenticated registration, administrative credentials outside GitHub, and a real-device push test. The public Firebase client IDs are populated. Keep the one-minute monitor. Do not ship v1.8 as STABLE before stable signing and device tests.
 
 ## Access and data model
 
 `users/{uid}`: `role` (`owner`, future `leader` or `agent`), `active`, `suspended`, `authorizedTeamIds` (empty by default). The initial owner profile must be provisioned through a trusted administrative channel after Juan signs in and the UID is verified. No client can create or promote a profile. Suspending means server changes `suspended: true`; every Firestore read checks the current profile, including an old signed-in session. User deletion is unnecessary.
 
-`users/{uid}/preferences/operational`: synchronized nonsecret settings. `users/{uid}/devices/{deviceId}`: server-managed device registration and authorization; tokens never appear in public code or notification payloads.
+`users/{uid}/preferences/operational`: synchronized nonsecret settings. `users/{uid}/deviceRequests/{deviceId}`: a signed-in active user may write only their own FCM registration request (token, platform, version, server timestamp); another user cannot read it. This request never grants authorization or triggers a send. `users/{uid}/devices/{deviceId}` remains server-managed authorization and must not be writable by a client. Tokens never appear in public code or notification payloads. A trusted sender must check the current active profile and authorized device on every send.
 
 `recruitment/{sourceLeadId}`: optional future mirror, owner-only. Source IDs must be stable and deduplicated; no app-side import of real recruitment records until source mapping is checked. Recruitment and FE clients are separate top-level collections.
 
 `clients/{clientId}`: one stable customer ID; `classification: LEAD | B_LEAD`; `assignedTo` UID or null; `teamId` or null; `status`, created/updated dates. Only a trusted admin backend creates or edits the canonical record. `clients/{clientId}/assignments/{eventId}` records each assignment, return to inventory, classification change and reassignment as append-only events, including `actorUid`, previous and next assignee/classification and server timestamp. `clients/{clientId}/activity/{eventId}` records notes, status and results with author UID and server timestamp; clients cannot alter previous events. The UI must display latest activity without erasing history when assignedTo changes. A former agent loses access to the customer after reassignment; owner sees full history. Leader team access remains disabled unless owner adds an authorized team ID.
 
-Rules in `firestore.rules` deny all unlisted paths and client writes to users, roles, assignments and canonical clients. They are deployed to Firestore and pass synthetic owner/agent/leader, query, history, privilege escalation and stale-session suspension tests in `firebase/tests/rules.test.cjs`, including GitHub Actions. A real authenticated device has not yet been tested. Firestore queries must carry assignment/team constraints; rules do not filter query results.
+Rules in `firestore.rules` deny all unlisted paths and client writes to users, roles, assignments and canonical clients. The currently deployed rules passed synthetic owner/agent/leader, query, history, privilege escalation and stale-session suspension tests in `firebase/tests/rules.test.cjs`. The new `deviceRequests` path is pending emulator and live deployment tests. Juan's real account has passed the server owner check in QA. Firestore queries must carry assignment/team constraints; rules do not filter query results.
 
 ## Local overlay migration
 
