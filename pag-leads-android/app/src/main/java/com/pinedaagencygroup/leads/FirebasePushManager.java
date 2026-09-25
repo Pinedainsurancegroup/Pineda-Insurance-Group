@@ -8,25 +8,17 @@ import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Source;
-import com.google.android.gms.tasks.Tasks;
+import com.google.firebase.firestore.FieldValue;
 
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.TimeUnit;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public final class FirebasePushManager {
     private static final String PREFS = "pag_native";
     private static final String KEY_PENDING = "pending_fcm_token";
+    private static final String KEY_DEVICE_ID = "firebase_device_id";
     private static volatile boolean initialized = false;
 
     private FirebasePushManager() {}
@@ -52,7 +44,7 @@ public final class FirebasePushManager {
         SharedPreferences p = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String pending = p.getString(KEY_PENDING, "");
         if (pending != null && !pending.trim().isEmpty()) {
-            registerAsync(app, pending.trim());
+            registerFirestoreAsync(app, pending.trim());
         } else {
             FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
                 if (!task.isSuccessful() || task.getResult() == null) return;
@@ -66,7 +58,7 @@ public final class FirebasePushManager {
         Context app = context.getApplicationContext();
         app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit().putString(KEY_PENDING, fcmToken.trim()).apply();
-        registerAsync(app, fcmToken.trim());
+        registerFirestoreAsync(app, fcmToken.trim());
     }
 
     public static boolean ensureInitialized(Context context) {
@@ -100,64 +92,30 @@ public final class FirebasePushManager {
         }
     }
 
-    private static void registerAsync(Context context, String fcmToken) {
+    private static void registerFirestoreAsync(Context context, String fcmToken) {
+        // This is only a request; a trusted administrator must approve devices
+        // before a sender may use them. Never send tokens to the legacy API.
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
         SharedPreferences p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        String endpoint = p.getString("url", "");
-        String apiToken = p.getString("token", "");
-        if (endpoint == null || endpoint.trim().isEmpty() ||
-            apiToken == null || apiToken.trim().isEmpty()) {
-            return;
+        String deviceId = p.getString(KEY_DEVICE_ID, "");
+        if (deviceId == null || deviceId.isEmpty()) {
+            deviceId = UUID.randomUUID().toString();
+            p.edit().putString(KEY_DEVICE_ID, deviceId).apply();
         }
-
-        new Thread(() -> {
-            try {
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                if (user == null) return;
-                DocumentSnapshot profile = Tasks.await(FirebaseFirestore.getInstance()
-                        .collection("users").document(user.getUid()).get(Source.SERVER),
-                        20, TimeUnit.SECONDS);
-                if (!profile.exists() || !"owner".equals(profile.getString("role")) ||
-                        !Boolean.TRUE.equals(profile.getBoolean("active")) ||
-                        Boolean.TRUE.equals(profile.getBoolean("suspended"))) return;
-                JSONObject body = new JSONObject();
-                body.put("action", "registerDevice");
-                body.put("token", apiToken.trim());
-                body.put("deviceToken", fcmToken);
-                body.put("platform", "android");
-                body.put("appVersion", "1.8");
-
-                JSONObject response = new JSONObject(post(endpoint.trim(), body.toString()));
-                if (response.optBoolean("ok", false)) {
-                    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                            .edit().remove(KEY_PENDING).apply();
-                }
-            } catch (Exception ignored) {}
-        }, "PAG-FCM-register").start();
-    }
-
-    private static String post(String endpoint, String json) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(endpoint).openConnection();
-        c.setConnectTimeout(15000);
-        c.setReadTimeout(20000);
-        c.setInstanceFollowRedirects(true);
-        c.setRequestMethod("POST");
-        c.setRequestProperty("Content-Type", "text/plain;charset=utf-8");
-        c.setRequestProperty("Accept", "application/json");
-        c.setDoOutput(true);
-
-        try (OutputStream os = c.getOutputStream()) {
-            os.write(json.getBytes(StandardCharsets.UTF_8));
-        }
-
-        int code = c.getResponseCode();
-        InputStream is = code >= 200 && code < 400 ? c.getInputStream() : c.getErrorStream();
-        if (is == null) throw new IllegalStateException("Sin respuesta");
-
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = br.readLine()) != null) sb.append(line);
-        }
-        return sb.toString();
+        Map<String, Object> request = new HashMap<>();
+        request.put("fcmToken", fcmToken);
+        request.put("platform", "android");
+        request.put("appVersion", "1.8");
+        request.put("updatedAt", FieldValue.serverTimestamp());
+        FirebaseFirestore.getInstance().collection("users").document(user.getUid())
+                .collection("deviceRequests").document(deviceId).set(request)
+                .addOnSuccessListener(unused -> {
+                    SharedPreferences current = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                    // Do not discard a newer token delivered while the write was pending.
+                    if (fcmToken.equals(current.getString(KEY_PENDING, ""))) {
+                        current.edit().remove(KEY_PENDING).apply();
+                    }
+                });
     }
 }
