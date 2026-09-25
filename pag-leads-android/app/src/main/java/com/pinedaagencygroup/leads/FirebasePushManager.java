@@ -9,6 +9,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreSettings;
 import com.google.firebase.firestore.FieldValue;
 
 import java.util.HashMap;
@@ -20,15 +21,13 @@ public final class FirebasePushManager {
     private static final String KEY_PENDING = "pending_fcm_token";
     private static final String KEY_DEVICE_ID = "firebase_device_id";
     private static volatile boolean initialized = false;
+    private static boolean firestoreConfigured = false;
 
     private FirebasePushManager() {}
 
     public static void initialize(Context context) {
         Context app = context.getApplicationContext();
-        if (!initialized) {
-            initialized = initFirebase(app);
-        }
-        if (!initialized) return;
+        if (!ensureInitialized(app)) return;
 
         FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
             if (!task.isSuccessful() || task.getResult() == null) return;
@@ -38,8 +37,7 @@ public final class FirebasePushManager {
 
     public static void syncRegistration(Context context) {
         Context app = context.getApplicationContext();
-        if (!initialized) initialized = initFirebase(app);
-        if (!initialized) return;
+        if (!ensureInitialized(app)) return;
 
         SharedPreferences p = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String pending = p.getString(KEY_PENDING, "");
@@ -58,12 +56,24 @@ public final class FirebasePushManager {
         Context app = context.getApplicationContext();
         app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit().putString(KEY_PENDING, fcmToken.trim()).apply();
-        registerFirestoreAsync(app, fcmToken.trim());
+        if (ensureInitialized(app)) registerFirestoreAsync(app, fcmToken.trim());
     }
 
-    public static boolean ensureInitialized(Context context) {
+    public static synchronized boolean ensureInitialized(Context context) {
         if (!initialized) initialized = initFirebase(context.getApplicationContext());
-        return initialized;
+        if (!initialized) return false;
+        if (!firestoreConfigured) {
+            try {
+                // Sensitive user data must not persist in Firestore's local disk cache.
+                FirebaseFirestore.getInstance().setFirestoreSettings(
+                        new FirebaseFirestoreSettings.Builder().setPersistenceEnabled(false).build());
+                firestoreConfigured = true;
+            } catch (IllegalStateException e) {
+                // Fail closed if another component started Firestore before this setting.
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean initFirebase(Context context) {
