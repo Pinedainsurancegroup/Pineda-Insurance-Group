@@ -124,6 +124,12 @@ public class MainActivity extends Activity {
 
     private class PAGNativeBridge {
         @JavascriptInterface
+        public String getBuildLabel() {
+            return getResources().getBoolean(R.bool.pag_qa_build)
+                    ? "PAG LEADS v1.8 QA" : "PAG LEADS v1.8";
+        }
+
+        @JavascriptInterface
         public String getSettingsJson() {
             if (!ownerVerified) return "{}";
             SharedPreferences p = getSharedPreferences("pag_native", MODE_PRIVATE);
