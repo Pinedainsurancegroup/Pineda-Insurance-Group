@@ -188,9 +188,9 @@ public class MainActivity extends Activity {
         return null;
     }
 
-    private void deliverRecruitment(String requestId, boolean ok, String payload) {
-        if (!ownerVerified || webView == null || !pageReady) return;
-        webView.evaluateJavascript("window.PAGNativeRecruitmentResult && " +
+    private void deliverRecruitment(WebView requestView, String requestId, boolean ok, String payload) {
+        if (!ownerVerified || webView != requestView || !pageReady) return;
+        requestView.evaluateJavascript("window.PAGNativeRecruitmentResult && " +
                 "window.PAGNativeRecruitmentResult(" + JSONObject.quote(requestId) + "," +
                 ok + "," + JSONObject.quote(payload) + ");", null);
     }
@@ -243,10 +243,11 @@ public class MainActivity extends Activity {
             if (!ownerVerified || webView == null || !pageReady ||
                     !("ping".equals(action) || "list".equals(action)) ||
                     requestId == null || !requestId.matches("[0-9]{1,12}")) return;
+            final WebView requestView = webView;
             URL endpoint = gatewayUrl();
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             if (endpoint == null || user == null) {
-                runOnUiThread(() -> deliverRecruitment(requestId, false, "{}"));
+                runOnUiThread(() -> deliverRecruitment(requestView, requestId, false, "{}"));
                 return;
             }
             final String uid = user.getUid();
@@ -255,7 +256,7 @@ public class MainActivity extends Activity {
                 if (!ownerVerified || current == null || !uid.equals(current.getUid()) ||
                         !task.isSuccessful() || task.getResult() == null ||
                         task.getResult().getToken() == null) {
-                    deliverRecruitment(requestId, false, "{}"); return;
+                    deliverRecruitment(requestView, requestId, false, "{}"); return;
                 }
                 final String token = task.getResult().getToken();
                 new Thread(() -> {
@@ -288,7 +289,7 @@ public class MainActivity extends Activity {
                     runOnUiThread(() -> {
                         FirebaseUser latest = FirebaseAuth.getInstance().getCurrentUser();
                         if (ownerVerified && latest != null && uid.equals(latest.getUid()))
-                            deliverRecruitment(requestId, success, payload);
+                            deliverRecruitment(requestView, requestId, success, payload);
                     });
                 }).start();
             });
