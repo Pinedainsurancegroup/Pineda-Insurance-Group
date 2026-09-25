@@ -13,18 +13,21 @@ function build(profileResponse) {
     PropertiesService: {getScriptProperties: () => ({getProperty: key => ({
       OWNER_UID: 'owner-uid', SPREADSHEET_ID: 'sheet-id', SHEET_NAME: 'Answers'
     })[key]})},
+    ScriptApp: {getOAuthToken: () => 'read-only-oauth-token'},
     UrlFetchApp: {fetch: (url, request) => {
-      authChecks++;
-      assert.match(url, /\/users\/owner-uid$/);
-      assert.equal(request.headers.Authorization, 'Bearer ' + TEST_TOKEN);
-      return {getResponseCode: () => profileResponse.code,
-        getContentText: () => JSON.stringify(profileResponse.data || {})};
-    }},
-    SpreadsheetApp: {openById: () => {
+      if (url.includes('firestore.googleapis.com')) {
+        authChecks++;
+        assert.match(url, /\/users\/owner-uid$/);
+        assert.equal(request.headers.Authorization, 'Bearer ' + TEST_TOKEN);
+        return {getResponseCode: () => profileResponse.code,
+          getContentText: () => JSON.stringify(profileResponse.data || {})};
+      }
       sheetReads++;
-      return {getSheetByName: () => ({getDataRange: () => ({getDisplayValues: () => [
+      assert.match(url, /sheets.googleapis.com\/v4\/spreadsheets\/sheet-id\/values\//);
+      assert.equal(request.headers.Authorization, 'Bearer read-only-oauth-token');
+      return {getResponseCode: () => 200, getContentText: () => JSON.stringify({values: [
         ['Marca temporal', 'Nombre completo / Full name'], ['1/2/2026 12:00', 'Ana']
-      ]})})};
+      ]})};
     }}
   });
   vm.runInContext(fs.readFileSync(__dirname + '/SparkOwnerGateway.gs', 'utf8'), context);
