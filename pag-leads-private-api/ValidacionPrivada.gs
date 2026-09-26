@@ -10,5 +10,9 @@ function pagVerificarFuente() {
   const headers = values[0] || [];
   if (!required.every(h => headers.includes(h))) throw new Error('Encabezados no coinciden');
   const leads = pagRecruitmentRows_(values);
-  console.log(JSON.stringify({ok: true, sourceReadOnly: true, recruitmentCount: leads.length}));
+  const stable = leads.map(x => x.stableId).filter(Boolean);
+  if (stable.length !== leads.length || new Set(stable).size !== leads.length)
+    throw new Error('Identidad permanente incompleta o duplicada');
+  console.log(JSON.stringify({ok: true, sourceReadOnly: true, recruitmentCount: leads.length,
+    stableIdentityCount: stable.length}));
 }

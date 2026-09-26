@@ -63,3 +63,18 @@ test('active owner gets only recruitment records after Firebase rule check', () 
   assert.equal(output.leads[0].createdAt, '2026-09-21T19:30:09');
   assert.deepEqual(g.counts(), [1, 1]);
 });
+
+test('permanent IDs survive reordering; duplicate or missing IDs disable sync only', () => {
+  const c = vm.createContext({});
+  vm.runInContext(fs.readFileSync(__dirname + '/SparkOwnerGateway.gs', 'utf8'), c);
+  const h = ['Marca temporal','Nombre completo / Full name','PAG_LEAD_ID'];
+  const a = ['26/09/2026 00:00:00','Synthetic A','r_11111111-1111-4111-8111-111111111111'];
+  const b = ['26/09/2026 00:01:00','Synthetic B','r_22222222-2222-4222-8222-222222222222'];
+  const first = c.pagRecruitmentRows_([h,a,b]), reversed = c.pagRecruitmentRows_([h,b,a]);
+  assert.equal(first[0].stableId, reversed[1].stableId);
+  assert.equal(first[0].id, 'PAG-A-2');
+  assert.equal(reversed[1].id, 'PAG-A-3');
+  const bad = c.pagRecruitmentRows_([h,a,[...b.slice(0,2),a[2]],['','Synthetic C','']]);
+  assert.equal(bad.length, 3);
+  assert.ok(bad.every(x => x.stableId === ''));
+});

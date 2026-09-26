@@ -1,3 +1,22 @@
+# PAG Leads v1.8 — current QA12 architecture (2026-09-26)
+
+The following current status supersedes the historical September 24 draft preserved below. v1.7 HOTFIX remains the stable installed app; QA12 is a separate package, not a stable promotion.
+
+- Firebase remains Spark in nam5, without Blaze, paid Cloud Functions or new service-account keys. Juan is the only active owner; no agents/leaders or real FE customers were created.
+- The private Owner Gateway is deployed at its existing URL (deployment version 3, September 26). It reads the original private recruitment Sheet after a current Firebase owner check. QA11 source loading and fast return were confirmed by Juan; the gateway preserves the old row-based `id` for compatibility and adds `stableId`.
+- Seven existing recruitment rows now have unique `r_` UUIDs in the appended `PAG_LEAD_ID` column. Answers are not rewritten. A separate identity handler was added to the existing private Spark sender using its already authorized scopes; the two notification handlers remain unchanged. Three triggers exist: form push, pending push retry and form identity assignment. Source registration contains no contact PII. Never sort only part of the Sheet; preserve each complete row and its ID.
+- `recruitmentSources/{stableId}` is admin-written (`enabled`, source hash, creation time). `recruitmentState/{stableId}` holds only owner operational status/note/revision/update metadata. Its append-only `activity` subcollection records actor, device, before/after values and server time. No duplicate Firestore mirror of form answers is created.
+- QA12 uses authenticated Android Firestore transactions and server-confirmed listeners. Rules require an active non-suspended owner, a registered source, fixed fields/statuses and an atomic matching history event for every state update. Revision checks detect concurrent edits; the user reviews before replacing a newer version. Anonymous, agent and leader access is denied for recruitment; role/device administration remains client-denied.
+- Existing local `pagov` data is preserved. Import requires review of each prospect/name/note because legacy row IDs cannot prove historic identity. Bindings freeze only after that review. A deterministic event ID makes retries idempotent; an existing cloud state is preserved while the local snapshot is added as a backup event. Missing/unmatched local entries remain local. Prior transitions that were never recorded cannot be reconstructed.
+- QA12 currently migrates data from the QA installation. v1.7 has a separate sandbox and is untouched; its local notes must be reviewed during a later stable-package update. Do not claim they have already migrated.
+- Source PII is held in the existing private Sheet; leads remain memory-only in QA. Existing local notes and drafts remain private app-local data until import. Firestore disk persistence stays disabled; returning to the app still requires current owner authorization. No offline access promise or remote erasure promise is made.
+- Preferences use the existing owner path. Push targets the one administratively approved QA phone; a second phone may read/sync after signing into Juan's account but needs separate approval to receive push. Token rotation approval is unchanged.
+- Emulator tests verify two same-owner sessions, live updates, stale-revision conflicts, idempotent import, history immutability, source registration and suspension of an existing session. Build and rules CI succeeded for `5cc41bbe72cdf8c2c5b1814411305ebee4a16769`. Real unauthenticated requests are denied. Phone QA12 import/history and two physical phones remain pending.
+
+See [QA12 synchronization and rollback](RECRUITMENT_SYNC_QA12.md). Latest authoritative session evidence is in Juan's PAG implementation register.
+
+## Historical architecture snapshot — superseded status, retained for history
+
 # PAG Leads v1.8 — Firebase architecture (draft, 2026-09-24)
 
 Status: Firestore created in nam5; security rules published and tested in the emulator. Juan signed in with Google on the separate QA installation and passed the owner gate. A generic Firebase Console push reached his Android phone on 2026-09-25; this does not verify an automatic sender. The QA installation lacks the private Apps Script connection and has not loaded the existing leads. Release update tests remain pending. v1.7 remains the production app.
