@@ -26,7 +26,7 @@ function build(profileResponse) {
       assert.match(url, /sheets.googleapis.com\/v4\/spreadsheets\/sheet-id\/values\//);
       assert.equal(request.headers.Authorization, 'Bearer read-only-oauth-token');
       return {getResponseCode: () => 200, getContentText: () => JSON.stringify({values: [
-        ['Marca temporal', 'Nombre completo / Full name'], ['1/2/2026 12:00', 'Ana']
+        ['Marca temporal', 'Nombre completo / Full name'], ['21/09/2026 19:30:09', 'Ana']
       ]})};
     }}
   });
@@ -60,5 +60,6 @@ test('active owner gets only recruitment records after Firebase rule check', () 
   assert.equal(output.ok, true);
   assert.equal(output.leads.length, 1);
   assert.equal(output.leads[0].type, 'agent');
+  assert.equal(output.leads[0].createdAt, '2026-09-21T19:30:09');
   assert.deepEqual(g.counts(), [1, 1]);
 });
