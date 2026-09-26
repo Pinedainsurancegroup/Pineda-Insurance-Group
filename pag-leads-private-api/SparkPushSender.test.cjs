@@ -48,6 +48,7 @@ function sender(options = {}) {
   };
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync(__dirname + '/SparkPushSender.gs', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync(__dirname + '/SparkCandidateProbe.gs', 'utf8'), sandbox);
   const event = {source: {getId: () => props.SPREADSHEET_ID}, range: {getRow: () => 6,
     getSheet: () => ({getName: () => props.SHEET_NAME, getSheetId: () => 1})},
     values: ['26/09/2026 10:00:00', 'DO-NOT-SEND-PRIVATE-NAME', '555-PII']};
@@ -123,4 +124,56 @@ test('private phone probe uses real sending checks and daily cap without creatin
   assert.throws(() => c.sandbox.pagSendQaTestNotification(), /NOT_READY/);
   const d = sender();d.props.PUSH_DAILY = JSON.stringify({day: new Date().toISOString().slice(0, 10), used: 500});
   d.sandbox.pagSendQaTestNotification();assert.equal(d.sends.length, 0);
+});
+
+test('candidate probe requires separate explicit configuration and preserves QA routing', () => {
+  const a = sender();
+  assert.throws(() => a.sandbox.pagSendCandidateTestNotification(), /CANDIDATE_CONFIG/);
+  a.props.CANDIDATE_DEVICE_ID = '12345678-1234-1234-1234-123456789abc';
+  const qa = a.props.QA_DEVICE_ID;
+  a.sandbox.pagVerifyCandidatePush();
+  assert.equal(a.sends[0].validate_only, true);
+  a.sandbox.pagSendCandidateTestNotification();
+  assert.equal(a.sends[1].validate_only, false);
+  assert.equal(JSON.parse(a.props.CANDIDATE_TEST_LAST).state, 'ACCEPTED');
+  assert.equal(a.props.QA_DEVICE_ID, qa);
+  assert.equal(Object.keys(a.props).filter(k => k.startsWith('PUSH_EVENT_')).length, 0);
+  assert.equal(a.triggers.length, 0);
+  assert.equal(a.writes.length, 0);
+  a.props.QA_DEVICE_ID = a.props.CANDIDATE_DEVICE_ID;
+  assert.throws(() => a.sandbox.pagCandidateConfig_(), /CANDIDATE_CONFIG/);
+});
+
+test('candidate approval is conditional and scoped to candidate document', () => {
+  const id = '12345678-1234-1234-1234-123456789abc';
+  const a = sender({unapproved: true});a.props.CANDIDATE_DEVICE_ID = id;
+  a.sandbox.pagApproveCandidateDevice();
+  assert.equal(a.writes.length, 1);
+  assert.ok(a.writes[0].url.endsWith('/devices/' + id + '?currentDocument.exists=false'));
+  assert.equal(a.writes[0].body.fields.fcmToken, undefined);
+  const b = sender();b.props.CANDIDATE_DEVICE_ID = id;
+  assert.throws(() => b.sandbox.pagApproveCandidateDevice(), /ALREADY_EXISTS/);
+  for (const options of [{suspended:true}, {active:false}, {role:'agent'}]) {
+    const c = sender({...options, unapproved:true});c.props.CANDIDATE_DEVICE_ID=id;
+    assert.throws(() => c.sandbox.pagApproveCandidateDevice(), /OWNER_INACTIVE/);
+    assert.equal(c.writes.length,0);
+  }
+});
+
+test('candidate probe blocks denied targets and respects global quota; retries cannot target QA', () => {
+  const id = '12345678-1234-1234-1234-123456789abc';
+  for (const options of [{suspended:true}, {active:false}, {role:'agent'}, {unapproved:true},
+    {changedToken:true}, {enabled:false}, {notifications:false}]) {
+    const a=sender(options);a.props.CANDIDATE_DEVICE_ID=id;
+    a.sandbox.pagSendCandidateTestNotification();assert.equal(a.sends.length,0);
+  }
+  const b=sender();b.props.CANDIDATE_DEVICE_ID=id;
+  b.props.PUSH_DAILY=JSON.stringify({day:new Date().toISOString().slice(0,10),used:500});
+  b.sandbox.pagSendCandidateTestNotification();assert.equal(b.sends.length,0);
+  b.props.PUSH_ENABLED='false';
+  assert.throws(() => b.sandbox.pagSendCandidateTestNotification(), /NOT_READY/);
+  const c=sender({fcmStatus:503});c.props.CANDIDATE_DEVICE_ID=id;
+  c.sandbox.pagSendCandidateTestNotification();c.sandbox.pagRetryPendingPush();
+  assert.equal(c.sends.length,1);
+  assert.equal(JSON.parse(c.props.CANDIDATE_TEST_LAST).state,'RETRY');
 });
