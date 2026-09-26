@@ -2,4 +2,6 @@
 <resources>
     <!-- Public Firebase app ID for the side-by-side QA package. -->
     <string name="pag_firebase_application_id">1:880973015225:android:b39a6142f9bcb8a3b21368</string>
+    <!-- Public endpoint; each request requires the active owner's Firebase session. -->
+    <string name="pag_owner_gateway_url">https://script.google.com/macros/s/AKfycby9qDv7CLzYb9OzxJPiSwZ8Z69S2E1SRgBDS3KD2ORGbuY9D4wkIClRQNiZaDSckCJp/exec</string>
 </resources>
