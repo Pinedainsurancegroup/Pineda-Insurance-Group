@@ -109,3 +109,18 @@ test('validation sends only validate_only and trigger setup is idempotent', () =
   const a = sender();a.sandbox.pagVerifyPushSender();assert.equal(a.sends[0].validate_only, true);
   a.sandbox.pagInstallPushTriggers();a.sandbox.pagInstallPushTriggers();assert.equal(a.triggers.length, 2);
 });
+
+test('private phone probe uses real sending checks and daily cap without creating leads', () => {
+  const a = sender();a.sandbox.pagSendQaTestNotification();
+  assert.equal(a.sends.length, 1);assert.equal(a.sends[0].validate_only, false);
+  assert.equal(a.writes.length, 0);
+  const key = Object.keys(a.props).find(k => k.startsWith('PUSH_EVENT_'));
+  assert.equal(JSON.parse(a.props[key]).test, true);
+  for (const option of [{suspended: true}, {unapproved: true}, {changedToken: true}, {notifications: false}]) {
+    const b = sender(option);b.sandbox.pagSendQaTestNotification();assert.equal(b.sends.length, 0);
+  }
+  const c = sender();c.props.PUSH_ENABLED = 'false';
+  assert.throws(() => c.sandbox.pagSendQaTestNotification(), /NOT_READY/);
+  const d = sender();d.props.PUSH_DAILY = JSON.stringify({day: new Date().toISOString().slice(0, 10), used: 500});
+  d.sandbox.pagSendQaTestNotification();assert.equal(d.sends.length, 0);
+});

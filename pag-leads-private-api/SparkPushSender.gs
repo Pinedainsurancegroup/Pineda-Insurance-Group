@@ -96,6 +96,23 @@ function pagVerifyPushSender() {
   console.log('PAG_PUSH_VALIDATE_' + pagPushSend_(c, target, 'validation', true));
 }
 
+// Private administrative phone test: same checks, cap and retry path as real events.
+// Sends a generic recruitment notification but creates no lead or spreadsheet row.
+function pagSendQaTestNotification() {
+  const c = pagPushConfig_();
+  if (!c.enabled) throw new Error('PAG_PUSH_NOT_READY');
+  pagPushWithLock_(() => {
+    const p = PropertiesService.getScriptProperties();
+    pagPrunePushEvents_(p);
+    if (Object.keys(p.getProperties()).filter(k => k.startsWith('PUSH_EVENT_')).length >= 100)
+      throw new Error('PAG_PUSH_QUEUE_FULL');
+    const key = 'PUSH_EVENT_' + pagPushHash_('QA_TEST/' + Date.now());
+    const record = {created: Date.now(), attempts: 0, state: 'PENDING', next: 0, test: true};
+    p.setProperty(key, JSON.stringify(record));
+    pagProcessPushEvent_(c, p, key, record);
+  });
+}
+
 // Install only in this new project. Existing triggers and old scripts remain untouched.
 function pagInstallPushTriggers() {
   const c = pagPushConfig_();

@@ -1,4 +1,10 @@
-# Private Spark push sender — prepared, not deployed
+# Private Spark push sender — QA activation
+
+2026-09-26 UTC: Juan explicitly approved the five OAuth scopes below and the
+specific QA phone. The separate private script was authorized, the phone approved,
+and `pagVerifyPushSender` returned `PAG_PUSH_VALIDATE_ACCEPTED`. PUSH_ENABLED is
+true and `pagInstallPushTriggers` returned `PAG_PUSH_TRIGGERS_READY`. This remains
+QA: a real form event and visible handset receipt still need verification.
 
 Use a **new private standalone Apps Script** belonging to Juan. No web app, no
 `doPost`, no service-account key, no Blaze/Cloud Functions. Do not edit the live
@@ -27,6 +33,11 @@ FCM and Firestore APIs available for its OAuth consumer project, explicitly appr
 the selected device with `pagApproveQaDevice`, then `pagVerifyPushSender` must report
 `PAG_PUSH_VALIDATE_ACCEPTED`. This uses `validate_only`, sends nothing. Set
 PUSH_ENABLED=true and run `pagInstallPushTriggers`. Do not deploy as web app.
+
+`pagSendQaTestNotification` is an administrative phone probe. It uses the same
+authorization, approved-device checks, cap and retries, marks its private ledger
+record as a test, and creates no spreadsheet row or lead. The visible notification
+is generic recruitment text. Do not count it as evidence of a real form trigger.
 
 The form-submit event sends immediately through FCM. The five-minute trigger
 only retries pending failures, at most three sends per event and 500 attempts/day.
