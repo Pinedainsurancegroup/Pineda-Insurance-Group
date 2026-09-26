@@ -5,29 +5,34 @@ const fs = require('node:fs');
 const path = require('node:path');
 const html = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/index.html'), 'utf8');
 
-function app() {
+function app({cloud=false}={}) {
   const elements = {};
   for (const [, id] of html.matchAll(/id="([^"]+)"/g)) {
     elements[id] = {textContent: '', value: id === 'sf' ? 'all' : '', checked: false,
       hidden: false, style: {}, classList: {toggle() {}, add() {}, remove() {}}, close() {}, showModal() {}};
   }
-  const requests = [], storage = new Map(), timers = new Map();
+  const requests = [], storage = new Map(), timers = new Map(), syncRequests=[], watches=[], checks=[];
+  let eventSequence=0;
   let active = true, timerId = 0;
   // window.status is a native string, not the element whose id is "status".
   const sandbox = {...elements, status: '', Map, Date, Intl, console,
-    document: {querySelector: selector => elements[selector.slice(1)], querySelectorAll: () => [], addEventListener() {}},
+    document: {querySelector: selector => elements[selector.slice(1)], querySelectorAll: selector => selector==='.migrateCheck'?checks:[], addEventListener() {}},
     localStorage: {getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value)},
     setTimeout: callback => {timers.set(++timerId, callback); return timerId}, clearTimeout: id => timers.delete(id), setInterval() {},
     PAGNative: {isSessionActive: () => active, hasOwnerGateway: () => active, getBuildLabel: () => 'PAG LEADS v1.8 QA',
       getSettingsJson: () => '{"auto":true,"notify":true}', requestRecruitment: (action, id) => requests.push({action, id})},
     addEventListener() {}
   };
+  if(cloud)Object.assign(sandbox.PAGNative,{getSyncUid:()=> 'test-owner',newSyncId:()=> 'synthetic-event-000'+(++eventSequence),
+    watchRecruitmentState: data=>watches.push(JSON.parse(data)),requestLeadSync:(data,id)=>syncRequests.push({input:JSON.parse(data),id})});
   sandbox.window = sandbox;
   const context = vm.createContext(sandbox);
   vm.runInContext(html.match(/<script>([\s\S]*?)<\/script>/)[1], context);
   const run = code => vm.runInContext(code, context);
   const result = (index, leads, ok = true) => sandbox.PAGNativeRecruitmentResult(requests[index].id, ok, JSON.stringify({ok, leads}));
-  return {sandbox, run, requests, result, elements, storage,
+  return {sandbox, run, requests, result, elements, storage, syncRequests,watches,checks,
+    cloudResult: states=>sandbox.PAGCloudState({ids:Object.keys(states),states}),
+    syncResult: (n,result,ok=true)=>sandbox.PAGSyncResult(syncRequests[n].id,ok,result),
     pause: () => {active = false; sandbox.PAGSuspend()}, resume: force => {active = true; return sandbox.PAGResume(force)}};
 }
 const lead = {id: 'test-1', type: 'agent', name: 'Prueba QA', status: 'Nuevo', createdAt: '2026-09-25T22:37:00'};
@@ -105,4 +110,49 @@ test('editing one lead updates only its badge and note; other dialogs load their
   assert.equal(a.run("st.leads.filter(x=>x.status==='Nuevo').length"), 3);
   assert.deepEqual(Object.keys(JSON.parse(a.storage.get('pagov'))).sort(), ['PAG-A-3', 'PAG-A-4']);
   assert.equal(a.sandbox.status, '', 'never write to the native browser status property');
+});
+
+const stableOne='r_11111111-1111-4111-8111-111111111111',stableTwo='r_22222222-2222-4222-8222-222222222222';
+const cloudLeads=[{...lead,id:'PAG-A-2',stableId:stableOne},{...lead,id:'PAG-A-3',stableId:stableTwo,name:'Segundo'}];
+async function cloudApp(){const a=app({cloud:true});const p=a.resume();a.result(0,cloudLeads);await p;return a}
+test('cloud save waits for server, keeps a draft, changes only one lead and survives refresh',async()=>{
+ const a=await cloudApp();a.run("openLead('PAG-A-2')");a.elements.status.value='Cita';a.elements.note.value='Mi nota';
+ await a.run('saveLead()');assert.equal(a.syncRequests.length,0);
+ a.cloudResult({[stableOne]:null,[stableTwo]:null});
+ const saving=a.run('saveLead()');assert.equal(a.run('st.leads[0].status'),'Nuevo');
+ assert.ok(a.storage.get('pagcloud:test-owner:drafts').includes('Mi nota'));
+ a.syncResult(0,{outcome:'saved',state:{status:'Cita',note:'Mi nota',revision:1},kind:'edit'});await saving;
+ assert.equal(a.run('st.leads[0].status'),'Cita');assert.equal(a.run('st.leads[1].status'),'Nuevo');
+ assert.equal(a.storage.get('pagcloud:test-owner:drafts'),'{}');
+ const refresh=a.resume(true);a.result(1,cloudLeads);await refresh;assert.equal(a.run('st.leads[0].note'),'Mi nota');
+});
+test('remote update does not erase an open draft; conflict requires another explicit save',async()=>{
+ const a=await cloudApp();a.cloudResult({[stableOne]:{status:'Nuevo',note:'Old',revision:1},[stableTwo]:null});
+ a.run("openLead('PAG-A-2')");a.elements.note.value='My edit';a.elements.status.value='Contactado';
+ a.cloudResult({[stableOne]:{status:'Seguimiento',note:'Other phone',revision:2}});
+ assert.equal(a.elements.note.value,'My edit');assert.equal(a.run('st.baseRevision'),1);
+ const saving=a.run('saveLead()');a.syncResult(0,{outcome:'conflict',state:{status:'Seguimiento',note:'Other phone',revision:2}});await saving;
+ assert.equal(a.elements.note.value,'My edit');assert.equal(a.run('st.baseRevision'),2);assert.equal(a.syncRequests.length,1);
+ const retry=a.run('saveLead()');assert.equal(a.syncRequests[1].input.baseRevision,2);
+ assert.notEqual(a.syncRequests[0].input.eventId,a.syncRequests[1].input.eventId);
+ a.syncResult(1,{outcome:'saved',state:{status:'Contactado',note:'My edit',revision:3}});await retry;
+});
+test('migration requires a checked review, freezes source ID and preserves the old local copy',async()=>{
+ const a=await cloudApp();const old=JSON.stringify({'PAG-A-2':{status:'Cita',note:'Legacy note',updatedAt:'2026-09-26'}});a.storage.set('pagov',old);
+ a.cloudResult({[stableOne]:{status:'Seguimiento',note:'Newer cloud note',revision:2},[stableTwo]:null});
+ a.elements.reviewLocal.onclick();await a.elements.importLocal.onclick();assert.equal(a.syncRequests.length,0);
+ a.checks.push({checked:true,dataset:{index:'0'}});const importing=a.elements.importLocal.onclick();
+ assert.equal(a.syncRequests[0].input.importing,true);assert.equal(a.syncRequests[0].input.leadId,stableOne);
+ assert.equal(JSON.parse(a.storage.get('pagcloud:test-owner:bindings'))['PAG-A-2'],stableOne);
+ a.syncResult(0,{outcome:'saved',kind:'backup',state:{status:'Seguimiento',note:'Newer cloud note',revision:2}});await importing;
+ assert.equal(a.storage.get('pagov'),old);assert.equal(a.run('localCandidates().length'),0);
+ assert.equal(a.run('st.leads[0].note'),'Newer cloud note');
+});
+test('paused cloud results cannot change visible data; pending draft survives an uncertain save',async()=>{
+ const a=await cloudApp();a.cloudResult({[stableOne]:null,[stableTwo]:null});a.run("openLead('PAG-A-2')");a.elements.note.value='Pending';
+ const saving=a.run('saveLead()');a.pause();await saving;
+ a.syncResult(0,{outcome:'saved',state:{status:'Cita',note:'late',revision:1}});
+ a.cloudResult({[stableOne]:{status:'Cita',note:'late',revision:1}});assert.notEqual(a.run('st.leads[0].note'),'late');
+ assert.ok(a.storage.get('pagcloud:test-owner:drafts').includes('Pending'));
+ await a.resume();assert.equal(a.run('cloudReady.size'),0);
 });

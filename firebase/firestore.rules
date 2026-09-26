@@ -77,6 +77,69 @@ service cloud.firestore {
       }
     }
 
+    // Source registration is administrative and contains no prospect contact data.
+    match /recruitmentSources/{leadId} {
+      allow read: if owner();
+      allow write: if false;
+    }
+    function registeredRecruitment(id) {
+      return id.matches('r_[a-f0-9-]{36}') &&
+        get(/databases/$(database)/documents/recruitmentSources/$(id)).data.enabled == true;
+    }
+    function validRecruitmentValues(d) {
+      return d.status in ['Nuevo', 'Contactado', 'Cita', 'Seguimiento', 'Completado'] &&
+        d.note is string && d.note.size() <= 4000;
+    }
+    function statePath(id) { return /databases/$(database)/documents/recruitmentState/$(id); }
+    function beforeRevision(id) { return exists(statePath(id)) ? get(statePath(id)).data.revision : 0; }
+    function beforeStatus(id) { return exists(statePath(id)) ? get(statePath(id)).data.status : 'Nuevo'; }
+    function beforeNote(id) { return exists(statePath(id)) ? get(statePath(id)).data.note : ''; }
+    function stateHasEvent(id) {
+      let d = request.resource.data;
+      let path = /databases/$(database)/documents/recruitmentState/$(id)/activity/$(d.lastEventId);
+      let event = getAfter(path).data;
+      return !exists(path) && event.kind in ['edit', 'import'] &&
+        event.status == d.status && event.note == d.note && event.revision == d.revision &&
+        event.actorUid == request.auth.uid && event.createdAt == request.time;
+    }
+    match /recruitmentState/{leadId} {
+      allow read: if owner();
+      allow create, update: if owner() && registeredRecruitment(leadId) &&
+        request.resource.data.keys().hasOnly(['status', 'note', 'revision', 'lastEventId', 'updatedBy', 'updatedAt']) &&
+        validRecruitmentValues(request.resource.data) &&
+        request.resource.data.revision is int && request.resource.data.revision == beforeRevision(leadId) + 1 &&
+        request.resource.data.lastEventId is string && request.resource.data.lastEventId.matches('[a-zA-Z0-9_-]{16,80}') &&
+        request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time &&
+        stateHasEvent(leadId);
+      allow delete: if false;
+      match /activity/{eventId} {
+        allow read: if owner();
+        allow create: if owner() && registeredRecruitment(leadId) &&
+          eventId.matches('[a-zA-Z0-9_-]{16,80}') &&
+          request.resource.data.keys().hasOnly(['actorUid', 'deviceId', 'kind', 'status', 'note',
+            'previousStatus', 'previousNote', 'baseRevision', 'revision', 'createdAt', 'originalUpdatedAt']) &&
+          validRecruitmentValues(request.resource.data) &&
+          request.resource.data.actorUid == request.auth.uid &&
+          request.resource.data.deviceId is string && request.resource.data.deviceId.size() >= 16 && request.resource.data.deviceId.size() <= 80 &&
+          request.resource.data.createdAt == request.time &&
+          request.resource.data.originalUpdatedAt is string && request.resource.data.originalUpdatedAt.size() <= 80 &&
+          request.resource.data.baseRevision is int && request.resource.data.revision is int &&
+          request.resource.data.baseRevision == beforeRevision(leadId) &&
+          request.resource.data.previousStatus == beforeStatus(leadId) && request.resource.data.previousNote == beforeNote(leadId) &&
+          ((request.resource.data.kind in ['edit', 'import'] &&
+            request.resource.data.revision == beforeRevision(leadId) + 1 &&
+            getAfter(statePath(leadId)).data.lastEventId == eventId &&
+            getAfter(statePath(leadId)).data.revision == request.resource.data.revision &&
+            getAfter(statePath(leadId)).data.status == request.resource.data.status &&
+            getAfter(statePath(leadId)).data.note == request.resource.data.note &&
+            getAfter(statePath(leadId)).data.updatedAt == request.time) ||
+           (request.resource.data.kind == 'backup' && exists(statePath(leadId)) &&
+            request.resource.data.revision == beforeRevision(leadId) &&
+            getAfter(statePath(leadId)).data == get(statePath(leadId)).data));
+        allow update, delete: if false;
+      }
+    }
+
     // Clients FE are empty for now. A trusted admin process owns canonical
     // classification, assignment and reassignment. LEAD -> B_LEAD edits the
     // same document; assignment history is append-only, server-written.

@@ -74,8 +74,9 @@ function pagRecruitmentRows_(values) {
     motivation: '¿Qué le motivó a solicitar información? / What motivated you to request information?',
     comments: 'Comentarios adicionales / Additional comments'
   };
-  return values.slice(1).map((r, n) => ({
-    id: 'PAG-A-' + (n + 2), // Legacy ID only; do not migrate overlays before immutable IDs exist.
+  const leads = values.slice(1).map((r, n) => ({
+    id: 'PAG-A-' + (n + 2), // Preserved for QA11 and the legacy local review.
+    stableId: String(r[idx['PAG_LEAD_ID']] || ''),
     type: 'agent',
     createdAt: pagTimestamp_(r[idx[H.ts]]),
     name: r[idx[H.name]] || '',
@@ -88,6 +89,12 @@ function pagRecruitmentRows_(values) {
     comments: r[idx[H.comments]] || '',
     source: 'Google Forms', status: 'Nuevo', note: ''
   })).filter(x => x.name || x.phone || x.email);
+  const counts = {};
+  leads.forEach(x => counts[x.stableId] = (counts[x.stableId] || 0) + 1);
+  leads.forEach(x => {
+    if (!/^r_[a-f0-9-]{36}$/.test(x.stableId) || counts[x.stableId] !== 1) x.stableId = '';
+  });
+  return leads;
 }
 
 function pagTimestamp_(value) {

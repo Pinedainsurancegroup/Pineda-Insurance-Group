@@ -14,6 +14,11 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -40,6 +45,8 @@ public class MainActivity extends Activity {
     private String viewUid;
     private FirebaseAuth.AuthStateListener accountWatch;
     private volatile int preferenceRevision;
+    private RecruitmentSync recruitmentSync;
+    private final Set<String> recruitmentIds = new HashSet<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -211,6 +218,7 @@ public class MainActivity extends Activity {
         ownerVerified = false;
         requestGeneration++;
         authGate.pause();
+        stopRecruitmentSync();
         if (webView != null) {
             webView.evaluateJavascript("window.PAGSuspend && window.PAGSuspend();", null);
             webView.onPause();
@@ -227,6 +235,8 @@ public class MainActivity extends Activity {
     }
 
     private void discardRecruitmentView() {
+        stopRecruitmentSync();
+        recruitmentIds.clear();
         if (webView == null) return;
         webView.stopLoading();
         webView.loadUrl("about:blank");
@@ -248,6 +258,18 @@ public class MainActivity extends Activity {
 
     private void deliverRecruitment(WebView requestView, int generation, String requestId, boolean ok, String payload) {
         if (!ownerVerified || requestGeneration != generation || webView != requestView || !pageReady) return;
+        if (ok) {
+            try {
+                JSONArray leads = new JSONObject(payload).optJSONArray("leads");
+                if (leads != null) {
+                    recruitmentIds.clear();
+                    for (int i = 0; i < leads.length(); i++) {
+                        String id = leads.getJSONObject(i).optString("stableId", "");
+                        if (RecruitmentSync.validId(id)) recruitmentIds.add(id);
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
         requestView.evaluateJavascript("window.PAGNativeRecruitmentResult && " +
                 "window.PAGNativeRecruitmentResult(" + JSONObject.quote(requestId) + "," +
                 ok + "," + JSONObject.quote(payload) + ");", null);
@@ -290,7 +312,69 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void stopRecruitmentSync() {
+        if (recruitmentSync != null) recruitmentSync.stop();
+        recruitmentSync = null;
+    }
+    private RecruitmentSync syncClient() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (!ownerVerified || user == null || !pageReady || webView == null) return null;
+        if (recruitmentSync == null) {
+            String device = getSharedPreferences("pag_native", MODE_PRIVATE).getString("firebase_device_id", "");
+            if (device.length() < 16) return null;
+            recruitmentSync = new RecruitmentSync(user.getUid(), device);
+        }
+        return recruitmentSync;
+    }
+
     private class PAGNativeBridge {
+        @JavascriptInterface public String getSyncUid() {
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            return ownerVerified && user != null ? user.getUid() : "";
+        }
+        @JavascriptInterface public String newSyncId() { return UUID.randomUUID().toString(); }
+        @JavascriptInterface public void watchRecruitmentState(String serializedIds) {
+            runOnUiThread(() -> {
+                RecruitmentSync client = syncClient(); if (client == null) return;
+                final WebView view = webView; final int generation = requestGeneration;
+                try {
+                    JSONArray input = new JSONArray(serializedIds);
+                    if (input.length() > 500) throw new IllegalArgumentException();
+                    ArrayList<String> ids = new ArrayList<>();
+                    for (int i = 0; i < input.length(); i++) {
+                        String id = input.getString(i);
+                        if (!recruitmentIds.contains(id) || ids.contains(id)) throw new IllegalArgumentException();
+                        ids.add(id);
+                    }
+                    client.watch(ids, payload -> {
+                        if (ownerVerified && generation == requestGeneration && webView == view && pageReady)
+                            view.evaluateJavascript("window.PAGCloudState && window.PAGCloudState(" + payload + ");", null);
+                    });
+                } catch (Exception ignored) {
+                    if (ownerVerified && webView == view)
+                        view.evaluateJavascript("window.PAGCloudState && window.PAGCloudState({error:true,all:true});", null);
+                }
+            });
+        }
+        @JavascriptInterface public void requestLeadSync(String serialized, String requestId) {
+            if (requestId == null || !requestId.matches("[0-9]{1,12}") || serialized == null || serialized.length() > 24000) return;
+            runOnUiThread(() -> {
+                RecruitmentSync client = syncClient();
+                final WebView view = webView; final int generation = requestGeneration;
+                RecruitmentSync.Reply reply = (ok, payload) -> {
+                    if (ownerVerified && generation == requestGeneration && view != null && webView == view && pageReady)
+                        view.evaluateJavascript("window.PAGSyncResult && window.PAGSyncResult(" + JSONObject.quote(requestId) + "," + ok + "," + payload + ");", null);
+                };
+                try {
+                    JSONObject input = new JSONObject(serialized);
+                    if (client == null || !recruitmentIds.contains(input.getString("leadId"))) throw new IllegalArgumentException();
+                    if ("save".equals(input.optString("action"))) client.save(input, reply);
+                    else if ("history".equals(input.optString("action"))) client.history(input, reply);
+                    else throw new IllegalArgumentException();
+                } catch (Exception ignored) { reply.done(false, new JSONObject()); }
+            });
+        }
+
         @JavascriptInterface
         public boolean hasOwnerGateway() {
             return ownerVerified && gatewayUrl() != null;
@@ -360,7 +444,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String getBuildLabel() {
             return getResources().getBoolean(R.bool.pag_qa_build)
-                    ? "PAG LEADS v1.8 QA" : "PAG LEADS v1.8";
+                    ? "PAG LEADS v1.8 QA12" : "PAG LEADS v1.8";
         }
 
         @JavascriptInterface

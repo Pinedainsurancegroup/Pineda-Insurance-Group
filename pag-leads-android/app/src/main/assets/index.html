@@ -15,13 +15,16 @@
 <main class="main">
 <section class="hero"><p class="ey" id="buildLabel">PAG LEADS</p><h1>Centro de leads</h1><p class="muted" id="sync">Conectando automáticamente…</p><span class="secure">Conexión privada automática · Google Apps Script</span></section>
 <section class="stats"><div class="stat"><span>Nuevos hoy</span><b id="s0">0</b></div><div class="stat"><span>Agentes</span><b id="s1">0</b></div><div class="stat"><span>Clientes FE</span><b id="s2">0</b></div><div class="stat"><span>Seguimiento</span><b id="s3">0</b></div></section>
+<section id="cloudBox" class="card" style="padding:14px;margin-bottom:16px" hidden><p id="cloudMessage" class="note">Conectando respaldo…</p><button id="reviewLocal" class="btn" hidden>Revisar cambios de este teléfono</button></section>
 <section class="tools"><input id="q" placeholder="Buscar nombre, teléfono o estado"><select id="sf"><option value="all">Todos los estados</option><option>Nuevo</option><option>Contactado</option><option>Cita</option><option>Seguimiento</option><option>Completado</option></select></section>
 <section class="card"><div class="tabs"><button class="tab on" data-t="agent">Agentes</button><button class="tab" data-t="client">Clientes</button><button class="tab" data-t="all">Todos</button></div><div id="list"></div><div class="empty" id="empty">Conectando con PAG Leads…</div></section>
 </main>
 <nav class="bottom"><button class="nav on" data-v="all"><span>⌂</span>Inicio</button><button class="nav" data-v="agent"><span>♙</span>Agentes</button><button class="nav" data-v="client"><span>◆</span>Clientes</button><button class="nav" id="settings"><span>⚙</span>Ajustes</button></nav>
 </div>
-<dialog id="leadDlg"><div class="dlg"><div class="head"><div><p class="ey" id="lt">LEAD</p><h2 id="ln"></h2></div><button class="x" onclick="leadDlg.close()">×</button></div><div class="grid" id="details"></div><div class="acts" id="acts"></div><label class="field">Estado<select id="status"><option>Nuevo</option><option>Contactado</option><option>Cita</option><option>Seguimiento</option><option>Completado</option></select></label><label class="field">Nota interna<textarea id="note" rows="3"></textarea></label><button class="btn wide" id="save">Guardar cambios</button></div></dialog>
-<dialog id="setDlg"><div class="dlg"><div class="head"><div><p class="ey">AJUSTES</p><h2>PAG Leads</h2></div><button class="x" onclick="setDlg.close()">×</button></div><div id="connBox" style="border:1px solid var(--l);border-radius:14px;padding:14px;margin:14px 0;background:#f8fafc"><b id="connState" style="display:block;color:var(--n)">Conexión automática</b><span id="connDetail" class="note">Comprobando conexión privada…</span></div><label class="switch"><span>Actualizar automáticamente cada minuto</span><input id="auto" type="checkbox"></label><label class="switch"><span>Notificaciones de nuevos leads</span><input id="notify" type="checkbox"></label><p class="note">La conexión privada se administra automáticamente en este teléfono. No necesitas probarla ni guardarla manualmente. Los estados y notas permanecen locales y no modifican Google Sheets.</p></div></dialog><dialog id="adminDlg"><div class="dlg"><div class="head"><div><p class="ey">RECUPERACIÓN TÉCNICA</p><h2>Reactivar conexión</h2></div><button class="x" onclick="adminDlg.close()">×</button></div><p class="note">Uso excepcional para cambio de teléfono o rotación de credenciales.</p><label class="field">URL privada de Apps Script<input id="adminUrl" placeholder="https://script.google.com/macros/s/.../exec"></label><label class="field">Token privado<input id="adminTok" type="password" placeholder="Token de PAG Leads"></label><div class="row"><button class="btn" id="adminTest">Probar</button><button class="btn" id="adminSave">Guardar y conectar</button></div><p class="note" id="adminResult"></p></div></dialog>
+<dialog id="leadDlg"><div class="dlg"><div class="head"><div><p class="ey" id="lt">LEAD</p><h2 id="ln"></h2></div><button class="x" onclick="leadDlg.close()">×</button></div><div class="grid" id="details"></div><div class="acts" id="acts"></div><label class="field">Estado<select id="status"><option>Nuevo</option><option>Contactado</option><option>Cita</option><option>Seguimiento</option><option>Completado</option></select></label><label class="field">Nota interna<textarea id="note" rows="3" maxlength="4000"></textarea></label><p id="editMessage" class="note" style="white-space:pre-wrap"></p><button class="btn" id="useCloud" hidden>Cargar versión de mi cuenta</button><button class="btn wide" id="save">Guardar cambios</button><button class="btn wide" id="showHistory" style="margin-top:12px" hidden>Ver historial</button></div></dialog>
+<dialog id="setDlg"><div class="dlg"><div class="head"><div><p class="ey">AJUSTES</p><h2>PAG Leads</h2></div><button class="x" onclick="setDlg.close()">×</button></div><div id="connBox" style="border:1px solid var(--l);border-radius:14px;padding:14px;margin:14px 0;background:#f8fafc"><b id="connState" style="display:block;color:var(--n)">Conexión automática</b><span id="connDetail" class="note">Comprobando conexión privada…</span></div><label class="switch"><span>Actualizar automáticamente cada minuto</span><input id="auto" type="checkbox"></label><label class="switch"><span>Notificaciones de nuevos leads</span><input id="notify" type="checkbox"></label><p class="note">La conexión privada se administra automáticamente en este teléfono. No necesitas probarla ni guardarla manualmente. Los estados y notas guardados en tu cuenta se sincronizan entre teléfonos. Puedes revisar e importar los cambios locales anteriores. Las respuestas originales del formulario se conservan.</p></div></dialog><dialog id="adminDlg"><div class="dlg"><div class="head"><div><p class="ey">RECUPERACIÓN TÉCNICA</p><h2>Reactivar conexión</h2></div><button class="x" onclick="adminDlg.close()">×</button></div><p class="note">Uso excepcional para cambio de teléfono o rotación de credenciales.</p><label class="field">URL privada de Apps Script<input id="adminUrl" placeholder="https://script.google.com/macros/s/.../exec"></label><label class="field">Token privado<input id="adminTok" type="password" placeholder="Token de PAG Leads"></label><div class="row"><button class="btn" id="adminTest">Probar</button><button class="btn" id="adminSave">Guardar y conectar</button></div><p class="note" id="adminResult"></p></div></dialog>
+<dialog id="migrationDlg"><div class="dlg"><div class="head"><h2>Revisar cambios locales</h2><button class="x" id="closeMigration">×</button></div><p class="note" id="migrationMessage"></p><div id="migrationRows"></div><button class="btn wide" id="importLocal">Respaldar los cambios marcados</button></div></dialog>
+<dialog id="historyDlg"><div class="dlg"><div class="head"><h2>Historial del prospecto</h2><button class="x" id="closeHistory">×</button></div><p class="note" id="historyMessage"></p><div id="historyRows"></div><button class="btn" id="historyMore">Ver anteriores</button></div></dialog>
 <div class="toast" id="toast"></div>
 <script>
 const st={leads:[],type:'agent',sel:null,set:{url:'',tok:'',auto:true,notify:true}};
@@ -55,13 +58,13 @@ function setConn(ok,msg){
   connDetail.textContent=msg|| (ok?'PAG Leads Private API':'Comprobando conexión privada…');
 }
 function over(){try{return JSON.parse(localStorage.getItem('pagov')||'{}')}catch{return {}}}
-function apply(a){const o=over();return a.map(x=>({...x,...(o[x.id]||{})}))}
+function apply(a){const o=over();return a.map(x=>({...x,...(cloudEnabled()?cloudOverlay(x):(o[x.id]||{}))}))}
 const pendingRecruitment=new Map();let requestSequence=0;
 function hasPrivateAccess(){return !!(st.set.url&&st.set.tok)||!!(window.PAGNative&&PAGNative.hasOwnerGateway&&PAGNative.hasOwnerGateway())}
 window.PAGNativeRecruitmentResult=(id,ok,payload)=>{const done=pendingRecruitment.get(id);if(!done)return;pendingRecruitment.delete(id);clearTimeout(done.timer);if(!ok){done.reject(new Error('Conexión privada no disponible'));return}try{done.resolve(JSON.parse(payload))}catch{done.reject(new Error('Respuesta privada no válida'))}};
 function privateGateway(action){return new Promise((resolve,reject)=>{const id=String(++requestSequence),timer=setTimeout(()=>{pendingRecruitment.delete(id);reject(new Error('Tiempo de espera agotado'))},45000);pendingRecruitment.set(id,{resolve,reject,timer});try{PAGNative.requestRecruitment(action,id)}catch(e){pendingRecruitment.delete(id);clearTimeout(timer);reject(e)}})}
 async function api(action){
-  if(!st.set.url||!st.set.tok){if(!hasPrivateAccess())throw new Error('Falta configurar conexión privada');const j=await privateGateway(action);if(j.ok===false)throw new Error('Conexión privada rechazada');return j}
+  if((window.PAGNative&&PAGNative.hasOwnerGateway&&PAGNative.hasOwnerGateway())||!st.set.url||!st.set.tok){if(!hasPrivateAccess())throw new Error('Falta configurar conexión privada');const j=await privateGateway(action);if(j.ok===false)throw new Error('Conexión privada rechazada');return j}
   const r=await fetch(st.set.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,token:st.set.tok}),cache:'no-store'});const j=await r.json();if(!r.ok||j.ok===false)throw new Error(j.error||'Conexión rechazada');return j
 }
 async function getLeads(){const j=await api('list');return apply(j.leads||[])}
@@ -83,7 +86,7 @@ async function refresh(opts={}){
     if(st.set.url&&st.set.tok&&opts.ping===true)ping=await api('ping');
     const leads=await getLeads();
     if(!pageActive||attempt!==refreshSequence)return;
-    st.leads=leads;lastSuccess=Date.now();reconnectFailures=0;render();
+    st.leads=leads;lastSuccess=Date.now();reconnectFailures=0;render();watchCloud();
     const when=new Date().toLocaleTimeString('es-US',{hour:'numeric',minute:'2-digit'});
     sync.textContent='Conexión privada activa · '+st.leads.length+' lead'+(st.leads.length===1?'':'s')+' · '+when;
     setConn(true,(ping&&ping.version?ping.version:'PAG Leads Private API')+' · última conexión '+when);
@@ -133,9 +136,9 @@ function openLead(id){
   details.innerHTML=rr.map(([k,v])=>`<div class="d"><span>${esc(k)}</span><b>${esc(v||'—')}</b></div>`).join('');
   let p=dig(x.phone);if(p.length===10)p='1'+p;
   acts.innerHTML=`<a href="tel:+${p}">Llamar</a><a href="https://wa.me/${p}">WhatsApp</a><a href="mailto:${encodeURIComponent(x.email||'')}">Email</a>`;
-  leadStatus.value=x.status||'Nuevo';leadNote.value=x.note||'';leadDlg.showModal()
+  leadStatus.value=x.status||'Nuevo';leadNote.value=x.note||'';openCloudEdit(x);leadDlg.showModal()
 }
-async function saveLead(){if(!pageActive||!st.sel)return;const p={status:leadStatus.value,note:leadNote.value.trim(),updatedAt:new Date().toISOString()};const o=over();o[st.sel.id]={...(o[st.sel.id]||{}),...p};localStorage.setItem('pagov',JSON.stringify(o));st.leads=apply(st.leads);render();leadDlg.close();pop('Lead actualizado en este teléfono')}
+async function saveLead(){if(!pageActive||!st.sel)return;if(cloudEnabled())return saveCloudLead();const p={status:leadStatus.value,note:leadNote.value.trim(),updatedAt:new Date().toISOString()};const o=over();o[st.sel.id]={...(o[st.sel.id]||{}),...p};localStorage.setItem('pagov',JSON.stringify(o));st.leads=apply(st.leads);render();leadDlg.close();pop('Lead actualizado en este teléfono')}
 function type(t){st.type=t;$$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));renderList()}
 function pop(m){toast.textContent=m;toast.style.display='block';setTimeout(()=>toast.style.display='none',2400)}
 r.onclick=()=>refresh({ping:true});q.oninput=renderList;sf.onchange=renderList;$$('.tab').forEach(b=>b.onclick=()=>type(b.dataset.t));$$('.nav[data-v]').forEach(b=>b.onclick=()=>{$$('.nav').forEach(x=>x.classList.remove('on'));b.classList.add('on');type(b.dataset.v)});settings.onclick=()=>setDlg.showModal();save.onclick=saveLead;
@@ -144,11 +147,153 @@ auto.onchange=savePrefs;notify.onchange=savePrefs;
 connBox.onclick=()=>{unlockTaps++;clearTimeout(unlockTimer);unlockTimer=setTimeout(()=>unlockTaps=0,3500);if(unlockTaps>=7){unlockTaps=0;adminUrl.value=st.set.url||'';adminTok.value='';adminResult.textContent='';adminDlg.showModal()}};
 adminTest.onclick=async()=>{adminResult.textContent='Probando…';const old={...st.set};st.set={...st.set,url:adminUrl.value.trim(),tok:adminTok.value.trim()||old.tok};try{const j=await api('ping');adminResult.textContent='✓ Conexión correcta'+(j.version?' · '+j.version:'')}catch(e){adminResult.textContent='✕ '+e.message}finally{st.set=old}};
 adminSave.onclick=()=>{const u=adminUrl.value.trim(),t=adminTok.value.trim();if(u)st.set.url=u;if(t)st.set.tok=t;persistSet();adminDlg.close();refresh({ping:true});pop('Conexión reactivada')};
-async function autoStart(force=false){try{if(window.PAGNative&&PAGNative.isSessionActive&&!PAGNative.isSessionActive())return;if(window.PAGNative&&PAGNative.getBuildLabel)buildLabel.textContent=PAGNative.getBuildLabel()}catch{return}pageActive=true;loadSet();if(st.set.url&&st.set.tok)nativeSync();if(force||!lastSuccess||Date.now()-lastSuccess>=60000)await refresh({ping:false,silent:true})}
+// Firestore metadata is available only through the authenticated Android bridge.
+let cloudUid='',cloudStates={},cloudReady=new Set(),cloudErrors=new Set(),syncSequence=0;
+const syncPending=new Map();
+const cloudBox=$('#cloudBox'),cloudMessage=$('#cloudMessage'),reviewLocal=$('#reviewLocal');
+const migrationDlg=$('#migrationDlg'),migrationRows=$('#migrationRows'),migrationMessage=$('#migrationMessage');
+const editMessage=$('#editMessage'),useCloud=$('#useCloud'),historyDlg=$('#historyDlg'),historyRows=$('#historyRows');
+let migrationItems=[],historyCursor=null,historyLead=null,historyGeneration=0;
+function cloudEnabled(){return !!(window.PAGNative&&PAGNative.getSyncUid&&PAGNative.requestLeadSync)}
+function syncKey(s){return 'pagcloud:'+cloudUid+':'+s}
+function readSync(s){try{return JSON.parse(localStorage.getItem(syncKey(s))||'{}')}catch{return {}}}
+function writeSync(s,v){localStorage.setItem(syncKey(s),JSON.stringify(v))}
+function localPayload(v){return JSON.stringify({status:v.status||'Nuevo',note:String(v.note||''),updatedAt:v.updatedAt||''})}
+function localCandidates(){
+  const bindings=readSync('bindings'),receipts=readSync('receipts'),out=[];
+  for(const [legacyId,v] of Object.entries(over())){
+    if(!v||typeof v!=='object'||(!v.note&&(!v.status||v.status==='Nuevo')))continue;
+    const binding=bindings[legacyId],lead=st.leads.find(x=>binding?x.stableId===binding:x.id===legacyId);
+    const signature=localPayload(v);
+    if(receipts[legacyId]&&receipts[legacyId].signature===signature&&receipts[legacyId].stableId===(binding||lead?.stableId))continue;
+    out.push({legacyId,lead,value:JSON.parse(signature),signature});
+  }
+  return out;
+}
+function localForLead(x){
+  if(!cloudEnabled())return over()[x.id]||{};
+  const c=localCandidates().find(c=>c.lead&&c.lead.id===x.id);return c?c.value:{};
+}
+function cloudOverlay(x){
+  const c=cloudStates[x.stableId];
+  return c&&c.revision>0?c:{status:'Nuevo',note:'',...localForLead(x),revision:0};
+}
+function initCloud(){
+  if(!cloudEnabled())return;
+  const uid=PAGNative.getSyncUid();if(!uid)return;
+  if(cloudUid!==uid){cloudUid=uid;cloudStates={};cloudReady.clear();cloudErrors.clear()}
+  cloudBox.hidden=false;
+}
+function watchCloud(){
+  if(!pageActive||!cloudUid)return;
+  const ids=st.leads.map(x=>x.stableId).filter(x=>/^r_[a-f0-9-]{36}$/.test(x||''));
+  PAGNative.watchRecruitmentState(JSON.stringify([...new Set(ids)]));renderCloudBanner();
+}
+function renderCloudBanner(){
+  if(!cloudUid)return;
+  const waiting=st.leads.filter(x=>!x.stableId||!cloudReady.has(x.stableId)).length;
+  const local=localCandidates().length;
+  cloudMessage.textContent=cloudErrors.size?'No se pudo actualizar el respaldo. Tus cambios locales se conservan.':
+    waiting?'Conectando el respaldo de tu cuenta…':local?local+' cambio(s) local(es) pendientes de revisar.':'Estados y notas sincronizados con tu cuenta.';
+  reviewLocal.hidden=!local;
+}
+window.PAGCloudState=result=>{
+  if(!pageActive||!cloudUid)return;
+  const ids=result.all?st.leads.map(x=>x.stableId):(result.ids||[]);
+  if(result.error){ids.forEach(id=>{cloudErrors.add(id);cloudReady.delete(id)});renderCloudBanner();return}
+  ids.forEach(id=>{cloudReady.add(id);cloudErrors.delete(id);cloudStates[id]=result.states[id]||{status:'Nuevo',note:'',revision:0}});
+  st.leads=apply(st.leads);render();renderCloudBanner();
+  // Never replace text the owner is editing when another device changes the record.
+  if(st.sel&&st.sel.stableId&&cloudStates[st.sel.stableId]&&cloudStates[st.sel.stableId].revision!==st.baseRevision){
+    editMessage.textContent='Hay una versión más reciente en tu cuenta. Tu edición sigue aquí; revisa antes de guardar.';
+    useCloud.hidden=false;
+  }
+};
+function syncCall(input){return new Promise((resolve,reject)=>{
+  if(!pageActive||!cloudUid){reject(new Error('Sesión no disponible'));return}
+  const id=String(++syncSequence),timer=setTimeout(()=>{syncPending.delete(id);reject(new Error('No se confirmó el guardado. Tu edición se conserva.'))},25000);
+  syncPending.set(id,{resolve,reject,timer});
+  try{PAGNative.requestLeadSync(JSON.stringify(input),id)}catch(e){clearTimeout(timer);syncPending.delete(id);reject(e)}
+})}
+window.PAGSyncResult=(id,ok,result)=>{const p=syncPending.get(id);if(!p)return;syncPending.delete(id);clearTimeout(p.timer);ok?p.resolve(result):p.reject(new Error('No se pudo guardar en tu cuenta. Tu edición se conserva.'))};
+function pauseCloud(){
+  for(const p of syncPending.values()){clearTimeout(p.timer);p.reject(new Error('Guardado pendiente de comprobar al volver.'))}syncPending.clear();cloudReady.clear();
+}
+function openCloudEdit(x){
+  editMessage.textContent='';useCloud.hidden=true;st.baseRevision=cloudStates[x.stableId]?.revision||0;
+  $('#showHistory').hidden=!cloudEnabled()||!x.stableId;
+  if(!cloudEnabled())return;
+  const d=readSync('drafts')[x.stableId];
+  if(d){leadStatus.value=d.status;leadNote.value=d.note;st.baseRevision=d.baseRevision;editMessage.textContent='Edición pendiente de este teléfono. Revisa y guarda para confirmar.';useCloud.hidden=false}
+  if(!x.stableId)editMessage.textContent='Este prospecto aún no está listo para sincronizar. Actualiza la lista en unos momentos.';
+}
+async function saveCloudLead(){
+  const x=st.sel;if(!x||!pageActive)return;
+  if(!x.stableId||!cloudReady.has(x.stableId)){editMessage.textContent='Espera la conexión con tu cuenta antes de guardar.';return}
+  const noteValue=leadNote.value.trim();if(noteValue.length>4000){editMessage.textContent='La nota debe tener como máximo 4000 caracteres.';return}
+  const drafts=readSync('drafts'),old=drafts[x.stableId];
+  const value={action:'save',leadId:x.stableId,status:leadStatus.value,note:noteValue,baseRevision:st.baseRevision};
+  value.eventId=old&&old.status===value.status&&old.note===value.note&&old.baseRevision===value.baseRevision?old.eventId:PAGNative.newSyncId();
+  try{drafts[x.stableId]=value;writeSync('drafts',drafts)}catch{editMessage.textContent='No se pudo conservar tu edición en el teléfono. No se envió.';return}
+  $('#save').disabled=true;editMessage.textContent='Guardando en tu cuenta…';
+  try{
+    const result=await syncCall(value);
+    cloudStates[x.stableId]=result.state;st.leads=apply(st.leads);render();
+    if(result.outcome==='conflict'){
+      st.baseRevision=result.state.revision;editMessage.textContent='Otro teléfono guardó cambios. En tu cuenta: '+result.state.status+' · '+(result.state.note||'Sin nota')+'. Tu edición sigue en los campos. Pulsa Guardar otra vez solo si quieres reemplazarla.';useCloud.hidden=false;return;
+    }
+    delete drafts[x.stableId];writeSync('drafts',drafts);
+    // The old local snapshot is kept for explicit migration review/history; never deleted here.
+    leadDlg.close();st.sel=null;pop('Guardado en tu cuenta');renderCloudBanner();
+  }catch(e){editMessage.textContent=e.message}
+  finally{$('#save').disabled=false}
+}
+useCloud.onclick=()=>{
+  if(!st.sel)return;const c=cloudStates[st.sel.stableId]||{status:'Nuevo',note:'',revision:0};
+  leadStatus.value=c.status;leadNote.value=c.note;st.baseRevision=c.revision;editMessage.textContent='Versión de tu cuenta cargada. La edición local pendiente se conserva hasta guardar.';useCloud.hidden=true;
+};
+reviewLocal.onclick=()=>{
+  migrationItems=localCandidates();
+  migrationRows.innerHTML=migrationItems.map((c,i)=>`<div class="d"><label><input type="checkbox" class="migrateCheck" data-index="${i}" ${c.lead?.stableId&&cloudReady.has(c.lead.stableId)?'':'disabled'}> Confirmo que corresponde a ${esc(c.lead?.name||'Prospecto sin identificar')}</label><p>${esc(c.value.status)}</p><p style="white-space:pre-wrap">${esc(c.value.note||'Sin nota')}</p>${c.lead?.stableId?'':'<p>No se puede importar automáticamente. La copia local se conserva.</p>'}</div>`).join('');
+  migrationMessage.textContent='Revisa cada nombre, estado y nota antes de marcarlo. Si ya hay información en tu cuenta, se conserva y lo local se añade al historial.';migrationDlg.showModal();
+};
+$('#importLocal').onclick=async()=>{
+  if(!pageActive)return;const chosen=$$('.migrateCheck').filter(e=>e.checked).map(e=>migrationItems[Number(e.dataset.index)]);
+  if(!chosen.length){migrationMessage.textContent='Marca los cambios cuyo prospecto hayas comprobado.';return}
+  $('#importLocal').disabled=true;let saved=0;
+  try{
+    for(const c of chosen){
+      if(!pageActive||!c.lead?.stableId||!cloudReady.has(c.lead.stableId))throw new Error('Conexión pendiente. Puedes reintentar sin duplicar el historial.');
+      // Freeze the user-verified identity before any network call or source-row reorder.
+      const bindings=readSync('bindings');bindings[c.legacyId]=c.lead.stableId;writeSync('bindings',bindings);
+      const r=await syncCall({action:'save',leadId:c.lead.stableId,importing:true,status:c.value.status,note:c.value.note,originalUpdatedAt:c.value.updatedAt,baseRevision:0});
+      const receipts=readSync('receipts');receipts[c.legacyId]={stableId:c.lead.stableId,signature:c.signature};writeSync('receipts',receipts);
+      cloudStates[c.lead.stableId]=r.state;saved++;
+    }
+    st.leads=apply(st.leads);render();migrationDlg.close();pop(saved+' cambio(s) respaldado(s)');renderCloudBanner();
+  }catch(e){migrationMessage.textContent=saved+' guardado(s). '+e.message}
+  finally{$('#importLocal').disabled=false}
+};
+async function loadHistory(reset=false){
+  if(reset){historyLead=st.sel?.stableId;historyCursor=null;historyRows.innerHTML='';historyGeneration++}
+  if(!historyLead)return;const generation=historyGeneration;
+  $('#historyMore').disabled=true;$('#historyMessage').textContent='Cargando historial…';
+  try{
+    const r=await syncCall({action:'history',leadId:historyLead,...(historyCursor?{cursor:historyCursor}:{})});if(generation!==historyGeneration)return;
+    historyRows.innerHTML+=r.events.map(e=>`<div class="d"><b>${esc(e.kind==='backup'?'Copia local preservada':e.kind==='import'?'Importación local':'Cambio guardado')} · ${esc(e.status)}</b><p>${esc(fmt(e.createdAt))} · Cuenta propietaria · teléfono ${esc((e.deviceId||'').slice(-4))}</p><p style="white-space:pre-wrap">${esc(e.note||'Sin nota')}</p><details><summary>Estado anterior</summary><p>${esc(e.previousStatus)}</p><p style="white-space:pre-wrap">${esc(e.previousNote||'Sin nota')}</p></details></div>`).join('');
+    historyCursor=r.cursor||null;$('#historyMore').hidden=!historyCursor;$('#historyMessage').textContent=historyRows.innerHTML?'':'Todavía no hay cambios guardados en tu cuenta.';
+  }catch(e){$('#historyMessage').textContent='No se pudo cargar el historial. Vuelve a intentarlo.'}
+  finally{$('#historyMore').disabled=false}
+}
+$('#showHistory').onclick=()=>{historyDlg.showModal();loadHistory(true)};
+$('#historyMore').onclick=()=>loadHistory();
+$('#closeMigration').onclick=()=>migrationDlg.close();$('#closeHistory').onclick=()=>{historyGeneration++;historyDlg.close()};
+
+async function autoStart(force=false){try{if(window.PAGNative&&PAGNative.isSessionActive&&!PAGNative.isSessionActive())return;if(window.PAGNative&&PAGNative.getBuildLabel)buildLabel.textContent=PAGNative.getBuildLabel()}catch{return}pageActive=true;initCloud();loadSet();watchCloud();if(st.set.url&&st.set.tok)nativeSync();if(force||!lastSuccess||Date.now()-lastSuccess>=60000)await refresh({ping:false,silent:true})}
 window.PAGAutoStart=autoStart;
 window.PAGResume=autoStart;
 window.PAGPreferencesChanged=()=>{if(pageActive)loadSet()};
-window.PAGSuspend=()=>{pageActive=false;refreshSequence++;connecting=false;clearTimeout(reconnectTimer);for(const done of pendingRecruitment.values()){clearTimeout(done.timer);done.reject(new Error('Sesión en pausa'))}pendingRecruitment.clear()};
+window.PAGSuspend=()=>{pageActive=false;pauseCloud();refreshSequence++;connecting=false;clearTimeout(reconnectTimer);for(const done of pendingRecruitment.values()){clearTimeout(done.timer);done.reject(new Error('Sesión en pausa'))}pendingRecruitment.clear()};
 window.addEventListener('online',()=>{if(pageActive)refresh({ping:false,silent:true})});
 // Android explicitly resumes only after a fresh server permission check.
 if(!window.PAGNative)autoStart();
