@@ -449,7 +449,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String getBuildLabel() {
             return getResources().getBoolean(R.bool.pag_qa_build)
-                    ? "PAG LEADS v1.8 QA13" : "PAG LEADS v1.8";
+                    ? "PAG LEADS v1.8 QA14" : "PAG LEADS v1.8 · CANDIDATA 1";
         }
 
         @JavascriptInterface

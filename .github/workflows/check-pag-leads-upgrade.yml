@@ -1,0 +1,49 @@
+name: Check PAG Leads update preserves local data
+on:
+  workflow_dispatch:
+  push:
+    branches: ['pag-leads-v1.8-fcm']
+    paths:
+      - 'pag-leads-android/**'
+      - '.github/workflows/check-pag-leads-upgrade.yml'
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build synthetic baseline and current app
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+          python3 pag-leads-android/tests/make-upgrade-fixture.py /tmp/pag-upgrade-fixture
+          gradle -p /tmp/pag-upgrade-fixture :app:assembleDebug --no-daemon
+          gradle -p pag-leads-android :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Upgrade without uninstalling or clearing app data
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: |
+            adb install /tmp/pag-upgrade-fixture/app/build/outputs/apk/debug/app-debug.apk
+            adb shell am start -W -n com.pinedaagencygroup.leads/.MainActivity
+            timeout 40 bash -c 'until adb shell run-as com.pinedaagencygroup.leads test -f files/fixture-ready; do sleep 1; done'
+            adb shell input keyevent 3
+            sleep 2
+            adb shell am force-stop com.pinedaagencygroup.leads
+            adb install -r pag-leads-android/app/build/outputs/apk/debug/app-debug.apk
+            adb install -t pag-leads-android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb shell am instrument -w com.pinedaagencygroup.leads.test/com.pinedaagencygroup.leads.UpgradeStorageInstrumentation | tee /tmp/pag-upgrade-result.txt
+            grep -q PAG_UPGRADE_STORAGE_PASS /tmp/pag-upgrade-result.txt

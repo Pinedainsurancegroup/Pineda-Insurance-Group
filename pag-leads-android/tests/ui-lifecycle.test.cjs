@@ -5,13 +5,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const html = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/index.html'), 'utf8');
 
-function app({cloud=false}={}) {
+function app({cloud=false,nativeSettings={auto:true,notify:true},initialStorage={}}={}) {
   const elements = {};
   for (const [, id] of html.matchAll(/id="([^"]+)"/g)) {
     elements[id] = {textContent: '', value: id === 'sf' ? 'all' : '', checked: false,
       hidden: false, style: {}, classList: {toggle() {}, add() {}, remove() {}}, close() {}, showModal() {}};
   }
-  const requests = [], storage = new Map(), timers = new Map(), syncRequests=[], watches=[], checks=[];
+  const requests = [], storage = new Map(Object.entries(initialStorage)), timers = new Map(), syncRequests=[], watches=[], checks=[];
   let eventSequence=0;
   let active = true, timerId = 0;
   // window.status is a native string, not the element whose id is "status".
@@ -20,7 +20,7 @@ function app({cloud=false}={}) {
     localStorage: {getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value)},
     setTimeout: callback => {timers.set(++timerId, callback); return timerId}, clearTimeout: id => timers.delete(id), setInterval() {},
     PAGNative: {isSessionActive: () => active, hasOwnerGateway: () => active, getBuildLabel: () => 'PAG LEADS v1.8 QA',
-      getSettingsJson: () => '{"auto":true,"notify":true}', requestRecruitment: (action, id) => requests.push({action, id})},
+      getSettingsJson: () => JSON.stringify(nativeSettings), requestRecruitment: (action, id) => requests.push({action, id})},
     addEventListener() {}
   };
   if(cloud)Object.assign(sandbox.PAGNative,{getSyncUid:()=> 'test-owner',newSyncId:()=> 'synthetic-event-000'+(++eventSequence),
@@ -155,4 +155,19 @@ test('paused cloud results cannot change visible data; pending draft survives an
  a.cloudResult({[stableOne]:{status:'Cita',note:'late',revision:1}});assert.notEqual(a.run('st.leads[0].note'),'late');
  assert.ok(a.storage.get('pagcloud:test-owner:drafts').includes('Pending'));
  await a.resume();assert.equal(a.run('cloudReady.size'),0);
+});
+
+test('upgrade keeps legacy configuration and notes while using the authenticated gateway and account state',async()=>{
+ const old=JSON.stringify({'PAG-A-2':{status:'Seguimiento',note:'Nota local v1.7',updatedAt:'2026-09-25T22:37:00Z'}});
+ const settings={url:'https://example.invalid/legacy',tok:'synthetic-upgrade-only',auto:false,notify:true};
+ const a=app({cloud:true,nativeSettings:settings,initialStorage:{pagov:old,pagset12:JSON.stringify(settings)}});
+ const first=a.resume();assert.deepEqual(a.requests.map(x=>x.action),['list']);a.result(0,cloudLeads);await first;
+ assert.deepEqual(JSON.parse(a.storage.get('pagset12')),settings);
+ assert.equal(a.storage.get('pagov'),old);
+ a.cloudResult({[stableOne]:{status:'Completado',note:'Nota actual de la cuenta',revision:4},[stableTwo]:null});
+ assert.equal(a.run('st.leads[0].note'),'Nota actual de la cuenta');
+ assert.equal(a.run('st.leads[0].status'),'Completado');
+ assert.equal(a.run('localCandidates().length'),1);
+ assert.equal(a.storage.get('pagov'),old,'old local note must stay available for reviewed backup');
+ a.elements.reviewLocal.onclick();assert.equal(a.syncRequests.length,0,'opening review must not import automatically');
 });

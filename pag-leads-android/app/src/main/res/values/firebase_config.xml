@@ -7,5 +7,5 @@
     <string name="pag_firebase_sender_id">880973015225</string>
     <string name="pag_firebase_web_client_id">880973015225-4q7rrccutn38n8su95l533og6ogbtbq4.apps.googleusercontent.com</string>
     <!-- Set only after the separate owner gateway is deployed and validated. -->
-    <string name="pag_owner_gateway_url"></string>
+    <string name="pag_owner_gateway_url">https://script.google.com/macros/s/AKfycby9qDv7CLzYb9OzxJPiSwZ8Z69S2E1SRgBDS3KD2ORGbuY9D4wkIClRQNiZaDSckCJp/exec</string>
 </resources>
