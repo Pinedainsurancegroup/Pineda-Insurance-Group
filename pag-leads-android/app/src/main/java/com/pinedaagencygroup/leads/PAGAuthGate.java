@@ -39,6 +39,8 @@ final class PAGAuthGate {
     private final LinearLayout view;
     private final TextView message;
     private final Button button;
+    private final Button emailButton;
+    private final OwnerPasswordAccess passwords;
     private final Executor ui;
     private final AccessCheck check = new AccessCheck();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -49,6 +51,7 @@ final class PAGAuthGate {
         this.activity = activity;
         this.listener = listener;
         this.ui = activity::runOnUiThread;
+        passwords = new OwnerPasswordAccess(activity, this::signIn);
         view = new LinearLayout(activity);
         view.setOrientation(LinearLayout.VERTICAL);
         view.setGravity(Gravity.CENTER);
@@ -58,12 +61,18 @@ final class PAGAuthGate {
         button = new Button(activity);
         button.setText("Continuar con Google");
         button.setOnClickListener(v -> signIn());
+        emailButton = new Button(activity);
+        emailButton.setText("Entrar con correo · Owner");
+        emailButton.setOnClickListener(v -> passwords.signIn(this::verify));
         view.addView(message);
         view.addView(button);
+        view.addView(emailButton);
         show("Verificando acceso a PAG Leads…", false);
     }
 
     LinearLayout view() { return view; }
+
+    void configureOwnerPassword() { passwords.configure(); }
 
     void verify() {
         pause();
@@ -124,6 +133,7 @@ final class PAGAuthGate {
     }
 
     void pause() {
+        passwords.close();
         check.cancel();
         if (timeout != null) handler.removeCallbacks(timeout);
         if (profileWatch != null) { profileWatch.remove(); profileWatch = null; }
@@ -183,5 +193,6 @@ final class PAGAuthGate {
     private void show(String text, boolean enabled) {
         message.setText(text);
         button.setEnabled(enabled);
+        emailButton.setEnabled(enabled);
     }
 }

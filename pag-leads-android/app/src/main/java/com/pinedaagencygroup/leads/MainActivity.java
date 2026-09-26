@@ -328,6 +328,11 @@ public class MainActivity extends Activity {
     }
 
     private class PAGNativeBridge {
+        @JavascriptInterface public void configureOwnerPassword() {
+            runOnUiThread(() -> {
+                if (resumed && ownerVerified) authGate.configureOwnerPassword();
+            });
+        }
         @JavascriptInterface public String getSyncUid() {
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             return ownerVerified && user != null ? user.getUid() : "";
@@ -444,7 +449,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String getBuildLabel() {
             return getResources().getBoolean(R.bool.pag_qa_build)
-                    ? "PAG LEADS v1.8 QA12" : "PAG LEADS v1.8";
+                    ? "PAG LEADS v1.8 QA13" : "PAG LEADS v1.8";
         }
 
         @JavascriptInterface
