@@ -13,7 +13,8 @@ function app() {
   }
   const requests = [], storage = new Map(), timers = new Map();
   let active = true, timerId = 0;
-  const sandbox = {...elements, Map, Date, Intl, console,
+  // window.status is a native string, not the element whose id is "status".
+  const sandbox = {...elements, status: '', Map, Date, Intl, console,
     document: {querySelector: selector => elements[selector.slice(1)], querySelectorAll: () => [], addEventListener() {}},
     localStorage: {getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value)},
     setTimeout: callback => {timers.set(++timerId, callback); return timerId}, clearTimeout: id => timers.delete(id), setInterval() {},
@@ -70,9 +71,38 @@ test('failed refresh retains the last successful list and exposes stale status',
 
 test('local note/status edits update immediately without another gateway round trip', async () => {
   const a = app(); const first = a.resume(); a.result(0, [lead]); await first;
-  a.run('st.sel=st.leads[0]'); a.elements.status.value = 'Seguimiento'; a.elements.note.value = 'Prueba local';
+  a.run("openLead('test-1')"); a.elements.status.value = 'Seguimiento'; a.elements.note.value = 'Prueba local';
   await a.run('saveLead()');
   assert.equal(a.requests.length, 1);
   assert.equal(a.run('st.leads[0].status'), 'Seguimiento');
   assert.equal(JSON.parse(a.storage.get('pagov'))['test-1'].note, 'Prueba local');
+});
+
+
+test('editing one lead updates only its badge and note; other dialogs load their own values', async () => {
+  const a = app(); const first = a.resume();
+  const leads = Array.from({length: 5}, (_, i) => ({...lead, id: `PAG-A-${i + 2}`, name: `Prueba ${i + 1}`}));
+  a.result(0, leads); await first;
+  a.run("openLead('PAG-A-3')");
+  assert.equal(a.elements.status.value, 'Nuevo');
+  a.elements.status.value = 'Contactado'; a.elements.note.value = 'Nota del segundo';
+  await a.run('saveLead()');
+  assert.equal(a.run('st.leads[1].status'), 'Contactado');
+  assert.equal(a.run("st.leads.filter(x=>x.status==='Nuevo').length"), 4);
+  assert.equal((a.elements.list.innerHTML.match(/>Contactado<\/span>/g) || []).length, 1);
+  assert.equal((a.elements.list.innerHTML.match(/>Nuevo<\/span>/g) || []).length, 4);
+  a.run("openLead('PAG-A-4')");
+  assert.equal(a.elements.status.value, 'Nuevo');
+  assert.equal(a.elements.note.value, '');
+  a.elements.status.value = 'Seguimiento'; a.elements.note.value = 'Nota del tercero';
+  await a.run('saveLead()');
+  a.run("openLead('PAG-A-3')");
+  assert.equal(a.elements.status.value, 'Contactado');
+  assert.equal(a.elements.note.value, 'Nota del segundo');
+  const refresh = a.resume(true); a.result(1, leads); await refresh;
+  assert.equal(a.run('st.leads[1].status'), 'Contactado');
+  assert.equal(a.run('st.leads[2].status'), 'Seguimiento');
+  assert.equal(a.run("st.leads.filter(x=>x.status==='Nuevo').length"), 3);
+  assert.deepEqual(Object.keys(JSON.parse(a.storage.get('pagov'))).sort(), ['PAG-A-3', 'PAG-A-4']);
+  assert.equal(a.sandbox.status, '', 'never write to the native browser status property');
 });

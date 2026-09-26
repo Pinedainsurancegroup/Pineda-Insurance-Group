@@ -26,6 +26,8 @@
 <script>
 const st={leads:[],type:'agent',sel:null,set:{url:'',tok:'',auto:true,notify:true}};
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+// Resolve form controls explicitly: window.status is a browser string, not this select.
+const leadStatus=$('#status'),leadNote=$('#note');
 const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 const dig=s=>String(s||'').replace(/\D/g,'');
 function fmt(i){try{return new Intl.DateTimeFormat('es-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(i))}catch{return i||''}}
@@ -131,9 +133,9 @@ function openLead(id){
   details.innerHTML=rr.map(([k,v])=>`<div class="d"><span>${esc(k)}</span><b>${esc(v||'—')}</b></div>`).join('');
   let p=dig(x.phone);if(p.length===10)p='1'+p;
   acts.innerHTML=`<a href="tel:+${p}">Llamar</a><a href="https://wa.me/${p}">WhatsApp</a><a href="mailto:${encodeURIComponent(x.email||'')}">Email</a>`;
-  status.value=x.status||'Nuevo';note.value=x.note||'';leadDlg.showModal()
+  leadStatus.value=x.status||'Nuevo';leadNote.value=x.note||'';leadDlg.showModal()
 }
-async function saveLead(){if(!pageActive||!st.sel)return;const p={status:status.value,note:note.value.trim(),updatedAt:new Date().toISOString()};const o=over();o[st.sel.id]={...(o[st.sel.id]||{}),...p};localStorage.setItem('pagov',JSON.stringify(o));st.leads=apply(st.leads);render();leadDlg.close();pop('Lead actualizado en este teléfono')}
+async function saveLead(){if(!pageActive||!st.sel)return;const p={status:leadStatus.value,note:leadNote.value.trim(),updatedAt:new Date().toISOString()};const o=over();o[st.sel.id]={...(o[st.sel.id]||{}),...p};localStorage.setItem('pagov',JSON.stringify(o));st.leads=apply(st.leads);render();leadDlg.close();pop('Lead actualizado en este teléfono')}
 function type(t){st.type=t;$$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));renderList()}
 function pop(m){toast.textContent=m;toast.style.display='block';setTimeout(()=>toast.style.display='none',2400)}
 r.onclick=()=>refresh({ping:true});q.oninput=renderList;sf.onchange=renderList;$$('.tab').forEach(b=>b.onclick=()=>type(b.dataset.t));$$('.nav[data-v]').forEach(b=>b.onclick=()=>{$$('.nav').forEach(x=>x.classList.remove('on'));b.classList.add('on');type(b.dataset.v)});settings.onclick=()=>setDlg.showModal();save.onclick=saveLead;
