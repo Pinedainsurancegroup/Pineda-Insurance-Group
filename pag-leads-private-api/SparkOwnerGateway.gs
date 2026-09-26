@@ -94,7 +94,8 @@ function pagTimestamp_(value) {
   if (!value) return '';
   const m = String(value).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if (!m) return String(value);
-  return m[3] + '-' + m[1].padStart(2, '0') + '-' + m[2].padStart(2, '0') +
+  // Recruitment Sheet uses day/month/year (confirmed by the QA phone output).
+  return m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0') +
     'T' + m[4].padStart(2, '0') + ':' + m[5] + ':' + (m[6] || '00');
 }
 
