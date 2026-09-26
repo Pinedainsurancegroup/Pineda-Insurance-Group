@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {initializeApp, deleteApp} = require('firebase/app');
 const {getAuth, connectAuthEmulator, GoogleAuthProvider, EmailAuthProvider, signInWithCredential,
-  linkWithCredential, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut} = require('firebase/auth');
+  updatePassword, reload, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut} = require('firebase/auth');
 const {getFirestore, connectFirestoreEmulator, doc, getDocFromServer, setDoc} = require('firebase/firestore');
 const {initializeTestEnvironment, assertFails} = require('@firebase/rules-unit-testing');
 
@@ -34,7 +34,9 @@ const {initializeTestEnvironment, assertFails} = require('@firebase/rules-unit-t
       await setDoc(doc(c.firestore(),'recruitmentState','password-test-lead'),{status:'Contactado',note:'Conservar mi nota',revision:3});
       await setDoc(doc(c.firestore(),'recruitmentState','password-test-lead','activity','earlier'),{kind:'edit',note:'Historial previo'});
     });
-    const linked=await linkWithCredential(before.user,EmailAuthProvider.credential(email,password));
+    await updatePassword(before.user,password);
+    await reload(before.user);
+    const linked=before;
     assert.equal(linked.user.uid,uid,'adding a password must preserve the Google UID');
     assert.equal(linked.user.emailVerified,true);
     assert.deepEqual(linked.user.providerData.map(p=>p.providerId).sort(),['google.com','password']);

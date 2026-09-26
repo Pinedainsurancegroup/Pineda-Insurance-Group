@@ -59,8 +59,10 @@ final class OwnerPasswordAccess {
         if (!sameOwner(user)) return;
         close();
         final int ticket = generation;
-        FirebaseFirestore.getInstance().collection("users").document(user.getUid())
-                .get(Source.SERVER).addOnCompleteListener(activity, task -> {
+        user.reload().continueWithTask(reloaded -> {
+                    if (!reloaded.isSuccessful()) throw reloaded.getException();
+                    return FirebaseFirestore.getInstance().collection("users").document(user.getUid()).get(Source.SERVER);
+                }).addOnCompleteListener(activity, task -> {
                     if (!current(ticket) || !sameOwner(FirebaseAuth.getInstance().getCurrentUser())) return;
                     DocumentSnapshot profile = task.isSuccessful() ? task.getResult() : null;
                     if (!allowed(profile)) {
@@ -161,12 +163,12 @@ final class OwnerPasswordAccess {
                                 busy(entry, false); status.setText("No se pudo validar tu permiso. Vuelve a entrar con Google.");
                                 return;
                             }
-                            // Linking preserves the existing UID. Never create a second user or replace Google.
-                            owner.linkWithCredential(EmailAuthProvider.getCredential(OWNER_EMAIL, secret))
+                            // Set a password on the authenticated, verified Owner; preserve UID and Google.
+                            owner.updatePassword(secret)
                                     .addOnCompleteListener(activity, task -> {
                                         if (!current(ticket)) return;
                                         password.setText(""); repeat.setText("");
-                                        if (task.isSuccessful() && sameOwner(task.getResult().getUser())) {
+                                        if (task.isSuccessful() && sameOwner(FirebaseAuth.getInstance().getCurrentUser())) {
                                             entry.dismiss();
                                             info("Contraseña creada. Ya puedes entrar con tu correo y esta contraseña en el otro teléfono. Tu información sigue en la misma cuenta.");
                                         } else {

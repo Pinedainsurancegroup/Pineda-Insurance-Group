@@ -5,7 +5,7 @@ Decisión de Juan, 26/09/2026: permitir escribir correo y contraseña en el segu
 ## Cuenta e identidad
 
 - La contraseña es exclusiva de PAG Leads. No se solicita la contraseña de Google en la app ni en el chat.
-- Primer teléfono, con sesión del Owner: Ajustes → Crear contraseña de PAG Leads. Un diálogo nativo pide contraseña y confirmación; `linkWithCredential(EmailAuthProvider...)` conserva el UID existente y el proveedor Google.
+- Primer teléfono, con sesión del Owner: Ajustes → Crear contraseña de PAG Leads. Un diálogo nativo pide contraseña y confirmación; `FirebaseUser.updatePassword(...)` establece la contraseña sobre el usuario autenticado y conserva el UID existente y el proveedor Google.
 - Segundo teléfono: Entrar con correo · Owner. `signInWithEmailAndPassword` y la comprobación posterior del perfil del servidor son obligatorios.
 - La app no crea cuentas con contraseña, no escribe roles ni concede permisos por coincidencia de correo. El acceso manual y la vinculación se limitan además a la identidad del Owner existente. Las Security Rules siguen imponiendo rol, estado activo y suspensión en el servidor.
 - Firebase habilita proveedores por proyecto, no por rol. Aunque alguien intentara registrar otra identidad directamente en Auth, no obtendría un perfil autorizado ni datos. No se crea autoservicio de alta o aprobación. La futura autorización de agentes requiere provisionamiento administrativo y su app/área correspondiente.
@@ -21,3 +21,5 @@ Habilitar Email/Password conservando Google en Firebase Authentication; no habil
 La prueba de emuladores cubre Google → contraseña sobre el mismo UID, acceso desde otra sesión a notas/historial, conservación de Google, contraseña incorrecta, cuenta no autorizada y suspensión de ambas sesiones. No certifica la experiencia del selector/teclado Android ni la vinculación real en producción. Verificar en los dos teléfonos después de habilitar el proveedor.
 
 v1.7, fuente de reclutamiento, reglas, asignaciones, FCM y firma estable siguen bajo los criterios anteriores. No promover QA13 a STABLE por esta modificación.
+
+La primera prueba detectó `auth/email-already-in-use` al intentar vincular EmailAuthProvider al mismo correo Google. Se corrigió usando la operación de establecer contraseña del usuario ya autenticado, sin cambiar correo, UID ni permisos. La misma prueba debe pasar con ese método antes de entregar la APK.
