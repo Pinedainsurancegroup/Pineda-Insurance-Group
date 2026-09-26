@@ -50,7 +50,7 @@ final class OwnerPasswordAccess {
 
     void signIn(Runnable verifiedSignIn) {
         if (!FirebasePushManager.ensureInitialized(activity)) return;
-        entry(false, null, verifiedSignIn);
+        entry(false, verifiedSignIn);
     }
 
     void configure() {
@@ -75,7 +75,7 @@ final class OwnerPasswordAccess {
                             return;
                         }
                     }
-                    entry(true, user, () -> {});
+                    entry(true, () -> {});
                 });
     }
 
@@ -98,7 +98,7 @@ final class OwnerPasswordAccess {
         return input;
     }
 
-    private void entry(boolean setup, FirebaseUser owner, Runnable signedIn) {
+    private void entry(boolean setup, Runnable signedIn) {
         close();
         final int ticket = generation;
         LinearLayout fields = new LinearLayout(activity);
@@ -158,13 +158,13 @@ final class OwnerPasswordAccess {
                         .addOnCompleteListener(activity, profileTask -> {
                             if (!current(ticket)) return;
                             FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-                            if (!sameOwner(currentUser) || currentUser != owner || !profileTask.isSuccessful() || !allowed(profileTask.getResult())) {
+                            if (!sameOwner(currentUser) || !profileTask.isSuccessful() || !allowed(profileTask.getResult())) {
                                 password.setText(""); repeat.setText("");
                                 busy(entry, false); status.setText("No se pudo validar tu permiso. Vuelve a entrar con Google.");
                                 return;
                             }
                             // Set a password on the authenticated, verified Owner; preserve UID and Google.
-                            owner.updatePassword(secret)
+                            currentUser.updatePassword(secret)
                                     .addOnCompleteListener(activity, task -> {
                                         if (!current(ticket)) return;
                                         password.setText(""); repeat.setText("");

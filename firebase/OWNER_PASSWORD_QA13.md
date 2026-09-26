@@ -14,12 +14,12 @@ Decisión de Juan, 26/09/2026: permitir escribir correo y contraseña en el segu
 
 Entrada nativa oculta y protegida contra capturas; no pasa al HTML/JavaScript, preferencias, historial ni registros. Se borra de los campos al terminar/cerrar/salir. Se exige de 12 a 128 caracteres para la vinculación inicial. Los errores se muestran sin datos internos. Recuperar contraseña solo envía el correo de Firebase cuando el usuario toca esa opción.
 
-## Configuración y prueba pendientes
+## Configuración aplicada y prueba pendiente
 
-Habilitar Email/Password conservando Google en Firebase Authentication; no habilitar enlace sin contraseña ni cambiar facturación. La sesión administrativa estaba cerrada al preparar esta versión: no considerar aplicado hasta verificación de la consola. Juan debe elegir y enviar su nueva contraseña personalmente desde el teléfono; nunca establecer una contraseña por él.
+Email/Password habilitado y verificado en la consola el 26/09/2026, conservando Google habilitado y Spark. Acceso por vínculo sin contraseña desactivado. Se comprobó la identidad owner existente antes de habilitar el proveedor; no se creó otro usuario. Juan debe elegir y enviar su nueva contraseña personalmente desde el teléfono; nunca establecer una contraseña por él.
 
 La prueba de emuladores cubre Google → contraseña sobre el mismo UID, acceso desde otra sesión a notas/historial, conservación de Google, contraseña incorrecta, cuenta no autorizada y suspensión de ambas sesiones. No certifica la experiencia del selector/teclado Android ni la vinculación real en producción. Verificar en los dos teléfonos después de habilitar el proveedor.
 
 v1.7, fuente de reclutamiento, reglas, asignaciones, FCM y firma estable siguen bajo los criterios anteriores. No promover QA13 a STABLE por esta modificación.
 
-La primera prueba detectó `auth/email-already-in-use` al intentar vincular EmailAuthProvider al mismo correo Google. Se corrigió usando la operación de establecer contraseña del usuario ya autenticado, sin cambiar correo, UID ni permisos. La misma prueba debe pasar con ese método antes de entregar la APK.
+La primera prueba detectó `auth/email-already-in-use` al intentar vincular EmailAuthProvider al mismo correo Google. Se corrigió usando la operación de establecer contraseña del usuario ya autenticado, sin cambiar correo, UID ni permisos. La prueba corregida pasó en CI: run 36268136215, commit ee65ff7a77419ffa58ccc96dfac5b764597c2b3b. La primera compilación con linkWithCredential no se entregó.
