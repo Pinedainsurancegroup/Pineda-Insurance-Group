@@ -27,6 +27,13 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Check loading and permission lifecycle regressions
+        run: |
+          node --test pag-leads-android/tests/ui-lifecycle.test.cjs
+          mkdir -p /tmp/pag-access-test
+          javac -d /tmp/pag-access-test pag-leads-android/app/src/main/java/com/pinedaagencygroup/leads/AccessCheck.java pag-leads-android/tests/AccessCheckTest.java
+          java -ea -cp /tmp/pag-access-test com.pinedaagencygroup.leads.AccessCheckTest
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:

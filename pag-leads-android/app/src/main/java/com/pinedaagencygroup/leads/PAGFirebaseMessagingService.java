@@ -22,6 +22,7 @@ public class PAGFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(RemoteMessage message) {
         super.onMessageReceived(message);
+        if (!getSharedPreferences("pag_native", MODE_PRIVATE).getBoolean("notifications", true)) return;
         createChannel();
 
         // Never render server-supplied lead fields on the lock screen.
@@ -29,6 +30,7 @@ public class PAGFirebaseMessagingService extends FirebaseMessagingService {
         String body = "Nuevo lead recibido. Toca para abrir PAG Leads.";
 
         Intent open = new Intent(this, MainActivity.class);
+        open.putExtra("pag_refresh", true);
         open.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
         PendingIntent pi = PendingIntent.getActivity(
@@ -49,7 +51,9 @@ public class PAGFirebaseMessagingService extends FirebaseMessagingService {
                 .build();
 
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        nm.notify((int) (System.currentTimeMillis() & 0x7fffffff), n);
+        String eventId = message.getData().get("eventId");
+        int notificationId = eventId == null ? (int) (System.currentTimeMillis() & 0x7fffffff) : eventId.hashCode();
+        nm.notify(notificationId, n);
     }
 
     private void createChannel() {

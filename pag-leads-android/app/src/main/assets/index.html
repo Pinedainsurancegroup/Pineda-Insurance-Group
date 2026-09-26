@@ -30,6 +30,7 @@ const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 const dig=s=>String(s||'').replace(/\D/g,'');
 function fmt(i){try{return new Intl.DateTimeFormat('es-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(i))}catch{return i||''}}
 let reconnectTimer=null,connecting=false,reconnectFailures=0,unlockTaps=0,unlockTimer=null;
+let pageActive=false,lastSuccess=0,refreshSequence=0;
 function nativeSync(){if(!st.set.url||!st.set.tok)return;try{if(window.PAGNative&&PAGNative.saveSettings)PAGNative.saveSettings(st.set.url,st.set.tok,st.set.auto!==false,st.set.notify!==false)}catch{}}
 function readNativeSet(){try{if(window.PAGNative&&PAGNative.getSettingsJson)return JSON.parse(PAGNative.getSettingsJson()||'{}')}catch{}return {}}
 function readLocalSet(){try{return JSON.parse(localStorage.getItem('pagset12')||'{}')}catch{return {}}}
@@ -56,15 +57,15 @@ function apply(a){const o=over();return a.map(x=>({...x,...(o[x.id]||{})}))}
 const pendingRecruitment=new Map();let requestSequence=0;
 function hasPrivateAccess(){return !!(st.set.url&&st.set.tok)||!!(window.PAGNative&&PAGNative.hasOwnerGateway&&PAGNative.hasOwnerGateway())}
 window.PAGNativeRecruitmentResult=(id,ok,payload)=>{const done=pendingRecruitment.get(id);if(!done)return;pendingRecruitment.delete(id);clearTimeout(done.timer);if(!ok){done.reject(new Error('Conexión privada no disponible'));return}try{done.resolve(JSON.parse(payload))}catch{done.reject(new Error('Respuesta privada no válida'))}};
-function privateGateway(action){return new Promise((resolve,reject)=>{const id=String(++requestSequence),timer=setTimeout(()=>{pendingRecruitment.delete(id);reject(new Error('Tiempo de espera agotado'))},20000);pendingRecruitment.set(id,{resolve,reject,timer});try{PAGNative.requestRecruitment(action,id)}catch(e){pendingRecruitment.delete(id);clearTimeout(timer);reject(e)}})}
+function privateGateway(action){return new Promise((resolve,reject)=>{const id=String(++requestSequence),timer=setTimeout(()=>{pendingRecruitment.delete(id);reject(new Error('Tiempo de espera agotado'))},45000);pendingRecruitment.set(id,{resolve,reject,timer});try{PAGNative.requestRecruitment(action,id)}catch(e){pendingRecruitment.delete(id);clearTimeout(timer);reject(e)}})}
 async function api(action){
   if(!st.set.url||!st.set.tok){if(!hasPrivateAccess())throw new Error('Falta configurar conexión privada');const j=await privateGateway(action);if(j.ok===false)throw new Error('Conexión privada rechazada');return j}
   const r=await fetch(st.set.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,token:st.set.tok}),cache:'no-store'});const j=await r.json();if(!r.ok||j.ok===false)throw new Error(j.error||'Conexión rechazada');return j
 }
 async function getLeads(){const j=await api('list');return apply(j.leads||[])}
-function scheduleReconnect(){clearTimeout(reconnectTimer);const gateway=!(st.set.url&&st.set.tok);const delay=gateway?Math.min(300000,30000*2**Math.min(reconnectFailures++,4)):10000;reconnectTimer=setTimeout(()=>refresh({ping:!gateway,silent:true}),delay)}
+function scheduleReconnect(){clearTimeout(reconnectTimer);if(!pageActive)return;const gateway=!(st.set.url&&st.set.tok);const delay=gateway?Math.min(300000,30000*2**Math.min(reconnectFailures++,4)):10000;reconnectTimer=setTimeout(()=>refresh({ping:!gateway,silent:true}),delay)}
 async function refresh(opts={}){
-  if(connecting)return;
+  if(!pageActive||connecting)return;
   if(!hasPrivateAccess()){
     const qa=buildLabel.textContent.includes('QA');
     sync.textContent=qa?'QA: conexión privada pendiente':'Conexión privada requiere reactivación';
@@ -72,23 +73,28 @@ async function refresh(opts={}){
     st.leads=[];render();return;
   }
   connecting=true;clearTimeout(reconnectTimer);
-  sync.textContent='Conectando automáticamente…';
+  const attempt=++refreshSequence;
+  sync.textContent=lastSuccess?'Actualizando leads…':'Cargando leads…';renderList();
   try{
     let ping=null;
-    if(opts.ping!==false)ping=await api('ping');
-    st.leads=await getLeads();reconnectFailures=0;render();
+    // The authenticated list request already verifies the gateway and current owner.
+    if(st.set.url&&st.set.tok&&opts.ping===true)ping=await api('ping');
+    const leads=await getLeads();
+    if(!pageActive||attempt!==refreshSequence)return;
+    st.leads=leads;lastSuccess=Date.now();reconnectFailures=0;render();
     const when=new Date().toLocaleTimeString('es-US',{hour:'numeric',minute:'2-digit'});
     sync.textContent='Conexión privada activa · '+st.leads.length+' lead'+(st.leads.length===1?'':'s')+' · '+when;
     setConn(true,(ping&&ping.version?ping.version:'PAG Leads Private API')+' · última conexión '+when);
   }catch(e){
-    sync.textContent='Reconectando automáticamente…';
+    if(!pageActive||attempt!==refreshSequence)return;
+    sync.textContent=lastSuccess?'Mostrando la última carga · reintentando actualización…':'Reconectando automáticamente…';
     setConn(false,'Sin conexión. PAG Leads volverá a intentarlo automáticamente.');
     scheduleReconnect();
     if(!opts.silent)pop('Reconectando automáticamente');
-  }finally{connecting=false}
+  }finally{if(attempt===refreshSequence){connecting=false;renderList()}}
 }
 function render(){const td=new Date().toDateString(),a=st.leads.filter(x=>x.type==='agent'),c=st.leads.filter(x=>x.type==='client');s0.textContent=st.leads.filter(x=>{const d=new Date(x.createdAt);return !isNaN(d)&&d.toDateString()===td&&x.status==='Nuevo'}).length;s1.textContent=a.length;s2.textContent=c.length;s3.textContent=st.leads.filter(x=>x.status==='Seguimiento').length;renderList()}
-function renderList(){const qv=q.value.toLowerCase(),sv=sf.value;const f=st.leads.filter(x=>(st.type==='all'||x.type===st.type)&&(sv==='all'||x.status===sv)&&(!qv||[x.name,x.phone,x.email,x.city,x.state].join(' ').toLowerCase().includes(qv))).sort((a,b)=>(Date.parse(b.createdAt)||0)-(Date.parse(a.createdAt)||0));list.innerHTML=f.map(x=>`<div class="lead" data-id="${esc(x.id)}"><div><div class="name">${esc(x.name||'Sin nombre')}</div><div class="meta">${esc([x.state,fmt(x.createdAt)].filter(Boolean).join(' · '))}</div><span class="tag">${x.type==='agent'?'Agente':'Cliente Final Expense'}</span></div><span class="badge ${esc(x.status||'Nuevo')}">${esc(x.status||'Nuevo')}</span></div>`).join('');empty.hidden=!!f.length;empty.textContent=hasPrivateAccess()?'No hay leads para mostrar.':'La conexión privada necesita reactivación.';$$('.lead').forEach(e=>e.onclick=()=>openLead(e.dataset.id))}
+function renderList(){const qv=q.value.toLowerCase(),sv=sf.value;const f=st.leads.filter(x=>(st.type==='all'||x.type===st.type)&&(sv==='all'||x.status===sv)&&(!qv||[x.name,x.phone,x.email,x.city,x.state].join(' ').toLowerCase().includes(qv))).sort((a,b)=>(Date.parse(b.createdAt)||0)-(Date.parse(a.createdAt)||0));list.innerHTML=f.map(x=>`<div class="lead" data-id="${esc(x.id)}"><div><div class="name">${esc(x.name||'Sin nombre')}</div><div class="meta">${esc([x.state,fmt(x.createdAt)].filter(Boolean).join(' · '))}</div><span class="tag">${x.type==='agent'?'Agente':'Cliente Final Expense'}</span></div><span class="badge ${esc(x.status||'Nuevo')}">${esc(x.status||'Nuevo')}</span></div>`).join('');empty.hidden=!!f.length;empty.textContent=!lastSuccess&&connecting?'Cargando leads…':(!lastSuccess&&hasPrivateAccess()?'Esperando la primera carga…':(hasPrivateAccess()?'No hay leads para mostrar.':'La conexión privada necesita reactivación.'));$$('.lead').forEach(e=>e.onclick=()=>openLead(e.dataset.id))}
 function parseMeta(raw){
   raw=String(raw||'').trim();
   const take=re=>{const m=raw.match(re);return m?m[1].trim():''};
@@ -127,7 +133,7 @@ function openLead(id){
   acts.innerHTML=`<a href="tel:+${p}">Llamar</a><a href="https://wa.me/${p}">WhatsApp</a><a href="mailto:${encodeURIComponent(x.email||'')}">Email</a>`;
   status.value=x.status||'Nuevo';note.value=x.note||'';leadDlg.showModal()
 }
-async function saveLead(){if(!st.sel)return;const p={status:status.value,note:note.value.trim(),updatedAt:new Date().toISOString()};const o=over();o[st.sel.id]={...(o[st.sel.id]||{}),...p};localStorage.setItem('pagov',JSON.stringify(o));leadDlg.close();await refresh();pop('Lead actualizado en este teléfono')}
+async function saveLead(){if(!pageActive||!st.sel)return;const p={status:status.value,note:note.value.trim(),updatedAt:new Date().toISOString()};const o=over();o[st.sel.id]={...(o[st.sel.id]||{}),...p};localStorage.setItem('pagov',JSON.stringify(o));st.leads=apply(st.leads);render();leadDlg.close();pop('Lead actualizado en este teléfono')}
 function type(t){st.type=t;$$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));renderList()}
 function pop(m){toast.textContent=m;toast.style.display='block';setTimeout(()=>toast.style.display='none',2400)}
 r.onclick=()=>refresh({ping:true});q.oninput=renderList;sf.onchange=renderList;$$('.tab').forEach(b=>b.onclick=()=>type(b.dataset.t));$$('.nav[data-v]').forEach(b=>b.onclick=()=>{$$('.nav').forEach(x=>x.classList.remove('on'));b.classList.add('on');type(b.dataset.v)});settings.onclick=()=>setDlg.showModal();save.onclick=saveLead;
@@ -136,10 +142,14 @@ auto.onchange=savePrefs;notify.onchange=savePrefs;
 connBox.onclick=()=>{unlockTaps++;clearTimeout(unlockTimer);unlockTimer=setTimeout(()=>unlockTaps=0,3500);if(unlockTaps>=7){unlockTaps=0;adminUrl.value=st.set.url||'';adminTok.value='';adminResult.textContent='';adminDlg.showModal()}};
 adminTest.onclick=async()=>{adminResult.textContent='Probando…';const old={...st.set};st.set={...st.set,url:adminUrl.value.trim(),tok:adminTok.value.trim()||old.tok};try{const j=await api('ping');adminResult.textContent='✓ Conexión correcta'+(j.version?' · '+j.version:'')}catch(e){adminResult.textContent='✕ '+e.message}finally{st.set=old}};
 adminSave.onclick=()=>{const u=adminUrl.value.trim(),t=adminTok.value.trim();if(u)st.set.url=u;if(t)st.set.tok=t;persistSet();adminDlg.close();refresh({ping:true});pop('Conexión reactivada')};
-async function autoStart(){try{if(window.PAGNative&&PAGNative.getBuildLabel)buildLabel.textContent=PAGNative.getBuildLabel()}catch{}loadSet();if(st.set.url&&st.set.tok)nativeSync();await refresh({ping:true,silent:true})}
+async function autoStart(force=false){try{if(window.PAGNative&&PAGNative.isSessionActive&&!PAGNative.isSessionActive())return;if(window.PAGNative&&PAGNative.getBuildLabel)buildLabel.textContent=PAGNative.getBuildLabel()}catch{return}pageActive=true;loadSet();if(st.set.url&&st.set.tok)nativeSync();if(force||!lastSuccess||Date.now()-lastSuccess>=60000)await refresh({ping:false,silent:true})}
 window.PAGAutoStart=autoStart;
-window.addEventListener('online',()=>refresh({ping:true,silent:true}));
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh({ping:true,silent:true})});
-autoStart();setInterval(()=>{if(st.set.auto&&(!reconnectFailures||st.set.url&&st.set.tok))refresh({ping:!!(st.set.url&&st.set.tok),silent:true})},60000);
+window.PAGResume=autoStart;
+window.PAGPreferencesChanged=()=>{if(pageActive)loadSet()};
+window.PAGSuspend=()=>{pageActive=false;refreshSequence++;connecting=false;clearTimeout(reconnectTimer);for(const done of pendingRecruitment.values()){clearTimeout(done.timer);done.reject(new Error('Sesión en pausa'))}pendingRecruitment.clear()};
+window.addEventListener('online',()=>{if(pageActive)refresh({ping:false,silent:true})});
+// Android explicitly resumes only after a fresh server permission check.
+if(!window.PAGNative)autoStart();
+setInterval(()=>{if(pageActive&&st.set.auto&&(!reconnectFailures||st.set.url&&st.set.tok)&&Date.now()-lastSuccess>=60000)refresh({ping:false,silent:true})},60000);
 </script>
 </body></html>

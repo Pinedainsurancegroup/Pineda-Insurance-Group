@@ -35,15 +35,29 @@ public class MainActivity extends Activity {
     private boolean pageReady = false;
     private PAGAuthGate authGate;
     private volatile boolean ownerVerified = false;
+    private volatile int requestGeneration;
+    private boolean resumed;
+    private String viewUid;
+    private FirebaseAuth.AuthStateListener accountWatch;
+    private volatile int preferenceRevision;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Recruitment must not remain readable in Android's recent-apps preview.
+        if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false);
         authGate = new PAGAuthGate(this, new PAGAuthGate.Listener() {
             @Override public void onOwnerVerified() {
+                if (!resumed) return;
+                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                if (user == null) return;
+                if (viewUid != null && !viewUid.equals(user.getUid())) discardRecruitmentView();
+                viewUid = user.getUid();
                 ownerVerified = true;
-                requestNotificationPermissionIfNeeded();
+                // Preferences and token registration must not delay the first lead request.
+                openRecruitment();
                 loadOperationalPreferences();
+                requestNotificationPermissionIfNeeded();
             }
 
             @Override public void onAccessRevoked() {
@@ -54,17 +68,31 @@ public class MainActivity extends Activity {
             }
         });
         setContentView(authGate.view());
+        if (FirebasePushManager.ensureInitialized(this)) {
+            accountWatch = auth -> {
+                FirebaseUser user = auth.getCurrentUser();
+                if (viewUid != null && (user == null || !viewUid.equals(user.getUid()))) {
+                    ownerVerified = false;
+                    requestGeneration++;
+                    setContentView(authGate.view());
+                    discardRecruitmentView();
+                    if (resumed) authGate.verify();
+                }
+            };
+            FirebaseAuth.getInstance().addAuthStateListener(accountWatch);
+        }
     }
 
     private void loadOperationalPreferences() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) { ownerVerified = false; authGate.verify(); return; }
         String uid = user.getUid();
+        final int revision = preferenceRevision;
         FirebaseFirestore.getInstance().collection("users").document(uid)
                 .collection("preferences").document("operational").get(Source.SERVER)
                 .addOnCompleteListener(this, task -> {
                     FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
-                    if (!ownerVerified || current == null || !uid.equals(current.getUid())) return;
+                    if (!ownerVerified || revision != preferenceRevision || current == null || !uid.equals(current.getUid())) return;
                     SharedPreferences prefs = getSharedPreferences("pag_native", MODE_PRIVATE);
                     if (task.isSuccessful() && task.getResult() != null) {
                         if (task.getResult().exists()) {
@@ -80,7 +108,8 @@ public class MainActivity extends Activity {
                                     prefs.getBoolean("notifications", true));
                         }
                     }
-                    openRecruitment();
+                    if (pageReady && webView != null)
+                        webView.evaluateJavascript("window.PAGPreferencesChanged && window.PAGPreferencesChanged();", null);
                 });
     }
 
@@ -107,7 +136,8 @@ public class MainActivity extends Activity {
         }
         if (webView != null) {
             setContentView(webView);
-            if (pageReady) webView.evaluateJavascript("window.PAGAutoStart && window.PAGAutoStart();", null);
+            webView.onResume();
+            if (pageReady) resumePage();
             return;
         }
 
@@ -144,29 +174,56 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                if (!ownerVerified || view != webView || !"file:///android_asset/index.html".equals(url)) return;
+                if (view != webView || !"file:///android_asset/index.html".equals(url)) return;
                 pageReady = true;
-                view.evaluateJavascript("window.PAGAutoStart && window.PAGAutoStart();", null);
+                if (ownerVerified) resumePage();
             }
         });
 
         webView.loadUrl("file:///android_asset/index.html");
     }
 
+    private void resumePage() {
+        boolean force = getIntent().getBooleanExtra("pag_refresh", false);
+        getIntent().removeExtra("pag_refresh");
+        webView.evaluateJavascript("window.PAGResume && window.PAGResume(" + force + ");", null);
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (ownerVerified && pageReady && webView != null) resumePage();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
+        resumed = true;
         // Recheck against the server before showing data after every return to the app.
         ownerVerified = false;
         setContentView(authGate.view());
-        discardRecruitmentView();
         authGate.verify();
     }
 
     @Override
     protected void onPause() {
+        resumed = false;
         ownerVerified = false;
+        requestGeneration++;
+        authGate.pause();
+        if (webView != null) {
+            webView.evaluateJavascript("window.PAGSuspend && window.PAGSuspend();", null);
+            webView.onPause();
+        }
+        setContentView(authGate.view());
         super.onPause();
+    }
+
+    @Override protected void onDestroy() {
+        authGate.pause();
+        if (accountWatch != null) FirebaseAuth.getInstance().removeAuthStateListener(accountWatch);
+        discardRecruitmentView();
+        super.onDestroy();
     }
 
     private void discardRecruitmentView() {
@@ -177,6 +234,7 @@ public class MainActivity extends Activity {
         webView.destroy();
         webView = null;
         pageReady = false;
+        viewUid = null;
     }
 
     private URL gatewayUrl() {
@@ -188,8 +246,8 @@ public class MainActivity extends Activity {
         return null;
     }
 
-    private void deliverRecruitment(WebView requestView, String requestId, boolean ok, String payload) {
-        if (!ownerVerified || webView != requestView || !pageReady) return;
+    private void deliverRecruitment(WebView requestView, int generation, String requestId, boolean ok, String payload) {
+        if (!ownerVerified || requestGeneration != generation || webView != requestView || !pageReady) return;
         requestView.evaluateJavascript("window.PAGNativeRecruitmentResult && " +
                 "window.PAGNativeRecruitmentResult(" + JSONObject.quote(requestId) + "," +
                 ok + "," + JSONObject.quote(payload) + ");", null);
@@ -239,24 +297,28 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public boolean isSessionActive() { return ownerVerified && pageReady; }
+
+        @JavascriptInterface
         public void requestRecruitment(String action, String requestId) {
             if (!ownerVerified || webView == null || !pageReady ||
                     !("ping".equals(action) || "list".equals(action)) ||
                     requestId == null || !requestId.matches("[0-9]{1,12}")) return;
             final WebView requestView = webView;
+            final int generation = requestGeneration;
             URL endpoint = gatewayUrl();
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             if (endpoint == null || user == null) {
-                runOnUiThread(() -> deliverRecruitment(requestView, requestId, false, "{}"));
+                runOnUiThread(() -> deliverRecruitment(requestView, generation, requestId, false, "{}"));
                 return;
             }
             final String uid = user.getUid();
-            user.getIdToken(true).addOnCompleteListener(MainActivity.this, task -> {
+            user.getIdToken(false).addOnCompleteListener(MainActivity.this::runOnUiThread, task -> {
                 FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
-                if (!ownerVerified || current == null || !uid.equals(current.getUid()) ||
+                if (!ownerVerified || generation != requestGeneration || current == null || !uid.equals(current.getUid()) ||
                         !task.isSuccessful() || task.getResult() == null ||
                         task.getResult().getToken() == null) {
-                    deliverRecruitment(requestView, requestId, false, "{}"); return;
+                    deliverRecruitment(requestView, generation, requestId, false, "{}"); return;
                 }
                 final String token = task.getResult().getToken();
                 new Thread(() -> {
@@ -268,7 +330,7 @@ public class MainActivity extends Activity {
                         connection.setRequestMethod("POST");
                         connection.setRequestProperty("Content-Type", "text/plain;charset=utf-8");
                         connection.setConnectTimeout(10000);
-                        connection.setReadTimeout(10000);
+                        connection.setReadTimeout(20000);
                         connection.setDoOutput(true);
                         connection.setInstanceFollowRedirects(false);
                         JSONObject request = new JSONObject();
@@ -289,7 +351,7 @@ public class MainActivity extends Activity {
                     runOnUiThread(() -> {
                         FirebaseUser latest = FirebaseAuth.getInstance().getCurrentUser();
                         if (ownerVerified && latest != null && uid.equals(latest.getUid()))
-                            deliverRecruitment(requestView, requestId, success, payload);
+                            deliverRecruitment(requestView, generation, requestId, success, payload);
                     });
                 }).start();
             });
@@ -323,6 +385,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void savePreferences(boolean autoRefresh, boolean notificationsEnabled) {
             if (!ownerVerified) return;
+            preferenceRevision++;
             SharedPreferences prefs = getSharedPreferences("pag_native", MODE_PRIVATE);
             prefs.edit().putBoolean("auto", autoRefresh)
                     .putBoolean("notifications", notificationsEnabled).apply();
