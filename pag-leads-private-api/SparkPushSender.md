@@ -1,4 +1,32 @@
-# Private Spark push sender — QA activation
+# Private Spark push sender — QA activation and RC transition
+
+## RC transition (26 September 2026)
+
+Juan verified QA form delivery, then RC1 installation, its manual FCM notice,
+notification tap, notes, state and history. The initial QA-only status below is
+historical. A new real form submission must still verify automatic RC delivery.
+
+`QA_DEVICE_ID` keeps the original approved QA installation. Optional
+`PUSH_PRIMARY_DEVICE_ID` selects the single destination for new automatic events;
+when absent, QA remains the default. `CANDIDATE_DEVICE_ID` is a separate reviewed
+RC target. `pagActivateCandidateAutomaticPush` validates the active Owner,
+preferences, device approval and current token with FCM validation-only, then
+sets the primary destination and a route audit under the existing script lock.
+It creates no lead, sends no visible message, changes no triggers or permissions,
+and preserves the QA approval and identifier. Do not run before physical RC tests.
+
+Each new queue record stores its original device ID. Retries keep that target
+even if the primary route changes; records from before this change remain on QA.
+The explicit QA approval/test functions continue to use QA_DEVICE_ID. The RC
+single-attempt probe stays outside the automatic retry queue. All sends retain
+the same Owner, preference, approved-token and global daily-cap checks.
+
+For an authorized rollback, validate the existing QA target first and restore
+the primary property to QA_DEVICE_ID (or remove only the primary property).
+Already queued RC events remain pinned to RC; evaluate them separately rather
+than silently redirecting them. Never delete user devices or operational history.
+
+## Original QA setup
 
 2026-09-26 UTC: Juan explicitly approved the five OAuth scopes below and the
 specific QA phone. The separate private script was authorized, the phone approved,

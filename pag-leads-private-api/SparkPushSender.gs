@@ -6,11 +6,14 @@ function pagPushConfig_() {
   const p = PropertiesService.getScriptProperties();
   const c = {project: p.getProperty('FIREBASE_PROJECT_ID'), owner: p.getProperty('OWNER_UID'),
     sheet: p.getProperty('SPREADSHEET_ID'), tab: p.getProperty('SHEET_NAME'),
-    device: p.getProperty('QA_DEVICE_ID'), enabled: p.getProperty('PUSH_ENABLED') === 'true'};
+    qaDevice: p.getProperty('QA_DEVICE_ID'),
+    device: p.getProperty('PUSH_PRIMARY_DEVICE_ID') || p.getProperty('QA_DEVICE_ID'),
+    enabled: p.getProperty('PUSH_ENABLED') === 'true'};
   if (!/^[a-z][a-z0-9-]{4,62}$/.test(c.project || '') ||
       !/^[A-Za-z0-9_-]{16,128}$/.test(c.owner || '') ||
       !/^[A-Za-z0-9_-]{20,128}$/.test(c.sheet || '') || !c.tab ||
-      !/^[A-Za-z0-9-]{16,80}$/.test(c.device || '')) throw new Error('PAG_PUSH_CONFIG');
+      !/^[A-Za-z0-9-]{16,80}$/.test(c.device || '') ||
+      !/^[A-Za-z0-9-]{16,80}$/.test(c.qaDevice || '')) throw new Error('PAG_PUSH_CONFIG');
   return c;
 }
 
@@ -60,6 +63,7 @@ function pagPushTarget_(c) {
 // A client deviceRequest alone never grants permission. No existing approval is overwritten.
 function pagApproveQaDevice() {
   const c = pagPushConfig_();
+  c.device = c.qaDevice;
   if (!pagPushOwner_(c)) throw new Error('PAG_PUSH_OWNER_INACTIVE');
   const path = 'users/' + c.owner + '/devices/' + c.device;
   if (pagPushFirestore_(c, path)) throw new Error('PAG_PUSH_APPROVAL_ALREADY_EXISTS');
@@ -100,6 +104,7 @@ function pagVerifyPushSender() {
 // Sends a generic recruitment notification but creates no lead or spreadsheet row.
 function pagSendQaTestNotification() {
   const c = pagPushConfig_();
+  c.device = c.qaDevice;
   if (!c.enabled) throw new Error('PAG_PUSH_NOT_READY');
   pagPushWithLock_(() => {
     const p = PropertiesService.getScriptProperties();
@@ -107,7 +112,7 @@ function pagSendQaTestNotification() {
     if (Object.keys(p.getProperties()).filter(k => k.startsWith('PUSH_EVENT_')).length >= 100)
       throw new Error('PAG_PUSH_QUEUE_FULL');
     const key = 'PUSH_EVENT_' + pagPushHash_('QA_TEST/' + Date.now());
-    const record = {created: Date.now(), attempts: 0, state: 'PENDING', next: 0, test: true};
+    const record = {created: Date.now(), attempts: 0, state: 'PENDING', next: 0, test: true, device: c.device};
     p.setProperty(key, JSON.stringify(record));
     pagProcessPushEvent_(c, p, key, record);
   });
@@ -138,7 +143,7 @@ function pagOnRecruitmentSubmit(e) {
     if (p.getProperty(key)) return;
     if (Object.keys(p.getProperties()).filter(k => k.startsWith('PUSH_EVENT_')).length >= 100)
       throw new Error('PAG_PUSH_QUEUE_FULL');
-    const record = {created: Date.now(), attempts: 0, state: 'PENDING', next: 0};
+    const record = {created: Date.now(), attempts: 0, state: 'PENDING', next: 0, device: c.device};
     p.setProperty(key, JSON.stringify(record));
     pagProcessPushEvent_(c, p, key, record);
   });
@@ -164,7 +169,14 @@ function pagProcessPushEvent_(c, p, key, record) {
     record.state = 'EXPIRED'; p.setProperty(key, JSON.stringify(record)); return;
   }
   try {
-    const target = pagPushTarget_(c);
+    // Pin retries to the original installation. Records predating routing used QA.
+    const device = record.device === undefined ? c.qaDevice : record.device;
+    if (typeof device !== 'string' || !/^[A-Za-z0-9-]{16,80}$/.test(device)) {
+      record.state = 'BLOCKED'; record.reason = 'INVALID_TARGET';
+      p.setProperty(key, JSON.stringify(record)); return;
+    }
+    const delivery = Object.assign({}, c, {device});
+    const target = pagPushTarget_(delivery);
     if (target.blocked) {
       record.state = 'BLOCKED'; record.reason = target.blocked;
     } else {
@@ -178,7 +190,7 @@ function pagProcessPushEvent_(c, p, key, record) {
         record.attempts++;
         record.next = Date.now() + 300000;
         p.setProperty(key, JSON.stringify(record));
-        const outcome = pagPushSend_(c, target, key.slice('PUSH_EVENT_'.length), false);
+        const outcome = pagPushSend_(delivery, target, key.slice('PUSH_EVENT_'.length), false);
         record.state = outcome === 'RETRY' ? 'PENDING' : outcome;
       }
     }

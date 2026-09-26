@@ -11,8 +11,9 @@ function sender(options = {}) {
     SPREADSHEET_ID: 'private-sheet-test-12345678', SHEET_NAME: 'Respuestas de formulario 1',
     QA_DEVICE_ID: 'device-test-12345678', PUSH_ENABLED: 'true'};
   const properties = {getProperty: k => props[k] || null, setProperty: (k, v) => {props[k] = v},
+    setProperties: values => Object.assign(props, values),
     getProperties: () => ({...props}), deleteProperty: k => delete props[k]};
-  const sends = [], writes = [], logs = [], triggers = [];
+  const sends = [], writes = [], logs = [], triggers = [], reads = [];
   const profile = {role: {stringValue: options.role || 'owner'}, active: {booleanValue: options.active !== false},
     suspended: {booleanValue: !!options.suspended}};
   const approved = options.unapproved ? null : {fields: {enabled: {booleanValue: options.enabled !== false},
@@ -28,6 +29,7 @@ function sender(options = {}) {
         return obj;
       }},
     UrlFetchApp: {fetch: (url, request) => {
+      reads.push(url);
       assert.equal(request.headers.Authorization, 'Bearer test-short-lived-oauth');
       const response = (code, body) => ({getResponseCode: () => code, getContentText: () => JSON.stringify(body)});
       if (url.startsWith('https://fcm.googleapis.com/')) {
@@ -52,7 +54,7 @@ function sender(options = {}) {
   const event = {source: {getId: () => props.SPREADSHEET_ID}, range: {getRow: () => 6,
     getSheet: () => ({getName: () => props.SHEET_NAME, getSheetId: () => 1})},
     values: ['26/09/2026 10:00:00', 'DO-NOT-SEND-PRIVATE-NAME', '555-PII']};
-  return {sandbox, props, sends, writes, logs, triggers, event, profile};
+  return {sandbox, props, sends, writes, logs, triggers, event, profile, reads};
 }
 
 test('one actual form event sends generic data once; duplicate event is suppressed', () => {
@@ -176,4 +178,62 @@ test('candidate probe blocks denied targets and respects global quota; retries c
   c.sandbox.pagSendCandidateTestNotification();c.sandbox.pagRetryPendingPush();
   assert.equal(c.sends.length,1);
   assert.equal(JSON.parse(c.props.CANDIDATE_TEST_LAST).state,'RETRY');
+});
+
+test('activation validates approved candidate and preserves QA route, old event and trigger state', () => {
+  const a=sender(), id='12345678-1234-1234-1234-123456789abc', qa=a.props.QA_DEVICE_ID;
+  a.props.CANDIDATE_DEVICE_ID=id;
+  a.sandbox.pagOnRecruitmentSubmit(a.event);
+  const oldKey=Object.keys(a.props).find(k=>k.startsWith('PUSH_EVENT_'));
+  const oldRecord=a.props[oldKey];
+  a.sandbox.pagActivateCandidateAutomaticPush();
+  assert.equal(a.props.PUSH_PRIMARY_DEVICE_ID,id);
+  assert.equal(a.props.QA_DEVICE_ID,qa);
+  assert.equal(a.props[oldKey],oldRecord);
+  assert.equal(a.sends.at(-1).validate_only,true);
+  assert.equal(a.triggers.length,0);
+  assert.equal(a.writes.length,0);
+  const routeAudit=a.props.PUSH_ROUTE_LAST;
+  a.sandbox.pagActivateCandidateAutomaticPush();
+  assert.equal(a.props.PUSH_ROUTE_LAST,routeAudit);
+  a.sandbox.pagOnRecruitmentSubmit({...a.event, values:['new timestamp','private']});
+  const latest=Object.keys(a.props).filter(k=>k.startsWith('PUSH_EVENT_')).map(k=>JSON.parse(a.props[k]));
+  assert.deepEqual(latest.map(x=>x.device).sort(),[qa,id].sort());
+  assert.ok(a.reads.some(u=>u.endsWith('/deviceRequests/'+id)));
+  assert.doesNotThrow(()=>a.sandbox.pagCandidateConfig_());
+});
+
+test('retries keep original target after route change, including legacy QA records', () => {
+  const id='12345678-1234-1234-1234-123456789abc';
+  for(const legacy of [false,true]) {
+    const a=sender({fcmStatus:503});a.sandbox.pagOnRecruitmentSubmit(a.event);
+    const key=Object.keys(a.props).find(k=>k.startsWith('PUSH_EVENT_'));
+    const record=JSON.parse(a.props[key]);record.next=0;if(legacy)delete record.device;
+    a.props[key]=JSON.stringify(record);a.props.PUSH_PRIMARY_DEVICE_ID=id;a.reads.length=0;
+    a.sandbox.pagRetryPendingPush();
+    assert.equal(a.sends.length,2);
+    assert.ok(a.reads.some(u=>u.endsWith('/deviceRequests/'+a.props.QA_DEVICE_ID)));
+    assert.ok(!a.reads.some(u=>u.endsWith('/deviceRequests/'+id)));
+  }
+  const a=sender({fcmStatus:503});a.props.PUSH_PRIMARY_DEVICE_ID=id;
+  a.sandbox.pagOnRecruitmentSubmit(a.event);
+  const key=Object.keys(a.props).find(k=>k.startsWith('PUSH_EVENT_'));
+  const record=JSON.parse(a.props[key]);record.next=0;a.props[key]=JSON.stringify(record);
+  delete a.props.PUSH_PRIMARY_DEVICE_ID;a.reads.length=0;a.sandbox.pagRetryPendingPush();
+  assert.ok(a.reads.some(u=>u.endsWith('/deviceRequests/'+id)));
+});
+
+test('failed activation changes no route; explicit QA tests remain on QA after transition', () => {
+  const id='12345678-1234-1234-1234-123456789abc';
+  for(const options of [{suspended:true},{unapproved:true},{changedToken:true},{notifications:false},{fcmStatus:503}]) {
+    const a=sender(options);a.props.CANDIDATE_DEVICE_ID=id;
+    assert.throws(()=>a.sandbox.pagActivateCandidateAutomaticPush());
+    assert.equal(a.props.PUSH_PRIMARY_DEVICE_ID,undefined);
+    assert.equal(a.props.PUSH_ROUTE_LAST,undefined);
+  }
+  const a=sender();a.props.CANDIDATE_DEVICE_ID=id;a.props.PUSH_PRIMARY_DEVICE_ID=id;
+  a.sandbox.pagSendQaTestNotification();
+  const key=Object.keys(a.props).find(k=>k.startsWith('PUSH_EVENT_'));
+  assert.equal(JSON.parse(a.props[key]).device,a.props.QA_DEVICE_ID);
+  assert.ok(a.reads.some(u=>u.endsWith('/deviceRequests/'+a.props.QA_DEVICE_ID)));
 });

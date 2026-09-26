@@ -4,7 +4,7 @@ function pagCandidateConfig_() {
   const c = pagPushConfig_();
   const id = PropertiesService.getScriptProperties().getProperty('CANDIDATE_DEVICE_ID');
   if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id || '') ||
-      id === c.device) throw new Error('PAG_CANDIDATE_CONFIG');
+      id === c.qaDevice) throw new Error('PAG_CANDIDATE_CONFIG');
   return Object.assign({}, c, {device: id});
 }
 
@@ -57,5 +57,25 @@ function pagSendCandidateTestNotification() {
     catch (_) { record.state = 'SERVER_UNAVAILABLE'; }
     p.setProperty('CANDIDATE_TEST_LAST', JSON.stringify(record));
     console.log('PAG_CANDIDATE_TEST_' + record.state);
+  });
+}
+
+// Explicit transition only after Juan verifies RC delivery and app behavior.
+// Retains the QA identifier/approval and never changes triggers or pending targets.
+function pagActivateCandidateAutomaticPush() {
+  pagPushWithLock_(() => {
+    const c = pagCandidateConfig_();
+    if (!c.enabled) throw new Error('PAG_PUSH_NOT_READY');
+    const target = pagPushTarget_(c);
+    if (target.blocked) throw new Error('PAG_CANDIDATE_' + target.blocked);
+    if (pagPushSend_(c, target, 'candidate-route-validation', true) !== 'ACCEPTED')
+      throw new Error('PAG_CANDIDATE_ROUTE_VALIDATION_FAILED');
+    const p = PropertiesService.getScriptProperties();
+    const previous = p.getProperty('PUSH_PRIMARY_DEVICE_ID') || c.qaDevice;
+    if (previous !== c.device) p.setProperties({
+      PUSH_PRIMARY_DEVICE_ID: c.device,
+      PUSH_ROUTE_LAST: JSON.stringify({at: new Date().toISOString(), previous, current: c.device})
+    });
+    console.log('PAG_CANDIDATE_AUTOMATIC_ROUTE_READY');
   });
 }
