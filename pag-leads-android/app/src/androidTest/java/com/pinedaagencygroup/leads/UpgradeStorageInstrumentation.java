@@ -28,8 +28,8 @@ public class UpgradeStorageInstrumentation extends Instrumentation {
         try {
             Context context = getTargetContext();
             require(context.getPackageName().equals("com.pinedaagencygroup.leads"), "wrong target");
-            require(context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionCode == 14,
-                    "candidate version not installed");
+            require(context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionCode == 15,
+                    "stable version not installed");
             SharedPreferences prefs = context.getSharedPreferences("pag_native", Context.MODE_PRIVATE);
             require(prefs.getString("url", "").equals("https://example.invalid/legacy"), "private URL lost");
             require(prefs.getString("token", "").equals("synthetic-upgrade-only"), "legacy credential lost");
@@ -67,7 +67,7 @@ public class UpgradeStorageInstrumentation extends Instrumentation {
             require(settings.getString("tok").equals("synthetic-upgrade-only"), "WebView settings lost");
             require(!settings.getBoolean("auto") && settings.getBoolean("notify"), "WebView preferences lost");
             runOnMainSync(() -> browser.get().destroy());
-            result.putString("stream", "PAG_UPGRADE_STORAGE_PASS: v8 to v14; native settings, monitor state, WebView notes and preferences retained.\n");
+            result.putString("stream", "PAG_UPGRADE_STORAGE_PASS: v8 to v15; native settings, monitor state, WebView notes and preferences retained.\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             result.putString("stream", "PAG_UPGRADE_STORAGE_FAIL: " + error.getClass().getSimpleName() + ": " + error.getMessage());

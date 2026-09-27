@@ -4,7 +4,12 @@
 
 Juan verified QA form delivery, then RC1 installation, its manual FCM notice,
 notification tap, notes, state and history. The initial QA-only status below is
-historical. A new real form submission must still verify automatic RC delivery.
+historical. Juan subsequently confirmed a new form notification in the background,
+opening the app by tapping it, the new lead on both phones, and synchronized
+Contactado status, notes and history (26 September 2026, California). This closes
+the physical automatic-delivery gate for RC1. It does not approve a second push
+destination, measure latency, or retire the fallback monitor. See
+`firebase/RELEASE_STABLE_v1.8.md` for the metadata-only stable promotion.
 
 `QA_DEVICE_ID` keeps the original approved QA installation. Optional
 `PUSH_PRIMARY_DEVICE_ID` selects the single destination for new automatic events;
