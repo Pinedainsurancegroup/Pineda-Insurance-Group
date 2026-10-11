@@ -25,27 +25,34 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - name: Rebuild stable baseline, then apply UI patch
+      - name: Reconstruct and verify validated baseline and backup scope
         working-directory: pimflextv-rebuild
         run: |
           bash apply_release_patches.sh
           cp app/src/main/java/com/pimflextv/next/MainActivity.java "$RUNNER_TEMP/stable.java"
           python3 patch_v32_reference_home.py
           python3 verify_reference_scope.py "$RUNNER_TEMP/stable.java"
-      - name: Build side-by-side preview APK and AAB
+          cp app/src/main/java/com/pimflextv/next/MainActivity.java "$RUNNER_TEMP/reference.java"
+          cp app/src/main/java/com/pimflextv/next/SecureStore.java "$RUNNER_TEMP/secure.java"
+          python3 patch_v321_portable_backup.py
+          python3 verify_portable_scope.py "$RUNNER_TEMP/reference.java" "$RUNNER_TEMP/secure.java"
+      - name: Test encrypted transfer and non-destructive restore
         working-directory: pimflextv-rebuild
-        run: gradle :app:assembleDebug :app:bundleDebug --no-daemon
-      - name: Verify preview identity and signature
+        run: gradle :app:testPreviewUnitTest --no-daemon
+      - name: Build isolated preview APK and AAB for private signing
+        working-directory: pimflextv-rebuild
+        run: gradle :app:assemblePreview :app:bundlePreview --no-daemon
+      - name: Verify preview identity
         run: |
-          APK=pimflextv-rebuild/app/build/outputs/apk/debug/app-debug.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$APK"
+          APK=pimflextv-rebuild/app/build/outputs/apk/preview/app-preview-unsigned.apk
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | head -n 8
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep "name='com.pimflextv.next.reference'"
-          sha256sum "$APK" pimflextv-rebuild/app/build/outputs/bundle/debug/app-debug.aab > PREVIEW-SHA256.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep "name='com.pimflextv.next.preview'"
+          sha256sum "$APK" pimflextv-rebuild/app/build/outputs/bundle/preview/app-preview.aab > PREVIEW-UNSIGNED-SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: PIMFLEX-TV-3.2.0-reference.1-TEST-ONLY
+          name: PIMFLEX-TV-3.2.1-preview.1-UNSIGNED
           path: |
-            pimflextv-rebuild/app/build/outputs/apk/debug/app-debug.apk
-            pimflextv-rebuild/app/build/outputs/bundle/debug/app-debug.aab
-            PREVIEW-SHA256.txt
+            pimflextv-rebuild/app/build/outputs/apk/preview/app-preview-unsigned.apk
+            pimflextv-rebuild/app/build/outputs/bundle/preview/app-preview.aab
+            pimflextv-rebuild/app/build/test-results/testPreviewUnitTest/
+            PREVIEW-UNSIGNED-SHA256.txt

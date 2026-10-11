@@ -65,3 +65,21 @@ Primary technical references:
 Reference file hashes:
 - APK: `c1fa614b2e2aec9399bbde9ca91491b8a4f03e010bd47a4074e57d7b0f6f6a36`
 - AAB: `852be7a751dfb44264deccb2f85aa0b2a2375f7d1146ca1a71d5d4d410ef6fe9`
+
+## Continuación 2026-10-11: respaldo y traslado al TV
+
+El usuario confirmó que 3.2.0-reference.1 funciona y autorizó continuar. No indicó modelo ni sistema del dispositivo; esa validación no se extiende a todos los Android TV.
+
+3.2.1-preview.1 añade un respaldo portátil cifrado con contraseña, exportación opcional de contraseñas de cuentas guardadas, importación mediante selector de archivos, revisión previa, combinación de favoritos y conservación de cuentas/ajustes existentes. El acceso está disponible antes del login y desde Ajustes. Los JSON antiguos solo se aceptan con esquema reconocido y lista explícita de preferencias; no se importan sus contraseñas, claves de sesión, rutas locales ni PIN parental. No se conecta a servidores al restaurar.
+
+El archivo usa AES-256-GCM, sal aleatoria de 16 bytes, IV aleatorio de 12 bytes y PBKDF2-HMAC-SHA1 con 600.000 iteraciones para compatibilidad Android 5+. El encabezado está autenticado. Se limita el archivo a unos 4 MiB, la profundidad JSON a 16 y las cuentas a 12. Para guardar contraseñas de cuentas en el destino se requiere Android 6+ y Android Keystore. Sin contraseña correcta o ante alteraciones, no se restaura ningún dato. Las preferencias y nuevas credenciales se preparan para un único commit, sin sobrescribir cuentas existentes.
+
+El traslado por archivo/USB no sustituye al emparejamiento remoto por código corto. No transfiere grabaciones, videos, subtítulos locales, perfiles VPN ni PIN parental. VPN integrada, emparejamiento por código y backend de clientes/notificaciones siguen pendientes.
+
+La nueva variante release `com.pimflextv.next.preview`, nombre visible `PIMFLEX TV Avance`, se compila sin secretos en CI y se firma fuera del repositorio con la clave persistente del propietario. Se instala junto a `com.pimflextv.next.reference` (prueba anterior, firma temporal del runner) y la app estable. Esta separación evita desinstalar la versión ya validada y permite que siguientes avances usen una firma estable. No es una actualización in situ de reference.1.
+
+La verificación compara 239 regiones sin cambios con v3.2; los únicos cambios revisados de MainActivity están en respaldo, accesos de login/cuentas y etiqueta de Ajustes. La autenticación, reproducción, URLs de streams y grabación conservan su implementación. SecureStore añade una función de preparación de credenciales; sus métodos anteriores quedan idénticos.
+
+Pruebas nuevas: cifrado/descifrado, contraseña errónea, manipulación, límites de tamaño y anidación, tipos de preferencias, rechazo de esquemas peligrosos, migración JSON, colisiones de identificadores, conservación de datos y fallos antes del commit. La ejecución de CI y las firmas finales se registran en el informe de entrega; estas pruebas no equivalen a prueba física con mando de TV.
+
+Referencias de compatibilidad: https://developer.android.com/reference/javax/crypto/SecretKeyFactory y https://developer.android.com/reference/javax/crypto/Cipher
