@@ -79,6 +79,9 @@ s=s.replace(marker,'''            showLogin();
             statusText.setText("Escribe la contraseña de esta cuenta y pulsa ENTRAR.");
             passInput.requestFocus();
             return;''')
+marker = '    private void showSavedAccounts() {\n        systemBack = this::showDashboard;\n        root = baseScreen();\n        addBack(this::showDashboard);'
+assert s.count(marker)==1
+s=s.replace(marker, '    private void showSavedAccounts() {\n        systemBack = accountInfo == null ? this::showLogin : this::showDashboard;\n        root = baseScreen();\n        addBack(systemBack);')
 s=s.replace('addCloneSettingsTile(grid, "▣", "CUENTAS EN ESTE TV", this::showCloneLoginOnTv);',
             'addCloneSettingsTile(grid, "▣", "TRASLADAR CUENTAS AL TV", this::showCloneLoginOnTv);')
 p.write_text(s)

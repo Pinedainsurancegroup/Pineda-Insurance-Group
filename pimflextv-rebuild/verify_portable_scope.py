@@ -8,7 +8,7 @@ def regions(s):
     matches=list(re.finditer(pattern,s,re.M))
     return {m[1]:s[m.start():matches[i+1].start() if i+1<len(matches) else len(s)].rstrip() for i,m in enumerate(matches)}
 a,b=regions(before),regions(after)
-allowed={'showLogin','showBackupRestoreScreen','createBackupJson','writeBackupToUri','restoreBackupFromUri','showCloneLoginOnTv','switchSavedAccount','showSettings'}
+allowed={'showLogin','showBackupRestoreScreen','createBackupJson','writeBackupToUri','restoreBackupFromUri','showCloneLoginOnTv','switchSavedAccount','showSettings','showSavedAccounts'}
 changed={name for name in a if a[name] != b.get(name)}
 assert changed <= allowed, changed-allowed
 assert set(a)-set(b)=={'createBackupJson'}

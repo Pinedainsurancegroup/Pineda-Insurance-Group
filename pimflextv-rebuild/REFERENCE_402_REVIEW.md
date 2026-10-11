@@ -78,7 +78,7 @@ El traslado por archivo/USB no sustituye al emparejamiento remoto por código co
 
 La nueva variante release `com.pimflextv.next.preview`, nombre visible `PIMFLEX TV Avance`, se compila sin secretos en CI y se firma fuera del repositorio con la clave persistente del propietario. Se instala junto a `com.pimflextv.next.reference` (prueba anterior, firma temporal del runner) y la app estable. Esta separación evita desinstalar la versión ya validada y permite que siguientes avances usen una firma estable. No es una actualización in situ de reference.1.
 
-La verificación compara 239 regiones sin cambios con v3.2; los únicos cambios revisados de MainActivity están en respaldo, accesos de login/cuentas y etiqueta de Ajustes. La autenticación, reproducción, URLs de streams y grabación conservan su implementación. SecureStore añade una función de preparación de credenciales; sus métodos anteriores quedan idénticos.
+La verificación compara 238 regiones sin cambios con v3.2; los únicos cambios revisados de MainActivity están en respaldo, accesos de login/cuentas y etiqueta de Ajustes. La autenticación, reproducción, URLs de streams y grabación conservan su implementación. SecureStore añade una función de preparación de credenciales; sus métodos anteriores quedan idénticos.
 
 Pruebas nuevas: cifrado/descifrado, contraseña errónea, manipulación, límites de tamaño y anidación, tipos de preferencias, rechazo de esquemas peligrosos, migración JSON, colisiones de identificadores, conservación de datos y fallos antes del commit. La ejecución de CI y las firmas finales se registran en el informe de entrega; estas pruebas no equivalen a prueba física con mando de TV.
 
