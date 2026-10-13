@@ -46,6 +46,9 @@ public class MainActivity extends Activity {
     private FirebaseAuth.AuthStateListener accountWatch;
     private volatile int preferenceRevision;
     private RecruitmentSync recruitmentSync;
+    private AgentWorkspace workspace;
+    private boolean workspaceSelected = true;
+    private final Map<String, Map<String,Object>> recruitmentContacts = new HashMap<>();
     private final Set<String> recruitmentIds = new HashSet<>();
 
     @Override
@@ -62,13 +65,22 @@ public class MainActivity extends Activity {
                 viewUid = user.getUid();
                 ownerVerified = true;
                 // Preferences and token registration must not delay the first lead request.
-                openRecruitment();
+                if (workspaceSelected) openWorkspace(); else openRecruitment();
                 loadOperationalPreferences();
                 requestNotificationPermissionIfNeeded();
             }
 
+            @Override public void onAgentVerified(com.google.firebase.firestore.DocumentSnapshot profile) {
+                if (!resumed) return;
+                ownerVerified = false;
+                discardRecruitmentView();
+                viewUid = profile.getId();
+                showWorkspace(profile);
+            }
+
             @Override public void onAccessRevoked() {
                 ownerVerified = false;
+                closeWorkspace();
                 stopService(new Intent(MainActivity.this, LeadMonitorService.class));
                 setContentView(authGate.view());
                 discardRecruitmentView();
@@ -82,12 +94,37 @@ public class MainActivity extends Activity {
                     ownerVerified = false;
                     requestGeneration++;
                     setContentView(authGate.view());
+                    closeWorkspace();
                     discardRecruitmentView();
                     if (resumed) authGate.verify();
                 }
             };
             FirebaseAuth.getInstance().addAuthStateListener(accountWatch);
         }
+    }
+
+    private void closeWorkspace() {
+        if (workspace != null) workspace.close(); workspace = null;
+    }
+    private void showWorkspace(com.google.firebase.firestore.DocumentSnapshot profile) {
+        closeWorkspace();
+        workspace = new AgentWorkspace(this, profile, () -> {
+            if (!resumed || !ownerVerified) return;
+            closeWorkspace(); workspaceSelected = false; openRecruitment();
+        });
+        setContentView(workspace.view());
+    }
+    private void openWorkspace() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (!resumed || !ownerVerified || user == null) return;
+        final int generation = requestGeneration; final String uid = user.getUid();
+        FirebaseFirestore.getInstance().collection("users").document(uid).get(Source.SERVER)
+            .addOnCompleteListener(this, t -> {
+                FirebaseUser latest = FirebaseAuth.getInstance().getCurrentUser();
+                if (!resumed || !ownerVerified || generation != requestGeneration || latest == null || !uid.equals(latest.getUid())) return;
+                if (t.isSuccessful() && t.getResult().exists()) showWorkspace(t.getResult());
+                else authGate.verify();
+            });
     }
 
     private void loadOperationalPreferences() {
@@ -218,6 +255,7 @@ public class MainActivity extends Activity {
         ownerVerified = false;
         requestGeneration++;
         authGate.pause();
+        closeWorkspace();
         stopRecruitmentSync();
         if (webView != null) {
             webView.evaluateJavascript("window.PAGSuspend && window.PAGSuspend();", null);
@@ -229,6 +267,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onDestroy() {
         authGate.pause();
+        closeWorkspace();
         if (accountWatch != null) FirebaseAuth.getInstance().removeAuthStateListener(accountWatch);
         discardRecruitmentView();
         super.onDestroy();
@@ -237,6 +276,7 @@ public class MainActivity extends Activity {
     private void discardRecruitmentView() {
         stopRecruitmentSync();
         recruitmentIds.clear();
+        recruitmentContacts.clear();
         if (webView == null) return;
         webView.stopLoading();
         webView.loadUrl("about:blank");
@@ -265,7 +305,14 @@ public class MainActivity extends Activity {
                     recruitmentIds.clear();
                     for (int i = 0; i < leads.length(); i++) {
                         String id = leads.getJSONObject(i).optString("stableId", "");
-                        if (RecruitmentSync.validId(id)) recruitmentIds.add(id);
+                        if (RecruitmentSync.validId(id)) {
+                            recruitmentIds.add(id);
+                            JSONObject lead = leads.getJSONObject(i);
+                            Map<String,Object> contact = new HashMap<>();
+                            contact.put("name", lead.optString("name", "")); contact.put("phone", lead.optString("phone", ""));
+                            contact.put("email", lead.optString("email", "")); contact.put("region", lead.optString("state", ""));
+                            recruitmentContacts.put(id, contact);
+                        }
                     }
                 }
             } catch (Exception ignored) {}
@@ -328,6 +375,23 @@ public class MainActivity extends Activity {
     }
 
     private class PAGNativeBridge {
+        @JavascriptInterface public void openAgentWorkspace() {
+            runOnUiThread(() -> { if (resumed && ownerVerified) { workspaceSelected = true; openWorkspace(); } });
+        }
+        @JavascriptInterface public void prepareAssignment(String id) {
+            runOnUiThread(() -> {
+                if (!resumed || !ownerVerified || !recruitmentContacts.containsKey(id)) return;
+                Map<String,Object> contact = new HashMap<>(recruitmentContacts.get(id));
+                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser(); if (user == null) return;
+                final int generation = requestGeneration;
+                FirebaseFirestore.getInstance().collection("users").document(user.getUid()).get(Source.SERVER)
+                    .addOnCompleteListener(MainActivity.this, t -> {
+                        if (!resumed || !ownerVerified || generation != requestGeneration || !t.isSuccessful()) return;
+                        workspaceSelected = true; showWorkspace(t.getResult()); workspace.importRecruitment(contact, id);
+                    });
+            });
+        }
+
         @JavascriptInterface public void configureOwnerPassword() {
             runOnUiThread(() -> {
                 if (resumed && ownerVerified) authGate.configureOwnerPassword();
@@ -449,7 +513,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String getBuildLabel() {
             return getResources().getBoolean(R.bool.pag_qa_build)
-                    ? "PAG LEADS v1.8 QA15" : "PAG LEADS v1.8 · STABLE";
+                    ? "PAG LEADS v1.9 · PRUEBA AGENTES" : "PAG LEADS v1.9 · CANDIDATA AGENTES";
         }
 
         @JavascriptInterface

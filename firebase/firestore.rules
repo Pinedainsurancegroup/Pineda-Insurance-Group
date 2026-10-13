@@ -5,32 +5,91 @@ service cloud.firestore {
     function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
     function active() {
       return signedIn() && profile().data.active == true &&
-        profile().data.suspended != true;
+        profile().data.suspended != true &&
+        (profile().data.role == 'owner' || (request.auth.token.email_verified == true &&
+          request.auth.token.email == profile().data.email));
     }
     function owner() { return active() && profile().data.role == 'owner'; }
     function agent() { return active() && profile().data.role == 'agent'; }
     function leader() { return active() && profile().data.role == 'leader'; }
-    function clientAccess() {
-      return owner() || (active() && resource.data.assignedTo == request.auth.uid) ||
-        (leader() && resource.data.teamId is string &&
-          resource.data.teamId in profile().data.get('authorizedTeamIds', []));
+    function scope(module) {
+      return owner() || (agent() && profile().data.scopes[module] == true);
     }
-    function canReadClient(clientId) {
-      return active() && (owner() ||
-        get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid ||
-        (leader() &&
-          get(/databases/$(database)/documents/clients/$(clientId)).data.teamId is string &&
-          get(/databases/$(database)/documents/clients/$(clientId)).data.teamId in
-            profile().data.get('authorizedTeamIds', [])));
+    function assignmentAccess(d, module) {
+      return owner() || (scope(module) && d.assignedTo == request.auth.uid);
+    }
+    function canReadClient(id) {
+      return owner() || (scope('clients') && get(/databases/$(database)/documents/clients/$(id)).data.assignedTo == request.auth.uid);
+    }
+    function canReadRecruitment(id) {
+      return owner() || (scope('recruitment') &&
+        get(/databases/$(database)/documents/recruitmentAssignments/$(id)).data.assignedTo == request.auth.uid);
+    }
+    function targetAllowed(uid, module) {
+      let p = /databases/$(database)/documents/users/$(uid);
+      return uid == '' || (get(p).data.role == 'agent' && get(p).data.active == true &&
+        get(p).data.suspended == false && get(p).data.scopes[module] == true);
+    }
+    // Two-way atomic audit binding. Every mutation requires a new immutable event.
+    function audited(bucket, id) {
+      let d = request.resource.data;
+      let p = /databases/$(database)/documents/$(bucket)/$(id);
+      let e = /databases/$(database)/documents/$(bucket)/$(id)/audit/$(d.lastEventId);
+      return d.revision is int && d.revision == (exists(p) ? get(p).data.get('revision', 0) : 0) + 1 &&
+        d.lastEventId.matches('[a-zA-Z0-9_-]{16,80}') && d.updatedBy == request.auth.uid &&
+        d.updatedAt == request.time && !exists(e) &&
+        getAfter(e).data.after == d && getAfter(e).data.before == (exists(p) ? get(p).data : {}) &&
+        getAfter(e).data.actorUid == request.auth.uid && getAfter(e).data.createdAt == request.time;
+    }
+    function auditEvent(bucket, id, eventId) {
+      let p = /databases/$(database)/documents/$(bucket)/$(id);
+      let e = request.resource.data;
+      return e.keys().hasOnly(['before', 'after', 'actorUid', 'createdAt']) &&
+        e.actorUid == request.auth.uid && e.createdAt == request.time &&
+        e.before == (exists(p) ? get(p).data : {}) && e.after == getAfter(p).data &&
+        e.after.lastEventId == eventId &&
+        e.after.revision == (exists(p) ? get(p).data.get('revision', 0) : 0) + 1 &&
+        e.after.updatedAt == request.time && e.after.updatedBy == request.auth.uid;
+    }
+    function validScopes(s) {
+      return s.keys().hasAll(['clients', 'recruitment']) && s.keys().hasOnly(['clients', 'recruitment']) &&
+        s.clients is bool && s.recruitment is bool;
+    }
+    function validAgent(uid) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['role', 'active', 'suspended', 'email', 'name', 'scopes', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        d.keys().hasOnly(['role', 'active', 'suspended', 'email', 'name', 'scopes', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        d.role == 'agent' && d.active is bool && d.suspended is bool &&
+        d.name is string && d.name.size() > 0 && d.name.size() <= 120 &&
+        d.email == get(/databases/$(database)/documents/accessRequests/$(uid)).data.email &&
+        validScopes(d.scopes) && audited('users', uid);
+    }
+    match /accessRequests/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || owner());
+      allow list: if owner();
+      allow create: if signedIn() && uid == request.auth.uid && request.auth.token.email_verified == true &&
+        !exists(/databases/$(database)/documents/users/$(uid)) &&
+        request.resource.data.keys().hasOnly(['email', 'name', 'createdAt']) &&
+        request.resource.data.email == request.auth.token.email &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 120 &&
+        request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
     }
 
-    // The first owner record is provisioned through the Firebase console or a
-    // trusted admin process after verifying Juan's Auth UID. Clients cannot
-    // create or change users, roles, suspension or team grants.
+    // Owner profiles remain admin-provisioned and immutable from clients.
+    // The active owner approves verified requests as agents with audited scopes.
     match /users/{uid} {
-      allow get: if active() && (owner() || request.auth.uid == uid);
+      allow get: if signedIn() && (request.auth.uid == uid || owner());
       allow list: if owner();
-      allow create, update, delete: if false;
+      allow create: if owner() && uid != request.auth.uid && validAgent(uid);
+      allow update: if owner() && uid != request.auth.uid && resource.data.role == 'agent' &&
+        request.resource.data.email == resource.data.email && validAgent(uid);
+      allow delete: if false;
+      match /audit/{eventId} {
+        allow read: if owner();
+        allow create: if owner() && auditEvent('users', uid, eventId);
+        allow update, delete: if false;
+      }
       match /preferences/{prefId} {
         allow read: if active() && (owner() || request.auth.uid == uid);
         allow create, update: if active() && request.auth.uid == uid &&
@@ -84,7 +143,9 @@ service cloud.firestore {
     }
     function registeredRecruitment(id) {
       return id.matches('r_[a-f0-9-]{36}') &&
-        get(/databases/$(database)/documents/recruitmentSources/$(id)).data.enabled == true;
+        ((exists(/databases/$(database)/documents/recruitmentSources/$(id)) &&
+          get(/databases/$(database)/documents/recruitmentSources/$(id)).data.enabled == true) ||
+         exists(/databases/$(database)/documents/recruitmentAssignments/$(id)));
     }
     function validRecruitmentValues(d) {
       return d.status in ['Nuevo', 'Contactado', 'Cita', 'Seguimiento', 'Completado'] &&
@@ -103,8 +164,8 @@ service cloud.firestore {
         event.actorUid == request.auth.uid && event.createdAt == request.time;
     }
     match /recruitmentState/{leadId} {
-      allow read: if owner();
-      allow create, update: if owner() && registeredRecruitment(leadId) &&
+      allow read: if canReadRecruitment(leadId);
+      allow create, update: if canReadRecruitment(leadId) && registeredRecruitment(leadId) &&
         request.resource.data.keys().hasOnly(['status', 'note', 'revision', 'lastEventId', 'updatedBy', 'updatedAt']) &&
         validRecruitmentValues(request.resource.data) &&
         request.resource.data.revision is int && request.resource.data.revision == beforeRevision(leadId) + 1 &&
@@ -113,8 +174,9 @@ service cloud.firestore {
         stateHasEvent(leadId);
       allow delete: if false;
       match /activity/{eventId} {
-        allow read: if owner();
-        allow create: if owner() && registeredRecruitment(leadId) &&
+        allow read: if canReadRecruitment(leadId);
+        allow create: if canReadRecruitment(leadId) && registeredRecruitment(leadId) &&
+          (owner() || request.resource.data.kind == 'edit') &&
           eventId.matches('[a-zA-Z0-9_-]{16,80}') &&
           request.resource.data.keys().hasOnly(['actorUid', 'deviceId', 'kind', 'status', 'note',
             'previousStatus', 'previousNote', 'baseRevision', 'revision', 'createdAt', 'originalUpdatedAt']) &&
@@ -140,29 +202,50 @@ service cloud.firestore {
       }
     }
 
-    // Clients FE are empty for now. A trusted admin process owns canonical
-    // classification, assignment and reassignment. LEAD -> B_LEAD edits the
-    // same document; assignment history is append-only, server-written.
-    match /clients/{clientId} {
-      allow get, list: if clientAccess();
-      allow create, update, delete: if false;
-      match /assignments/{assignmentId} {
-        allow read: if canReadClient(clientId);
-        allow write: if false;
-      }
-      match /activity/{eventId} {
-        allow read: if canReadClient(clientId);
-        allow create: if active() &&
-          (owner() || ((agent() || leader()) &&
-            get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid)) &&
-          request.resource.data.keys().hasOnly(['actorUid', 'kind', 'status', 'note', 'createdAt']) &&
-          request.resource.data.actorUid == request.auth.uid &&
-          request.resource.data.kind in ['status', 'note', 'result'] &&
-          request.resource.data.status is string && request.resource.data.status.size() <= 80 &&
-          request.resource.data.note is string && request.resource.data.note.size() <= 4000 &&
-          request.resource.data.createdAt == request.time;
+    function validContact(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 200 &&
+        d.phone is string && d.phone.size() <= 40 && d.email is string && d.email.size() <= 254 &&
+        d.region is string && d.region.size() <= 120 && d.assignedTo is string && d.assignedTo.size() <= 128;
+    }
+    function validAssignment(d) {
+      return d.keys().hasAll(['name', 'phone', 'email', 'region', 'assignedTo', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        d.keys().hasOnly(['name', 'phone', 'email', 'region', 'assignedTo', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) && validContact(d);
+    }
+    match /recruitmentAssignments/{id} {
+      allow read: if owner() || (scope('recruitment') && resource.data.assignedTo == request.auth.uid);
+      allow create, update: if owner() && id.matches('r_[a-f0-9-]{36}') &&
+        validAssignment(request.resource.data) &&
+        ((resource != null && request.resource.data.assignedTo == resource.data.assignedTo) || targetAllowed(request.resource.data.assignedTo, 'recruitment')) &&
+        audited('recruitmentAssignments', id);
+      allow delete: if false;
+      match /audit/{eventId} {
+        allow read: if canReadRecruitment(id);
+        allow create: if owner() && auditEvent('recruitmentAssignments', id, eventId);
         allow update, delete: if false;
       }
+    }
+    function validClient(d) {
+      return d.keys().hasAll(['name', 'phone', 'email', 'region', 'assignedTo', 'classification', 'status', 'note', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        d.keys().hasOnly(['name', 'phone', 'email', 'region', 'assignedTo', 'classification', 'status', 'note', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        validContact(d) && d.classification in ['LEAD', 'B_LEAD'] && validRecruitmentValues(d);
+    }
+    match /clients/{id} {
+      allow read: if owner() || (scope('clients') && resource.data.assignedTo == request.auth.uid);
+      allow create: if owner() && validClient(request.resource.data) &&
+        targetAllowed(request.resource.data.assignedTo, 'clients') && audited('clients', id);
+      allow update: if validClient(request.resource.data) && audited('clients', id) &&
+        ((owner() && (request.resource.data.assignedTo == resource.data.assignedTo || targetAllowed(request.resource.data.assignedTo, 'clients'))) ||
+         (scope('clients') && resource.data.assignedTo == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'note', 'revision', 'lastEventId', 'updatedAt', 'updatedBy'])));
+      allow delete: if false;
+      match /audit/{eventId} {
+        allow read: if canReadClient(id);
+        allow create: if canReadClient(id) && auditEvent('clients', id, eventId);
+        allow update, delete: if false;
+      }
+      // Historical collections remain read-only.
+      match /assignments/{eventId} { allow read: if canReadClient(id); allow write: if false; }
+      match /activity/{eventId} { allow read: if canReadClient(id); allow write: if false; }
     }
 
     match /{path=**} { allow read, write: if false; }

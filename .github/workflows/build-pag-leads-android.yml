@@ -44,13 +44,13 @@ jobs:
         run: gradle :app:assembleDebug --no-daemon
 
       - name: Rename APK
-        run: cp pag-leads-android/app/build/outputs/apk/debug/app-debug.apk PAG-Leads-v1.8.apk
+        run: cp pag-leads-android/app/build/outputs/apk/debug/app-debug.apk PAG-Leads-v1.9-AGENTS-QA1.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PAG-Leads-v1.8-APK
-          path: PAG-Leads-v1.8.apk
+          name: PAG-Leads-v1.9-AGENTS-QA1-APK
+          path: PAG-Leads-v1.9-AGENTS-QA1.apk
           if-no-files-found: error
 
       - name: Build unsigned release APK
@@ -60,7 +60,7 @@ jobs:
       - name: Prepare unsigned APK and signing tools
         shell: bash
         run: |
-          cp pag-leads-android/app/build/outputs/apk/release/app-release-unsigned.apk PAG-Leads-v1.8-unsigned.apk
+          cp pag-leads-android/app/build/outputs/apk/release/app-release-unsigned.apk PAG-Leads-v1.9-AGENTS-QA1-unsigned.apk
           mkdir -p android-signing-tools/lib
           cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" android-signing-tools/
           cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" android-signing-tools/
@@ -70,8 +70,8 @@ jobs:
       - name: Upload unsigned APK
         uses: actions/upload-artifact@v4
         with:
-          name: PAG-Leads-v1.8-unsigned
-          path: PAG-Leads-v1.8-unsigned.apk
+          name: PAG-Leads-v1.9-AGENTS-QA1-unsigned
+          path: PAG-Leads-v1.9-AGENTS-QA1-unsigned.apk
           if-no-files-found: error
 
       - name: Upload Android signing tools
@@ -88,6 +88,6 @@ jobs:
       - name: Upload unsigned QA APK
         uses: actions/upload-artifact@v4
         with:
-          name: PAG-Leads-v1.8-QA-unsigned
+          name: PAG-Leads-v1.9-AGENTS-QA1-QA-unsigned
           path: pag-leads-android/app/build/outputs/apk/qa/app-qa-unsigned.apk
           if-no-files-found: error

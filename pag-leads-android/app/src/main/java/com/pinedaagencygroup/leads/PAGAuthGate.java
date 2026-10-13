@@ -32,7 +32,7 @@ import java.util.concurrent.Executor;
 
 /** Blocks the legacy recruitment UI until the current server profile confirms owner access. */
 final class PAGAuthGate {
-    interface Listener { void onOwnerVerified(); void onAccessRevoked(); }
+    interface Listener { void onOwnerVerified(); void onAccessRevoked(); void onAgentVerified(DocumentSnapshot profile); }
 
     private final Activity activity;
     private final Listener listener;
@@ -41,6 +41,8 @@ final class PAGAuthGate {
     private final Button button;
     private final Button emailButton;
     private final OwnerPasswordAccess passwords;
+    private final AgentAccess agents;
+    private final Button requestButton, retryButton, signOutButton;
     private final Executor ui;
     private final AccessCheck check = new AccessCheck();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -52,6 +54,7 @@ final class PAGAuthGate {
         this.listener = listener;
         this.ui = activity::runOnUiThread;
         passwords = new OwnerPasswordAccess(activity, this::signIn);
+        agents = new AgentAccess(activity);
         view = new LinearLayout(activity);
         view.setOrientation(LinearLayout.VERTICAL);
         view.setGravity(Gravity.CENTER);
@@ -62,11 +65,17 @@ final class PAGAuthGate {
         button.setText("Continuar con Google");
         button.setOnClickListener(v -> signIn());
         emailButton = new Button(activity);
-        emailButton.setText("Entrar con correo · Owner");
-        emailButton.setOnClickListener(v -> passwords.signIn(this::verify));
+        emailButton.setText("Entrar con correo");
+        emailButton.setOnClickListener(v -> agents.account(false, this::verify));
         view.addView(message);
         view.addView(button);
         view.addView(emailButton);
+        requestButton = new Button(activity); requestButton.setText("Solicitar acceso");
+        requestButton.setOnClickListener(v -> agents.request(this::verify)); view.addView(requestButton);
+        retryButton = new Button(activity); retryButton.setText("Volver a comprobar acceso");
+        retryButton.setOnClickListener(v -> refresh()); view.addView(retryButton);
+        signOutButton = new Button(activity); signOutButton.setText("Cambiar de cuenta / cerrar sesión");
+        signOutButton.setOnClickListener(v -> { pause(); FirebaseAuth.getInstance().signOut(); verify(); }); view.addView(signOutButton);
         show("Verificando acceso a PAG Leads…", false);
     }
 
@@ -103,8 +112,10 @@ final class PAGAuthGate {
                     if (!isCurrent(ticket)) return;
                     handler.removeCallbacks(timeout);
                     if (task.isSuccessful() && task.getResult() != null && allowed(task.getResult())) {
-                        listener.onOwnerVerified();
-                        watchProfile(uid, ticket);
+                        DocumentSnapshot profile = task.getResult();
+                        if ("owner".equals(profile.getString("role"))) listener.onOwnerVerified();
+                        else listener.onAgentVerified(profile);
+                        watchProfile(uid, ticket, profile);
                     } else {
                         pause();
                         listener.onAccessRevoked();
@@ -118,7 +129,7 @@ final class PAGAuthGate {
         return check.accepts(ticket, user == null ? null : user.getUid());
     }
 
-    private void watchProfile(String uid, int ticket) {
+    private void watchProfile(String uid, int ticket, DocumentSnapshot original) {
         if (!isCurrent(ticket)) return;
         profileWatch = FirebaseFirestore.getInstance().collection("users").document(uid)
                 .addSnapshotListener(MetadataChanges.INCLUDE, (doc, error) -> {
@@ -128,21 +139,37 @@ final class PAGAuthGate {
                         pause();
                         listener.onAccessRevoked();
                         show("Cuenta sin acceso activo.", true);
+                    } else if (doc != null && !doc.getMetadata().isFromCache() &&
+                        !java.util.Objects.equals(doc.getData(), original.getData())) {
+                        listener.onAccessRevoked(); verify();
                     }
                 });
     }
 
     void pause() {
         passwords.close();
+        agents.close();
         check.cancel();
         if (timeout != null) handler.removeCallbacks(timeout);
         if (profileWatch != null) { profileWatch.remove(); profileWatch = null; }
     }
 
     private boolean allowed(DocumentSnapshot doc) {
-        return doc.exists() && "owner".equals(doc.getString("role")) &&
+        FirebaseUser u = FirebaseAuth.getInstance().getCurrentUser();
+        boolean role = "owner".equals(doc.getString("role")) || ("agent".equals(doc.getString("role")) &&
+            u != null && u.isEmailVerified() && java.util.Objects.equals(u.getEmail(), doc.getString("email")));
+        return doc.exists() && role &&
                 Boolean.TRUE.equals(doc.getBoolean("active")) &&
                 !Boolean.TRUE.equals(doc.getBoolean("suspended"));
+    }
+
+    private void refresh() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) { verify(); return; }
+        user.reload().continueWithTask(t -> {
+            if (!t.isSuccessful()) throw t.getException();
+            return user.getIdToken(true);
+        }).addOnCompleteListener(activity, t -> verify());
     }
 
     private void signIn() {
@@ -194,5 +221,8 @@ final class PAGAuthGate {
         message.setText(text);
         button.setEnabled(enabled);
         emailButton.setEnabled(enabled);
+        requestButton.setEnabled(enabled);
+        retryButton.setEnabled(enabled);
+        signOutButton.setEnabled(enabled);
     }
 }
