@@ -29,10 +29,10 @@ Los avisos automáticos existentes del Owner no se redirigen. **Avisos de asigna
 
 ## Evidencia automatizada
 
-- 11 pruebas del WebView existente: carga, regreso/pausa, notas, migración, conflictos y conservación de datos.
+- 38 pruebas locales de WebView/Gateway/emisores/identidad (incluyen cinco escenarios del emisor de agentes y las 11 pruebas del WebView): carga, regreso/pausa, notas, migración, conflictos y conservación de datos.
 - Reglas existentes: aislamiento, dispositivos, suspensión y sincronización del Owner, más autenticación por contraseña.
 - 17 grupos nuevos de escenarios de seguridad: solicitud verificada, correo/UID falsos, aprobación con auditoría, exclusión de Owner, asignación, consultas restringidas, edición limitada, conflicto, historial inmutable, reasignación, separación FE/reclutamiento, estado compartido, retirada de permisos, suspensión, cambio de identidad y retorno a inventario.
-- Build de Android y suite Firebase: GitHub Actions 38431446479 y 38431446329, commit de producto `043625cfaf5ab0eeba513e445cb8cd242242b23d`.
+- Primera compilación/reglas: GitHub Actions 38431446479 y 38431446329. QA2 incorpora avisos; commit de producto `240718a823d4041c227b230ebbdadfea70841e65`, build 38433646293 y reglas 38433646393. La verificación JSON de entrega contiene los resultados finales de cada gate.
 - APK QA con paquete `com.pinedaagencygroup.leads.qa`, código 17; firma PAG existente SHA-256 `b470f6fcf469ac928852283418dd6c1a7f681815cf8d1cc826751ce60fd7a374`. HTML empaquetado igual al fuente, ZIP y alineación comprobados.
 
 La APK se instala junto a STABLE y actualiza una instalación QA anterior si existe. No distribuir a agentes antes de activar reglas y probar con datos ficticios. No etiquetar STABLE.
@@ -50,3 +50,11 @@ La APK se instala junto a STABLE y actualiza una instalación QA anterior si exi
 Código en rama `pag-leads-v1.9-agents`; la base `pag-leads-v1.8-fcm` no se modifica. Antes de desplegar, guardar el ruleset real vigente. Una reversión de reglas retira acceso nuevo pero no borra documentos ni historial. Nunca restaurar un snapshot viejo sobre datos nuevos. Conservar las colecciones nuevas hasta decidir su tratamiento; no hay operación de borrado masivo.
 
 La carpeta de Drive de esta entrega contiene código de desarrollo, APK QA, verificación, guía y documentos vigentes. Es un respaldo del desarrollo, no una exportación actualizada de producción. La firma y contraseñas permanecen separadas en el respaldo privado previo.
+
+## Límite de activación
+
+La habilitación real queda bloqueada por falta de sesión administrativa. Los 17 escenarios de reglas y 38 pruebas locales aprobaron con datos sintéticos. Las pruebas de CI y la firma se consultan en el JSON de verificación; no se crean agentes reales ni se envían avisos durante el desarrollo. QA2 sustituye QA1 como candidata de prueba; conservar QA1 únicamente como hito histórico.
+
+### Herramientas Android
+
+AGP 8.13.2 y Gradle 8.13 (JDK 17), compatibles con los metadatos Kotlin 2.3 de Firebase Auth. Referencia oficial: https://developer.android.com/build/releases/agp-8-13-0-release-notes . No cambia el SDK objetivo ni la identidad de firma.

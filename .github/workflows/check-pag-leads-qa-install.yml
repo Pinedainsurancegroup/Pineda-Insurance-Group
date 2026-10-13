@@ -18,13 +18,13 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.13'
       - name: Install Android build tools
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
       - name: Build unsigned QA APK
         working-directory: pag-leads-android
-        run: gradle :app:assembleDebug :app:assembleQa --no-daemon
+        run: gradle :app:assembleDebug :app:assembleQa --no-daemon --stacktrace
       - name: Sign QA with disposable Android debug identity
         run: |
           keytool -genkeypair -noprompt -keystore /tmp/pag-qa-test.jks \

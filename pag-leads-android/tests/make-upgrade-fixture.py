@@ -18,7 +18,7 @@ dependencyResolutionManagement { repositories { google(); mavenCentral() } }
 rootProject.name = 'PAGSyntheticUpgradeBaseline'
 include(':app')
 ''')
-write('build.gradle', "plugins { id 'com.android.application' version '8.7.3' apply false }\n")
+write('build.gradle', "plugins { id 'com.android.application' version '8.13.2' apply false }\n")
 write('app/build.gradle', '''plugins { id 'com.android.application' }
 android {
  namespace 'com.pinedaagencygroup.leads'

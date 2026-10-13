@@ -18,13 +18,13 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.13'
       - name: Build synthetic baseline and current app
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
           python3 pag-leads-android/tests/make-upgrade-fixture.py /tmp/pag-upgrade-fixture
-          gradle -p /tmp/pag-upgrade-fixture :app:assembleDebug --no-daemon
-          gradle -p pag-leads-android :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon
+          gradle -p /tmp/pag-upgrade-fixture :app:assembleDebug --no-daemon --stacktrace
+          gradle -p pag-leads-android :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon --stacktrace
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
