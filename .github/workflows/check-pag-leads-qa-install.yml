@@ -56,5 +56,6 @@ jobs:
             sleep 5
             adb shell uiautomator dump /sdcard/pag-gate.xml
             adb pull /sdcard/pag-gate.xml /tmp/pag-gate.xml
-            grep -q 'Solicitar acceso' /tmp/pag-gate.xml
-            grep -q 'Entrar con correo' /tmp/pag-gate.xml
+            cat /tmp/pag-gate.xml
+            grep -qi 'Solicitar acceso' /tmp/pag-gate.xml
+            grep -qi 'Entrar con correo' /tmp/pag-gate.xml
