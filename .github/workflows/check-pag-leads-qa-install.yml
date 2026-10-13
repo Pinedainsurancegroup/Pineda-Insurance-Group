@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - '.github/workflows/check-pag-leads-qa-install.yml'
+      - 'pag-leads-android/**'
 
 jobs:
   install-qa:
@@ -50,3 +51,10 @@ jobs:
           script: |
             adb install /tmp/pag-leads-qa-install-check.apk
             adb shell pm path com.pinedaagencygroup.leads.qa
+
+            adb shell am start -W -n com.pinedaagencygroup.leads.qa/com.pinedaagencygroup.leads.MainActivity
+            sleep 5
+            adb shell uiautomator dump /sdcard/pag-gate.xml
+            adb pull /sdcard/pag-gate.xml /tmp/pag-gate.xml
+            grep -q 'Solicitar acceso' /tmp/pag-gate.xml
+            grep -q 'Entrar con correo' /tmp/pag-gate.xml

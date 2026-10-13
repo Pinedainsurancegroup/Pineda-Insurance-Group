@@ -2,7 +2,7 @@ name: Check PAG Leads update preserves local data
 on:
   workflow_dispatch:
   push:
-    branches: ['pag-leads-v1.8-fcm']
+    branches: ['pag-leads-v1.9-agents']
     paths:
       - 'pag-leads-android/**'
       - '.github/workflows/check-pag-leads-upgrade.yml'

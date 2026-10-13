@@ -1,7 +1,7 @@
-"""Generate a synthetic version-8 app to check Android update storage retention.
+"""Generate a synthetic version-15 app to check Android update storage retention.
 
 Never reads the real stable APK or production data. Same package, preference
-names and WebView origin as v1.7; disposable CI signing identity only.
+names and WebView origin as the stable v1.8; disposable CI signing identity only.
 """
 from pathlib import Path
 import json
@@ -27,8 +27,8 @@ android {
   applicationId 'com.pinedaagencygroup.leads'
   minSdk 23
   targetSdk 35
-  versionCode 8
-  versionName '1.7-SYNTHETIC-TEST'
+  versionCode 15
+  versionName '1.8-SYNTHETIC-TEST'
  }
 }
 ''')
