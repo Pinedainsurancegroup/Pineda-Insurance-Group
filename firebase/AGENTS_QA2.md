@@ -32,7 +32,7 @@ Los avisos automáticos existentes del Owner no se redirigen. **Avisos de asigna
 - 38 pruebas locales de WebView/Gateway/emisores/identidad (incluyen cinco escenarios del emisor de agentes y las 11 pruebas del WebView): carga, regreso/pausa, notas, migración, conflictos y conservación de datos.
 - Reglas existentes: aislamiento, dispositivos, suspensión y sincronización del Owner, más autenticación por contraseña.
 - 17 grupos nuevos de escenarios de seguridad: solicitud verificada, correo/UID falsos, aprobación con auditoría, exclusión de Owner, asignación, consultas restringidas, edición limitada, conflicto, historial inmutable, reasignación, separación FE/reclutamiento, estado compartido, retirada de permisos, suspensión, cambio de identidad y retorno a inventario.
-- Primera compilación/reglas: GitHub Actions 38431446479 y 38431446329. QA2 incorpora avisos; commit de producto `240718a823d4041c227b230ebbdadfea70841e65`, build 38433646293 y reglas 38433646393. La verificación JSON de entrega contiene los resultados finales de cada gate.
+- QA2 final: commit `3ef1133b714b91b2b22fac3fadd7ce72eadf1338`; compilación 38435440894, instalación/apertura Android 16 38435440903 y actualización sintética v15→v17 38435441475, todos aprobados. Reglas 38434972502 aprobadas; desde ese commit solo cambió configuración de memoria Android. 38433646293/38433873884/38434972509 fueron intentos fallidos previos, conservados en el Registro. La verificación JSON de entrega incluye hashes y límites de estas pruebas.
 - APK QA con paquete `com.pinedaagencygroup.leads.qa`, código 17; firma PAG existente SHA-256 `b470f6fcf469ac928852283418dd6c1a7f681815cf8d1cc826751ce60fd7a374`. HTML empaquetado igual al fuente, ZIP y alineación comprobados.
 
 La APK se instala junto a STABLE y actualiza una instalación QA anterior si existe. No distribuir a agentes antes de activar reglas y probar con datos ficticios. No etiquetar STABLE.
@@ -57,4 +57,4 @@ La habilitación real queda bloqueada por falta de sesión administrativa. Los 1
 
 ### Herramientas Android
 
-AGP 8.13.2 y Gradle 8.13 (JDK 17), compatibles con los metadatos Kotlin 2.3 de Firebase Auth. Referencia oficial: https://developer.android.com/build/releases/agp-8-13-0-release-notes . No cambia el SDK objetivo ni la identidad de firma.
+AGP 8.13.2 y Gradle 8.13 (JDK 17), compatibles con los metadatos Kotlin 2.3 de Firebase Auth. Referencia oficial: https://developer.android.com/build/releases/agp-8-13-0-release-notes . No cambia el SDK objetivo ni la identidad de firma. El stacktrace de 38434972509 confirmó además `OutOfMemoryError: Java heap space` al empaquetar: `gradle.properties` fija heap de 2 GB y máximo dos workers; las tres comprobaciones Android finales aprobaron con esa configuración.
