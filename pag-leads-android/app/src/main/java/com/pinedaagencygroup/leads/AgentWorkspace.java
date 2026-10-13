@@ -34,7 +34,7 @@ final class AgentWorkspace {
         clients=owner||Boolean.TRUE.equals(profile.get("scopes.clients"));
         recruitment=owner||Boolean.TRUE.equals(profile.get("scopes.recruitment"));
         root=new LinearLayout(activity);root.setOrientation(1);root.setBackgroundColor(Color.rgb(247,243,234));
-        TextView brand=new TextView(activity);brand.setText("Pineda Agency Group\nPineda Insurance Group · v1.9 PRUEBA");brand.setTextColor(Color.WHITE);brand.setTextSize(18);brand.setPadding(24,20,24,20);brand.setBackgroundColor(NAVY);root.addView(brand);
+        TextView brand=new TextView(activity);brand.setText("Pineda Agency Group\nPineda Insurance Group · v1.9 PRUEBA QA2");brand.setTextColor(Color.WHITE);brand.setTextSize(18);brand.setPadding(24,20,24,20);brand.setBackgroundColor(NAVY);root.addView(brand);
         ScrollView scroll=new ScrollView(activity);body=new LinearLayout(activity);body.setOrientation(1);body.setPadding(24,12,24,28);scroll.setFillViewport(true);scroll.addView(body);root.addView(scroll);
         home();
     }
@@ -58,6 +58,11 @@ final class AgentWorkspace {
         if(recruitment)button("Reclutamiento asignado",()->records("recruitmentAssignments",null));
         if(!clients&&!recruitment)text("Tu acceso está aprobado, pero aún no tienes secciones habilitadas.",16);
         if(owner)button("Mi base original de reclutamiento",legacy);
+        if(!owner) {
+            button("Preferencias de avisos",this::notificationSettings);
+            String device=activity.getSharedPreferences("pag_native",0).getString("firebase_device_id","");
+            if(device.length()>=4)text("Este teléfono: "+device.substring(device.length()-4)+" · Juan debe aprobarlo para recibir avisos.",14);
+        }
         button("Cerrar sesión",()->{close();FirebaseAuth.getInstance().signOut();});
     }
     private void accounts(DocumentSnapshot cursor){int ticket=screen("Solicitudes y agentes");back();text("Abre un correo para aprobar, cambiar permisos, suspender o rechazar el acceso.",15);
@@ -86,7 +91,43 @@ final class AgentWorkspace {
                 d.put("role","agent");d.put("email",request.getString("email"));d.put("name",input(name));d.put("active",active.isChecked());d.put("suspended",suspended.isChecked());d.put("scopes",scopes);
                 save.setEnabled(false);store.save("users",request.getId(),d,AgentStore.revision(p)).addOnCompleteListener(activity,s->{if(!current(ticket))return;if(s.isSuccessful())accounts(null);else{save.setEnabled(true);error(s.getException());}});
             });
+            if(p.exists())button("Dispositivos y avisos",()->devices(p.getId(),null));
             if(p.exists())button("Historial de permisos",()->history("users",p.getId(),"audit",null,()->account(request)));
+        });
+    }
+    private void notificationSettings(){int ticket=screen("Avisos de asignación");back();
+        DocumentReference ref=store.db.collection("users").document(uid).collection("preferences").document("operational");
+        ref.get(Source.SERVER).addOnCompleteListener(activity,t->{if(!current(ticket))return;if(!t.isSuccessful()){error(t.getException());return;}
+            boolean enabled=!Boolean.FALSE.equals(t.getResult().getBoolean("notifications"));
+            activity.getSharedPreferences("pag_native",0).edit().putBoolean("notifications",enabled).apply();
+            CheckBox toggle=check("Recibir avisos de nuevas asignaciones",enabled);
+            button("Guardar preferencia",()->{Map<String,Object>d=new HashMap<>();d.put("autoRefresh",true);d.put("notifications",toggle.isChecked());d.put("updatedAt",FieldValue.serverTimestamp());
+                ref.set(d).addOnCompleteListener(activity,saved->{if(!current(ticket))return;if(saved.isSuccessful()){activity.getSharedPreferences("pag_native",0).edit().putBoolean("notifications",toggle.isChecked()).apply();message.setText("Preferencia guardada.");}else error(saved.getException());});
+            });
+            text("Los avisos requieren permiso de Android, el teléfono aprobado por Juan y el servicio de avisos activado.",14);
+        });
+    }
+    private void devices(String agentUid,DocumentSnapshot cursor){int ticket=screen("Dispositivos del agente");back();
+        text("Aprueba solo el teléfono que el agente te confirme. Una renovación del registro requiere aprobarlo nuevamente.",15);
+        Query q=store.db.collection("users").document(agentUid).collection("deviceRequests").orderBy(FieldPath.documentId()).limit(20);if(cursor!=null)q=q.startAfter(cursor);
+        q.get(Source.SERVER).addOnCompleteListener(activity,t->{if(!current(ticket))return;if(!t.isSuccessful()){error(t.getException());return;}
+            if(t.getResult().isEmpty())text("No hay dispositivos registrados. El agente debe abrir la app y permitir notificaciones.",16);
+            for(DocumentSnapshot request:t.getResult()){
+                String id=request.getId();String label="Teléfono …"+id.substring(Math.max(0,id.length()-4))+" · "+value(request,"appVersion");
+                button(label+" · Revisar",()->{
+                    store.db.collection("agentDevices").document(id).get(Source.SERVER).addOnCompleteListener(activity,read->{if(!current(ticket))return;if(!read.isSuccessful()){error(read.getException());return;}
+                        DocumentSnapshot prior=read.getResult();String token=request.getString("fcmToken");if(token==null){message.setText("Registro incompleto.");return;}
+                        String hash;try{StringBuilder hex=new StringBuilder();for(byte b:java.security.MessageDigest.getInstance("SHA-256").digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8)))hex.append(String.format(java.util.Locale.US,"%02x",b&255));hash=hex.toString();}catch(Exception e){error(e);return;}
+                        boolean approved=prior.exists()&&Boolean.TRUE.equals(prior.getBoolean("enabled"))&&hash.equals(prior.getString("approvedTokenSha256"));
+                        dialog=new AlertDialog.Builder(activity).setTitle(label).setMessage(approved?"Este registro está aprobado. Puedes suspender sus avisos.":"¿El agente confirmó este teléfono? Aprueba para permitir avisos genéricos, sin datos del prospecto.")
+                            .setNegativeButton("Volver",null).setPositiveButton(approved?"Suspender avisos":"Aprobar teléfono",(x,w)->{
+                                Map<String,Object>d=new HashMap<>();d.put("userId",agentUid);d.put("deviceId",id);d.put("enabled",!approved);d.put("approvedTokenSha256",hash);
+                                store.save("agentDevices",id,d,AgentStore.revision(prior)).addOnCompleteListener(activity,saved->{if(!current(ticket))return;if(saved.isSuccessful())message.setText(approved?"Avisos suspendidos.":"Teléfono aprobado. Falta que el servicio de avisos esté activado para enviar.");else error(saved.getException());});
+                            }).show();
+                    });
+                });
+            }
+            if(t.getResult().size()==20)button("Más dispositivos",()->devices(agentUid,t.getResult().getDocuments().get(19)));
         });
     }
     private void records(String bucket,DocumentSnapshot cursor){int ticket=screen(bucket.equals("clients")?"Clientes Final Expense":"Reclutamiento asignado");back();

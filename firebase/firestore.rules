@@ -248,6 +248,40 @@ service cloud.firestore {
       match /activity/{eventId} { allow read: if canReadClient(id); allow write: if false; }
     }
 
+    match /agentDevices/{deviceId} {
+      allow read: if owner();
+      allow create, update: if owner() &&
+        request.resource.data.keys().hasOnly(['userId','deviceId','enabled','approvedTokenSha256','revision','lastEventId','updatedAt','updatedBy']) &&
+        request.resource.data.deviceId == deviceId && deviceId.matches('[a-zA-Z0-9_-]{16,80}') &&
+        request.resource.data.userId is string && request.resource.data.enabled is bool &&
+        request.resource.data.approvedTokenSha256.matches('[a-f0-9]{64}') &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.userId)).data.role == 'agent' &&
+        exists(/databases/$(database)/documents/users/$(request.resource.data.userId)/deviceRequests/$(deviceId)) &&
+        audited('agentDevices', deviceId);
+      allow delete: if false;
+      match /audit/{eventId} {
+        allow read: if owner();
+        allow create: if owner() && auditEvent('agentDevices', deviceId, eventId);
+        allow update, delete: if false;
+      }
+    }
+    match /assignmentNotices/{eventId} {
+      allow read: if owner();
+      allow create: if owner() &&
+        request.resource.data.keys().hasOnly(['bucket','recordId','targetUid','state','createdAt']) &&
+        request.resource.data.bucket in ['clients','recruitmentAssignments'] &&
+        request.resource.data.state == 'pending' && request.resource.data.createdAt == request.time &&
+        request.resource.data.targetUid is string && request.resource.data.targetUid.size() > 0 &&
+        (!exists(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)) ||
+         get(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)).data.assignedTo != request.resource.data.targetUid) &&
+        getAfter(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)).data.assignedTo == request.resource.data.targetUid &&
+        getAfter(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)).data.lastEventId == eventId &&
+        getAfter(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)).data.updatedAt == request.time &&
+        !exists(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)/audit/$(eventId));
+      allow update, delete: if false;
+      match /deliveries/{deviceId} { allow read: if owner(); allow write: if false; }
+    }
+
     match /{path=**} { allow read, write: if false; }
   }
 }

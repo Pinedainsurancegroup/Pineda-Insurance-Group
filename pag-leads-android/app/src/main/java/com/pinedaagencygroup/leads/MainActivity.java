@@ -75,6 +75,8 @@ public class MainActivity extends Activity {
                 ownerVerified = false;
                 discardRecruitmentView();
                 viewUid = profile.getId();
+                FirebasePushManager.initialize(MainActivity.this);
+                requestNotificationPermissionIfNeeded();
                 showWorkspace(profile);
             }
 
@@ -513,7 +515,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String getBuildLabel() {
             return getResources().getBoolean(R.bool.pag_qa_build)
-                    ? "PAG LEADS v1.9 · PRUEBA AGENTES" : "PAG LEADS v1.9 · CANDIDATA AGENTES";
+                    ? "PAG LEADS v1.9 · PRUEBA AGENTES QA2" : "PAG LEADS v1.9 · CANDIDATA AGENTES";
         }
 
         @JavascriptInterface

@@ -97,5 +97,21 @@ async function recEdit(d,actor,id,status='Contactado',kind='edit'){
    const d=(await getDoc(doc(owner,`recruitmentAssignments/${rid}`))).data();await audited(owner,'recruitmentAssignments',rid,{...d,assignedTo:''},'owner');
    await assertFails(getDoc(doc(a,`recruitmentState/${rid}`)));await assertFails(getDocs(collection(a,`recruitmentAssignments/${rid}/audit`)));await assertSucceeds(getDocs(collection(owner,`recruitmentState/${rid}/activity`)));
  });
+ await check('assignment queue requires a real atomic reassignment; agents cannot send',async()=>{
+   const ref=doc(owner,'clients/unassigned'),old=(await getDoc(ref)).data(),eid=eventId();
+   const after={...old,assignedTo:'a',revision:old.revision+1,lastEventId:eid,updatedBy:'owner',updatedAt:serverTimestamp()};
+   const notice={bucket:'clients',recordId:'unassigned',targetUid:'a',state:'pending',createdAt:serverTimestamp()};
+   await assertFails(setDoc(doc(owner,`assignmentNotices/${eid}`),notice));
+   const batch=writeBatch(owner);batch.set(ref,after);batch.set(doc(owner,`clients/unassigned/audit/${eid}`),{before:old,after,actorUid:'owner',createdAt:serverTimestamp()});batch.set(doc(owner,`assignmentNotices/${eid}`),notice);await assertSucceeds(batch.commit());
+   await assertFails(getDoc(doc(a,`assignmentNotices/${eid}`)));await assertFails(setDoc(doc(a,`assignmentNotices/${eventId()}`),notice));
+   await assertFails(updateDoc(doc(owner,`assignmentNotices/${eid}`),{state:'accepted'}));
+ });
+ await check('only owner can approve a requested agent device with immutable audit',async()=>{
+   const id='agent_test_phone_1234567890';await setDoc(doc(a,`users/a/deviceRequests/${id}`),{fcmToken:'synthetic_token_1234567890',platform:'android',appVersion:'1.9-QA2',updatedAt:serverTimestamp()});
+   const d={userId:'a',deviceId:id,enabled:true,approvedTokenSha256:'a'.repeat(64)};
+   await assertFails(setDoc(doc(a,`agentDevices/${id}`),d));await assertFails(setDoc(doc(owner,`agentDevices/${id}`),d));
+   await assertSucceeds(audited(owner,'agentDevices',id,d,'owner'));await assertFails(getDoc(doc(a,`agentDevices/${id}`)));
+   await assertSucceeds(audited(owner,'agentDevices',id,{...d,enabled:false},'owner'));
+ });
  console.log(`AGENTS SECURITY: ${passed} scenario groups passed`);
 }finally{await env.cleanup();}})().catch(e=>{console.error(e);process.exitCode=1;});

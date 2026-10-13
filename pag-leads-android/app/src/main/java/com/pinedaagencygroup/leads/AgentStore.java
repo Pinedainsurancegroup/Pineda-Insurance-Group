@@ -24,7 +24,15 @@ final class AgentStore {
             Map<String,Object> audit = new HashMap<>();
             audit.put("before", previous.exists() ? previous.getData() : new HashMap<>());
             audit.put("after", after); audit.put("actorUid", uid); audit.put("createdAt", FieldValue.serverTimestamp());
-            tx.set(ref, after); tx.set(event, audit); return null;
+            tx.set(ref, after); tx.set(event, audit);
+            if (("clients".equals(bucket) || "recruitmentAssignments".equals(bucket)) &&
+                after.get("assignedTo") instanceof String && !"".equals(after.get("assignedTo")) &&
+                !Objects.equals(previous.getString("assignedTo"), after.get("assignedTo"))) {
+                Map<String,Object> notice = new HashMap<>(); notice.put("bucket", bucket); notice.put("recordId", id);
+                notice.put("targetUid", after.get("assignedTo")); notice.put("state", "pending"); notice.put("createdAt", FieldValue.serverTimestamp());
+                tx.set(db.collection("assignmentNotices").document(event.getId()), notice);
+            }
+            return null;
         });
     }
     static boolean conflict(Exception e) {

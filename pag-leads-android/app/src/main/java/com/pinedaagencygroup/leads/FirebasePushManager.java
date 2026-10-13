@@ -116,7 +116,7 @@ public final class FirebasePushManager {
         Map<String, Object> request = new HashMap<>();
         request.put("fcmToken", fcmToken);
         request.put("platform", "android");
-        request.put("appVersion", "1.8");
+        request.put("appVersion", "1.9-AGENTS-QA2");
         request.put("updatedAt", FieldValue.serverTimestamp());
         FirebaseFirestore.getInstance().collection("users").document(user.getUid())
                 .collection("deviceRequests").document(deviceId).set(request)

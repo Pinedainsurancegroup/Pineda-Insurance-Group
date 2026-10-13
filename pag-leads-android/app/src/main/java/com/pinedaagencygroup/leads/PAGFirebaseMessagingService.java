@@ -26,8 +26,9 @@ public class PAGFirebaseMessagingService extends FirebaseMessagingService {
         createChannel();
 
         // Never render server-supplied lead fields on the lock screen.
-        String title = "PAG Leads — Nuevo agente";
-        String body = "Nuevo lead recibido. Toca para abrir PAG Leads.";
+        boolean assigned = "assignment".equals(message.getData().get("kind"));
+        String title = assigned ? "PAG Leads — Nueva asignación" : "PAG Leads — Nuevo agente";
+        String body = assigned ? "Tienes un prospecto asignado. Abre PAG Leads para revisarlo." : "Nuevo lead recibido. Toca para abrir PAG Leads.";
 
         Intent open = new Intent(this, MainActivity.class);
         open.putExtra("pag_refresh", true);

@@ -10,8 +10,8 @@ android {
         applicationId 'com.pinedaagencygroup.leads'
         minSdk 23
         targetSdk 35
-        versionCode 16
-        versionName '1.9-AGENTS-QA1'
+        versionCode 17
+        versionName '1.9-AGENTS-QA2'
         testInstrumentationRunner 'com.pinedaagencygroup.leads.UpgradeStorageInstrumentation'
     }
 

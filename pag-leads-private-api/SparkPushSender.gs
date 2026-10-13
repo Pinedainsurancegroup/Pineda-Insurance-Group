@@ -85,7 +85,7 @@ function pagPushSend_(c, target, eventId, validateOnly) {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
     headers: {Authorization: 'Bearer ' + ScriptApp.getOAuthToken()},
     payload: JSON.stringify({validate_only: !!validateOnly, message: {token: target.token,
-      data: {kind: 'recruitment', eventId, schema: '1'}, android: {priority: 'HIGH', ttl: '3600s'}}})
+      data: {kind: target.kind === 'assignment' ? 'assignment' : 'recruitment', eventId, schema: '1'}, android: {priority: 'HIGH', ttl: '3600s'}}})
   });
   const status = response.getResponseCode();
   if (status === 200) return 'ACCEPTED'; // FCM acceptance is not handset delivery evidence.
