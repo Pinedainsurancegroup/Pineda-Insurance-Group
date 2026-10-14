@@ -61,9 +61,47 @@ service cloud.firestore {
         d.keys().hasOnly(['role', 'active', 'suspended', 'email', 'name', 'scopes', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
         d.role == 'agent' && d.active is bool && d.suspended is bool &&
         d.name is string && d.name.size() > 0 && d.name.size() <= 120 &&
-        d.email == get(/databases/$(database)/documents/accessRequests/$(uid)).data.email &&
+        d.email == getAfter(/databases/$(database)/documents/accessRequests/$(uid)).data.email &&
         validScopes(d.scopes) && audited('users', uid);
     }
+    function invited(uid) {
+      let key = request.auth.token.email.lower();
+      let path = /databases/$(database)/documents/agentInvitations/$(key);
+      let i = get(path).data;
+      let d = getAfter(/databases/$(database)/documents/users/$(uid)).data;
+      return signedIn() && request.auth.uid == uid && request.auth.token.email_verified == true &&
+        !exists(/databases/$(database)/documents/users/$(uid)) &&
+        i.active == true && i.claimedUid == '' && i.email == key &&
+        getAfter(path).data.claimedUid == uid && getAfter(path).data.claimedAt == request.time &&
+        d.role == 'agent' && d.active == true && d.suspended == false &&
+        d.name == i.name && d.email == request.auth.token.email && d.scopes == i.scopes;
+    }
+    function validInvitation(key) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['email', 'name', 'scopes', 'active', 'claimedUid', 'claimedAt', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        d.keys().hasOnly(['email', 'name', 'scopes', 'active', 'claimedUid', 'claimedAt', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        key.size() <= 254 && d.email == key && d.email == d.email.lower() &&
+        d.name is string && d.name.size() > 0 && d.name.size() <= 120 &&
+        validScopes(d.scopes) && (d.scopes.clients || d.scopes.recruitment) && d.active is bool &&
+        (exists(/databases/$(database)/documents/agentInvitations/$(key)) ?
+          (d.claimedUid == resource.data.claimedUid && d.claimedAt == resource.data.claimedAt) :
+          (d.claimedUid == '' && d.claimedAt == null)) && audited('agentInvitations', key);
+    }
+    match /agentInvitations/{email} {
+      allow get: if owner() || (signedIn() && request.auth.token.email_verified == true && request.auth.token.email.lower() == email);
+      allow list: if owner();
+      allow create: if owner() && validInvitation(email);
+      allow update: if (owner() && validInvitation(email)) ||
+        (invited(request.auth.uid) && request.auth.token.email.lower() == email &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedUid', 'claimedAt']));
+      allow delete: if false;
+      match /audit/{eventId} {
+        allow read: if owner();
+        allow create: if owner() && auditEvent('agentInvitations', email, eventId);
+        allow update, delete: if false;
+      }
+    }
+
     match /accessRequests/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || owner());
       allow list: if owner();
@@ -81,13 +119,13 @@ service cloud.firestore {
     match /users/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || owner());
       allow list: if owner();
-      allow create: if owner() && uid != request.auth.uid && validAgent(uid);
+      allow create: if ((owner() && uid != request.auth.uid) || invited(uid)) && validAgent(uid);
       allow update: if owner() && uid != request.auth.uid && resource.data.role == 'agent' &&
         request.resource.data.email == resource.data.email && validAgent(uid);
       allow delete: if false;
       match /audit/{eventId} {
         allow read: if owner();
-        allow create: if owner() && auditEvent('users', uid, eventId);
+        allow create: if (owner() || invited(uid)) && auditEvent('users', uid, eventId);
         allow update, delete: if false;
       }
       match /preferences/{prefId} {

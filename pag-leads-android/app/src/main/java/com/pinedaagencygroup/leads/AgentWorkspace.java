@@ -34,7 +34,7 @@ final class AgentWorkspace {
         clients=owner||Boolean.TRUE.equals(profile.get("scopes.clients"));
         recruitment=owner||Boolean.TRUE.equals(profile.get("scopes.recruitment"));
         root=new LinearLayout(activity);root.setOrientation(1);root.setBackgroundColor(Color.rgb(247,243,234));
-        TextView brand=new TextView(activity);brand.setText("Pineda Agency Group\nPineda Insurance Group · v1.9 PRUEBA QA2");brand.setTextColor(Color.WHITE);brand.setTextSize(18);brand.setPadding(24,20,24,20);brand.setBackgroundColor(NAVY);root.addView(brand);
+        TextView brand=new TextView(activity);brand.setText("Pineda Agency Group\nPineda Insurance Group · v1.9 PRUEBA QA3");brand.setTextColor(Color.WHITE);brand.setTextSize(18);brand.setPadding(24,20,24,20);brand.setBackgroundColor(NAVY);root.addView(brand);
         ScrollView scroll=new ScrollView(activity);body=new LinearLayout(activity);body.setOrientation(1);body.setPadding(24,12,24,28);scroll.setFillViewport(true);scroll.addView(body);root.addView(scroll);
         home();
     }
@@ -53,7 +53,7 @@ final class AgentWorkspace {
     private void error(Exception e){message.setText(AgentStore.conflict(e)?"Otro teléfono cambió este registro. Tu edición sigue aquí; vuelve a abrirlo para revisar la versión actual antes de guardar.":"No se pudo completar. Revisa tu conexión y permisos; no se confirmó ningún cambio.");}
     private void back(){button("Volver al inicio",this::home);}
     void home(){screen(owner?"Administrar mi equipo":"Mis prospectos");text(owner?"Aprueba accesos y asigna prospectos a cada agente.":"Aquí aparecen solo las secciones autorizadas y los prospectos que Juan te asignó.",16);
-        if(owner)button("Solicitudes y agentes",()->accounts(null));
+        if(owner) {button("Invitar agente",()->invite(null)); button("Invitaciones enviadas",()->invitations(null)); button("Solicitudes y agentes",()->accounts(null));}
         if(clients)button("Clientes Final Expense",()->records("clients",null));
         if(recruitment)button("Reclutamiento asignado",()->records("recruitmentAssignments",null));
         if(!clients&&!recruitment)text("Tu acceso está aprobado, pero aún no tienes secciones habilitadas.",16);
@@ -64,6 +64,51 @@ final class AgentWorkspace {
             if(device.length()>=4)text("Este teléfono: "+device.substring(device.length()-4)+" · Juan debe aprobarlo para recibir avisos.",14);
         }
         button("Cerrar sesión",()->{close();FirebaseAuth.getInstance().signOut();});
+    }
+    private void invite(DocumentSnapshot prior){int ticket=screen("Invitar agente");back();
+        EditText name=field("Nombre del agente",prior==null?"":value(prior,"name"),false,120);
+        EditText email=field("Correo del agente",prior==null?"":value(prior,"email"),false,254);
+        email.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        if(prior!=null)email.setEnabled(false);
+        CheckBox fe=check("Clientes Final Expense",prior!=null&&Boolean.TRUE.equals(prior.get("scopes.clients")));
+        CheckBox rec=check("Reclutamiento",prior!=null&&Boolean.TRUE.equals(prior.get("scopes.recruitment")));
+        text("El agente abrirá el enlace del correo y confirmará su dirección. No tendrá que crear una contraseña ni enviar otra solicitud.",15);
+        Button send=button("Guardar permisos y enviar invitación",()->{});
+        send.setOnClickListener(v->{
+            String address=EmailInvitationAccess.emailKey(input(email));
+            if(input(name).isEmpty()||!android.util.Patterns.EMAIL_ADDRESS.matcher(address).matches()||(!fe.isChecked()&&!rec.isChecked())){message.setText("Completa nombre, correo y al menos una sección.");return;}
+            send.setEnabled(false);
+            store.db.collection("agentInvitations").document(address).get(Source.SERVER).addOnCompleteListener(activity,t->{
+                if(!current(ticket))return;if(!t.isSuccessful()){send.setEnabled(true);error(t.getException());return;}
+                DocumentSnapshot old=t.getResult();
+                if(old.exists()&&!value(old,"claimedUid").isEmpty()){send.setEnabled(true);message.setText("Este agente ya aceptó. Modifica sus permisos en Solicitudes y agentes. Puede solicitar otro enlace desde su teléfono.");return;}
+                Map<String,Object>d=new HashMap<>(),scopes=new HashMap<>();scopes.put("clients",fe.isChecked());scopes.put("recruitment",rec.isChecked());
+                d.put("email",address);d.put("name",input(name));d.put("scopes",scopes);d.put("active",true);d.put("claimedUid","");d.put("claimedAt",null);
+                store.save("agentInvitations",address,d,AgentStore.revision(old)).addOnCompleteListener(activity,saved->{
+                    if(!current(ticket))return;if(!saved.isSuccessful()){send.setEnabled(true);error(saved.getException());return;}
+                    EmailInvitationAccess.send(activity,address).addOnCompleteListener(activity,sent->{
+                        if(!current(ticket))return;send.setEnabled(true);message.setText(sent.isSuccessful()?"Invitación enviada a "+address+". El agente debe abrirla con la app QA3 instalada.":"Permisos guardados, pero el correo no se pudo enviar. Pulsa de nuevo para reintentar.");
+                    });
+                });
+            });
+        });
+    }
+    private void invitations(DocumentSnapshot cursor){int ticket=screen("Invitaciones enviadas");back();
+        Query q=store.db.collection("agentInvitations").orderBy(FieldPath.documentId()).limit(50);if(cursor!=null)q=q.startAfter(cursor);
+        q.get(Source.SERVER).addOnCompleteListener(activity,t->{
+            if(!current(ticket))return;if(!t.isSuccessful()){error(t.getException());return;}
+            if(t.getResult().isEmpty())text("Todavía no has enviado invitaciones.",16);
+            for(DocumentSnapshot d:t.getResult()){
+                boolean claimed=!value(d,"claimedUid").isEmpty();
+                button(value(d,"name")+"\n"+value(d,"email")+" · "+(claimed?"Aceptada":Boolean.TRUE.equals(d.getBoolean("active"))?"Pendiente":"Cancelada"),()->{
+                    if(claimed){store.db.collection("accessRequests").document(value(d,"claimedUid")).get(Source.SERVER).addOnCompleteListener(activity,r->{if(!current(ticket))return;if(r.isSuccessful()&&r.getResult().exists())account(r.getResult());else message.setText("No se pudo abrir el agente. Revisa Solicitudes y agentes.");});return;}
+                    dialog=new AlertDialog.Builder(activity).setTitle(value(d,"email")).setMessage("Puedes volver a enviar el enlace o cancelar la invitación pendiente.")
+                        .setPositiveButton("Revisar y reenviar",(x,w)->invite(d)).setNegativeButton("Volver",null)
+                        .setNeutralButton("Cancelar invitación",(x,w)->{Map<String,Object>data=new HashMap<>(d.getData());data.put("active",false);store.save("agentInvitations",d.getId(),data,AgentStore.revision(d)).addOnCompleteListener(activity,saved->{if(!current(ticket))return;if(saved.isSuccessful())invitations(null);else error(saved.getException());});}).show();
+                });
+            }
+            if(t.getResult().size()==50)button("Más invitaciones",()->invitations(t.getResult().getDocuments().get(49)));
+        });
     }
     private void accounts(DocumentSnapshot cursor){int ticket=screen("Solicitudes y agentes");back();text("Abre un correo para aprobar, cambiar permisos, suspender o rechazar el acceso.",15);
         Query q=store.db.collection("accessRequests").orderBy(FieldPath.documentId()).limit(50);if(cursor!=null)q=q.startAfter(cursor);

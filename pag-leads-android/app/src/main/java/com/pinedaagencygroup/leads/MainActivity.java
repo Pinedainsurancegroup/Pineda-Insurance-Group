@@ -238,6 +238,7 @@ public class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        if (resumed && authGate.openInvitation(intent)) return;
         if (ownerVerified && pageReady && webView != null) resumePage();
     }
 
@@ -248,7 +249,7 @@ public class MainActivity extends Activity {
         // Recheck against the server before showing data after every return to the app.
         ownerVerified = false;
         setContentView(authGate.view());
-        authGate.verify();
+        if (!authGate.openInvitation(getIntent())) authGate.verify();
     }
 
     @Override

@@ -42,6 +42,7 @@ final class PAGAuthGate {
     private final Button emailButton;
     private final OwnerPasswordAccess passwords;
     private final AgentAccess agents;
+    private final EmailInvitationAccess invitations;
     private final Button requestButton, retryButton, signOutButton;
     private final Executor ui;
     private final AccessCheck check = new AccessCheck();
@@ -55,6 +56,7 @@ final class PAGAuthGate {
         this.ui = activity::runOnUiThread;
         passwords = new OwnerPasswordAccess(activity, this::signIn);
         agents = new AgentAccess(activity);
+        invitations = new EmailInvitationAccess(activity);
         view = new LinearLayout(activity);
         view.setOrientation(LinearLayout.VERTICAL);
         view.setGravity(Gravity.CENTER);
@@ -65,13 +67,13 @@ final class PAGAuthGate {
         button.setText("Continuar con Google");
         button.setOnClickListener(v -> signIn());
         emailButton = new Button(activity);
-        emailButton.setText("Entrar con correo");
-        emailButton.setOnClickListener(v -> agents.account(false, this::verify));
+        emailButton.setText("Entrar como agente · sin contraseña");
+        emailButton.setOnClickListener(v -> invitations.login(this::verify));
         view.addView(message);
         view.addView(button);
         view.addView(emailButton);
-        requestButton = new Button(activity); requestButton.setText("Solicitar acceso");
-        requestButton.setOnClickListener(v -> agents.request(this::verify)); view.addView(requestButton);
+        requestButton = new Button(activity); requestButton.setText("Acceso anterior con contraseña");
+        requestButton.setOnClickListener(v -> agents.account(false, this::verify)); view.addView(requestButton);
         retryButton = new Button(activity); retryButton.setText("Volver a comprobar acceso");
         retryButton.setOnClickListener(v -> refresh()); view.addView(retryButton);
         signOutButton = new Button(activity); signOutButton.setText("Cambiar de cuenta / cerrar sesión");
@@ -80,6 +82,8 @@ final class PAGAuthGate {
     }
 
     LinearLayout view() { return view; }
+
+    boolean openInvitation(android.content.Intent intent) { return invitations.accept(intent, this::verify); }
 
     void configureOwnerPassword() { passwords.configure(); }
 
@@ -119,7 +123,15 @@ final class PAGAuthGate {
                     } else {
                         pause();
                         listener.onAccessRevoked();
-                        show("Cuenta sin acceso activo. Si acabas de entrar, falta aprobar tu perfil.", true);
+                        if (task.isSuccessful() && task.getResult() != null && !task.getResult().exists() && user.isEmailVerified()) {
+                            final int claimTicket = check.begin(uid);
+                            show("Comprobando tu invitación…", false);
+                            invitations.redeem().addOnCompleteListener(activity, claim -> {
+                                if (!isCurrent(claimTicket)) return;
+                                if (claim.isSuccessful()) verify();
+                                else show("Juan debe invitar este correo y autorizar sus permisos. Si ya te invitó, revisa la conexión y vuelve a comprobar.", true);
+                            });
+                        } else show("Cuenta sin acceso activo. Juan debe revisar tu autorización.", true);
                     }
                 });
     }
@@ -149,6 +161,7 @@ final class PAGAuthGate {
     void pause() {
         passwords.close();
         agents.close();
+        invitations.close();
         check.cancel();
         if (timeout != null) handler.removeCallbacks(timeout);
         if (profileWatch != null) { profileWatch.remove(); profileWatch = null; }
