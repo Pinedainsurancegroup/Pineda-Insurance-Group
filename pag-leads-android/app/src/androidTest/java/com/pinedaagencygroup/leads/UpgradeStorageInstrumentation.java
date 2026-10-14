@@ -28,7 +28,7 @@ public class UpgradeStorageInstrumentation extends Instrumentation {
         try {
             Context context = getTargetContext();
             require(context.getPackageName().equals("com.pinedaagencygroup.leads"), "wrong target");
-            require(context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionCode == 17,
+            require(context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionCode == 18,
                     "agent candidate version not installed");
             SharedPreferences prefs = context.getSharedPreferences("pag_native", Context.MODE_PRIVATE);
             require(prefs.getString("url", "").equals("https://example.invalid/legacy"), "private URL lost");
