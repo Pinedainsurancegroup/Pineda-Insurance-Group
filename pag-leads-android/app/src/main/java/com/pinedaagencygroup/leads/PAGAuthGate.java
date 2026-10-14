@@ -64,16 +64,16 @@ final class PAGAuthGate {
         message = new TextView(activity);
         message.setTextSize(18);
         button = new Button(activity);
-        button.setText("Continuar con Google");
+        button.setText("Entrar como administrador · Google");
         button.setOnClickListener(v -> signIn());
         emailButton = new Button(activity);
         emailButton.setText("Entrar como agente · sin contraseña");
         emailButton.setOnClickListener(v -> invitations.login(this::verify));
         view.addView(message);
-        view.addView(button);
         view.addView(emailButton);
+        view.addView(button);
         requestButton = new Button(activity); requestButton.setText("Acceso anterior con contraseña");
-        requestButton.setOnClickListener(v -> agents.account(false, this::verify)); view.addView(requestButton);
+        requestButton.setOnClickListener(v -> agents.account(false, this::verify)); requestButton.setVisibility(android.view.View.GONE); view.addView(requestButton);
         retryButton = new Button(activity); retryButton.setText("Volver a comprobar acceso");
         retryButton.setOnClickListener(v -> refresh()); view.addView(retryButton);
         signOutButton = new Button(activity); signOutButton.setText("Cambiar de cuenta / cerrar sesión");
@@ -237,5 +237,8 @@ final class PAGAuthGate {
         requestButton.setEnabled(enabled);
         retryButton.setEnabled(enabled);
         signOutButton.setEnabled(enabled);
+        boolean signedIn = FirebasePushManager.ensureInitialized(activity) && FirebaseAuth.getInstance().getCurrentUser() != null;
+        retryButton.setVisibility(signedIn ? android.view.View.VISIBLE : android.view.View.GONE);
+        signOutButton.setVisibility(signedIn ? android.view.View.VISIBLE : android.view.View.GONE);
     }
 }
