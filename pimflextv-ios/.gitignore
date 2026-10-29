@@ -1,0 +1,14 @@
+.build/
+.swiftpm/
+DerivedData/
+DeviceBuild/
+SourcePackage/
+PIMFLEXTV-iOS-*.zip
+*.xcodeproj/
+*.xcworkspace/
+*.xcresult/
+*.xcarchive/
+*.ipa
+*.p12
+*.mobileprovision
+build.log
