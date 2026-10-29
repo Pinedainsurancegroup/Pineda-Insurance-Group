@@ -6,7 +6,8 @@
 
 - `bridge.cjs`: proyección mínima de estado, identificador y revisión; validación estricta de datos persistidos; comparación de nuevo, posterior, repetido, obsoleto y conflicto.
 - `preview.cjs`: conciliación offline de hasta 1.000 filas, con correspondencias explícitas y revisión de ambigüedades. Produce propuestas, nunca escrituras.
-- `tests/`: seis pruebas originales más 52 pruebas adicionales; datos exclusivamente sintéticos.
+- `audit.cjs`: ejecución de auditoría paginada con adaptadores internos; selección acotada, cancelación, consistencia y reporte agregado. Véase `AUDIT.md`; solo probado con lectores simulados.
+- `tests/`: 95 pruebas (58 anteriores y 37 del auditor); datos exclusivamente sintéticos.
 - `VERIFICATION.md`: entorno, evidencia y límites de las pruebas.
 
 ```bash
