@@ -4,7 +4,7 @@ import PimflexCore
 struct CatalogView: View {
     @EnvironmentObject private var model: AppModel
     let kind: MediaKind
-    @State private var categories: [Category] = []
+    @State private var categories: [PimflexCore.Category] = []
     @State private var items: [MediaItem] = []
     @State private var category = ""
     @State private var search = ""
@@ -70,7 +70,7 @@ struct CatalogView: View {
             if account.mode == .m3u {
                 let entries = try await model.api.playlist(account)
                 items = entries.filter { $0.kind == kind }
-                categories = Set(items.map(\.categoryID)).filter { !$0.isEmpty }.sorted().map { Category(id: $0, name: $0) }
+                categories = Set(items.map(\.categoryID)).filter { !$0.isEmpty }.sorted().map { PimflexCore.Category(id: $0, name: $0) }
             } else {
                 async let groups = model.api.categories(account, kind: kind)
                 async let catalog = model.api.catalog(account, kind: kind)
