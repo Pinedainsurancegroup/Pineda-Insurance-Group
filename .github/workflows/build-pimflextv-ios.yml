@@ -1,0 +1,58 @@
+name: PIMFLEX TV iOS Preview
+on:
+  pull_request:
+    branches: [pimflextv-production-hardening]
+    paths: ['pimflextv-ios/**', '.github/workflows/build-pimflextv-ios.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-ios:
+    runs-on: macos-15
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: pimflextv-ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Core regression tests
+        run: swift test
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Build iOS simulator app
+        run: |
+          set -o pipefail
+          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO build | tee build.log
+      - name: Build unsigned iPhone app
+        run: |
+          set -o pipefail
+          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath DeviceBuild CODE_SIGNING_ALLOWED=NO build
+      - name: Login UI regression test
+        run: |
+          set -o pipefail
+          device_id=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for k,v in d["devices"].items() if "iOS" in k for x in v if "iPhone" in x["name"]))')
+          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Debug -destination "platform=iOS Simulator,id=$device_id" -derivedDataPath DerivedData -resultBundlePath LoginTests.xcresult CODE_SIGNING_ALLOWED=NO test
+      - name: Package simulator app and generated source project
+        run: |
+          ditto -c -k --keepParent DerivedData/Build/Products/Debug-iphonesimulator/PimflexTV.app PIMFLEXTV-iOS-Simulator.zip
+          mkdir -p SourcePackage
+          cp -R App Sources Tests UITests Resources scripts PimflexTV.xcodeproj Package.swift project.yml README.md PARITY.md SourcePackage/
+          ditto -c -k --keepParent SourcePackage PIMFLEXTV-iOS-Source.zip
+      - name: Upload simulator and source artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PIMFLEXTV-iOS-PREVIEW-NOT-IPHONE-INSTALLER
+          path: |
+            pimflextv-ios/PIMFLEXTV-iOS-Simulator.zip
+            pimflextv-ios/PIMFLEXTV-iOS-Source.zip
+          if-no-files-found: error
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PIMFLEXTV-iOS-validation
+          path: |
+            pimflextv-ios/build.log
+            pimflextv-ios/LoginTests.xcresult
