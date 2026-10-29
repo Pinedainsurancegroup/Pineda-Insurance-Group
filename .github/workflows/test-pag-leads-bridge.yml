@@ -5,14 +5,17 @@ on:
       - 'pag-leads-bridge/**'
       - '.github/workflows/test-pag-leads-bridge.yml'
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   unit:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test pag-leads-bridge/tests/bridge.test.cjs
+      - run: node --test pag-leads-bridge/tests/*.test.cjs

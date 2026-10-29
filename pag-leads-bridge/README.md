@@ -1,38 +1,61 @@
-# PAG Leads ↔ PAG CRM — Etapa 0 de integración segura
+# PAG Leads ↔ PAG CRM — conciliación previa, sin despliegue
 
-**Estado (29-oct-2026):** prototipo de contrato y pruebas **sin despliegue**. Este módulo NO conecta a PAG CRM, NO lee Google Sheets/Firestore y NO envía mensajes. Se construye en una rama de trabajo separada para proteger la APK **PAG Leads v1.8 STABLE**.
+**29-oct-2026 · PR #8 · trabajo aislado.** Este módulo NO conecta cuentas, NO lee Firestore/Sheets, NO escribe en PAG CRM y NO envía mensajes. Conserva la app STABLE, el desarrollo QA y los sistemas de producción existentes.
 
-## Arquitectura que se preserva
+## Qué se implementó
 
-- **PAG Leads:** la fuente privada Google Forms → Sheets → Apps Script sigue siendo la autoridad de los datos originales de *reclutamiento*; el identificador estable es `r_<UUID>` (nunca el antiguo índice `PAG-A-*`).
-- **Firestore:** `recruitmentState/{stableId}` conserva estados, notas, revisiones e historial, con reglas actuales. La rama `pag-leads-v1.9-agents` contiene trabajo de permisos y asignaciones **QA no desplegadas**, que tampoco se modifica en producción.
-- **PAG CRM:** conservará su propio historial de conversaciones WhatsApp, identificación de contacto y tareas; aún falta revisar su esquema vivo y los permisos del servicio antes de conectar los dos sistemas.
-- **Puente:** sincronizará información mínima mediante un ejecutor autenticado, con correlación verificada y registro de idempotencia. El teléfono móvil no recibirá claves privadas de PAG CRM.
-
-## Primer avance de código
-
-`bridge.cjs` crea una proyección **solamente de estado operacional no PII**: `schema`, `source`, `sourceLeadId`, `sourceRevision`, `status` e `idempotencyKey`. Valida IDs estables, estados y revisiones. Compara versiones y rechaza eventos obsoletos, conflictos de misma revisión o identidades diferentes. No incluye nombres, teléfonos, correos, notas ni asignaciones, aunque alguien los envíe como campos adicionales.
-
-Ejecutar pruebas locales:
+- `bridge.cjs`: proyección mínima de estado, identificador y revisión; validación estricta de datos persistidos; comparación de nuevo, posterior, repetido, obsoleto y conflicto.
+- `preview.cjs`: conciliación offline de hasta 1.000 filas, con correspondencias explícitas y revisión de ambigüedades. Produce propuestas, nunca escrituras.
+- `tests/`: seis pruebas originales más 52 pruebas adicionales; datos exclusivamente sintéticos.
+- `VERIFICATION.md`: entorno, evidencia y límites de las pruebas.
 
 ```bash
-node --test pag-leads-bridge/tests/bridge.test.cjs
+node --test pag-leads-bridge/tests/*.test.cjs
+node --test --experimental-test-coverage pag-leads-bridge/tests/*.test.cjs
 ```
 
-## Pasos posteriores antes de conectar datos reales
+## Autoridad de cada dato: no migrar ni duplicar a ciegas
 
-1. **Auditar el PAG CRM existente** (modelo de contactos, eventos, permisos, endpoints internos, revisiones y cambios posteriores al 27-oct). No crear otro CRM ni asumir que una API privada está disponible.
-2. Definir un identificador de correspondencia `stableId ↔ crmContactId` comprobado **en servidor**. Nunca deduplicar por nombre o confiar en un índice de fila. Los datos personales originales solo podrán consultarse por una ruta protegida, bajo permisos y consentimiento correspondientes.
-3. Crear adaptador **read-only** para consultar primero una muestra sintética y luego una muestra autorizada, sin cambios en estado, permisos, contactos ni envíos.
-4. Después del visto bueno, diseñar una cola idempotente de actualizaciones mínimas con conflictos explícitos, auditoría y reversión. No habilitar sincronización bidireccional hasta definir qué sistema manda para cada campo.
-5. Separar estrictamente *reclutamiento* de *clientes Final Expense*. No importar clientes reales ni activar cuentas de agentes como parte de este puente.
-6. Verificar Firebase owner/agent permissions, respaldo recuperable y notificaciones FCM sin datos personales. Mantener `v1.8 STABLE` y la rama `v1.9` actuales sin desplegar cambios.
+La fuente privada Forms → Sheets → Apps Script conserva los datos originales de reclutamiento. Firestore conserva estados/notas/revisiones e historial. PAG CRM conserva conversaciones y tareas según su esquema vivo, que todavía debe inspeccionarse. La app y el puente NO deben inventar una nueva fuente maestra ni sobrescribir notas.
 
-## Criterios de aceptación de esta etapa
+El identificador de origen es `r_<UUID>`: nunca el índice histórico de una fila. Se requiere una correspondencia comprobada con el identificador del CRM. No se enlazan personas automáticamente por nombre, teléfono compartido o suposición.
 
-- Tests deterministas aprobados usando IDs ficticios.
-- Cero secretos y cero PII en GitHub/fixtures/registro de prueba.
-- Ningún cambio en APK, Firestore Rules, formularios, CRM, webhooks o notificaciones de producción.
-- Se documentan las incertidumbres de PAG CRM y el estado de acceso antes de pasar a datos reales.
+`Completado` se conserva como estado del sistema de origen: NO demuestra contratación, producción, licencia verificada ni consentimiento para contactar.
 
-**No usar TinyFish ni contratar plataformas nuevas.** Integración mediante servicios existentes y permisos mínimos.
+## Contrato de vista previa (no describe una API existente)
+
+```js
+const { createReconciliationPreview } = require('./preview.cjs');
+const result = createReconciliationPreview({
+  sourceRows: [],   // { stableId, status, revision }; se omiten otros campos
+  links: [],        // { sourceLeadId, crmContactId, module, verified, enabled }
+  projections: []   // { crmContactId, snapshot } previamente validado
+});
+```
+
+- `module` admite solo `recruitment`; el flujo de clientes Final Expense queda separado.
+- `verified`/`enabled` son afirmaciones del adaptador: NO autentican al usuario ni conceden permisos. Un futuro servidor debe obtenerlas de su registro protegido, nunca confiar en lo que declare el teléfono o un archivo del usuario.
+- No se crea un contacto si falta el enlace; se devuelve `unlinked` para revisión.
+- Las correspondencias múltiples, registros repetidos y reasignaciones inconsistentes se bloquean en la vista previa.
+- Un registro de correspondencias o proyecciones mal formado detiene el lote completo. Una fila de origen inválida se marca sin copiar su contenido a los errores.
+- `candidate-new` y `candidate-newer` son propuestas de proyección, NO acciones autorizadas. No hay ejecutor de escrituras en este módulo.
+- El resultado fija `mode=preview`, `writesEnabled=false` y `messagesEnabled=false`. No acepta una opción para activarlos.
+
+## Privacidad y seguridad
+
+No se copian nombres, teléfonos, correos, notas ni datos de salud a la salida. **Los identificadores y estados siguen siendo datos vinculables; no son anónimos ni aptos para publicación.** Los ejemplos del repositorio público son ficticios. Los datos reales requieren autorización, almacenamiento privado y registros limitados.
+
+La clave SHA-256 de idempotencia depende de esquema, ID y revisión. Detecta inconsistencias; NO es una firma, un secreto ni prueba de autenticidad. El mismo ID/revisión con estado diferente produce un conflicto, no otro evento autorizado.
+
+Este módulo no verifica identidad Firebase, permisos Owner/agente, consentimiento, STOP/BAJA, firmas de webhooks ni ventanas de mensajería. Esos controles pertenecen a servicios que aún deben auditarse. No sustituirlos por instrucciones del modelo.
+
+## Pasos siguientes, sobre lo existente
+
+1. Inspeccionar la revisión y el esquema realmente desplegados de PAG CRM y PAG Receiver; preservar cambios recientes.
+2. Verificar una ruta de lectura autenticada y su alcance mínimo, sin copiar secretos al chat ni al repositorio.
+3. Definir cómo el adaptador obtiene estados y enlaces del servidor. Este contrato normalizado NO implica que exista un endpoint compatible.
+4. Ejecutar una prueba de solo lectura con muestra autorizada; comparar manualmente identidad, estado y revisión.
+5. Diseñar persistencia transaccional, conflictos concurrentes, reintentos, auditoría y reversión ANTES de cualquier escritura.
+6. Mantener el piloto WhatsApp independiente: un único respondedor, baja, pausa humana y evidencia de entrega. El puente no habilita ese piloto.
+
+No cambiar APK, reglas Firebase, Forms/Sheets, Apps Scripts, roles, notificaciones, secretos, Meta ni LeadConnector desde esta etapa. No usar TinyFish ni contratar plataformas. La sincronización bidireccional y la producción siguen sin aprobarse mediante estas pruebas.
