@@ -21,7 +21,7 @@ def validate(config, expected_project):
     if set(config) != set(FIELDS) | {'environment', 'android_package'}:
         raise ValueError('Missing or unexpected fields; use staging-config.example.json')
     for key in FIELDS:
-        if not isinstance(config[key], str) or not config[key].strip() or config[key] != config[key].strip():
+        if not isinstance(config[key], str) or (key != 'pag_owner_gateway_url' and not config[key].strip()) or config[key] != config[key].strip():
             raise ValueError(f'Missing or invalid {key}')
     prod = production_values()
     for key in FIELDS:
@@ -39,6 +39,8 @@ def validate(config, expected_project):
         raise ValueError('Web client ID must match staging project number')
     if not re.fullmatch(r'AIza[0-9A-Za-z_-]{35}', config['pag_firebase_api_key']):
         raise ValueError('Invalid Firebase public API key format')
+    if not config['pag_owner_gateway_url']:
+        return config  # Auth-only staging; native legacy fallback is disabled.
     url = urlparse(config['pag_owner_gateway_url'])
     if url.scheme != 'https' or url.netloc != 'script.google.com' or url.query or url.fragment or not re.fullmatch(r'/macros/s/[A-Za-z0-9_-]+/exec', url.path):
         raise ValueError('Expected a separate HTTPS Apps Script staging gateway')
@@ -49,6 +51,7 @@ def staging_manifest(project):
         raise ValueError('Independent project ID required for staging app links')
     template = '''<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <application>
+        <service android:name="com.pinedaagencygroup.leads.LeadMonitorService" tools:node="remove" />
         <activity android:name="com.pinedaagencygroup.leads.MainActivity" android:launchMode="singleTop" android:exported="true" tools:node="replace">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -81,6 +84,7 @@ def generate(config, expected_project, output):
         ET.SubElement(resource, 'string', name=key).text = config[key]
     ET.SubElement(resource, 'string', name='pag_app_name').text = 'PAG Leads STAGING'
     ET.SubElement(resource, 'bool', name='pag_qa_build').text = 'true'
+    ET.SubElement(resource, 'bool', name='pag_staging_build').text = 'true'
     xml = ET.tostring(resource, encoding='utf-8', xml_declaration=True)
     path = output / 'res/values/staging.xml'
     path.parent.mkdir(parents=True)

@@ -60,7 +60,18 @@ public final class FirebasePushManager {
     }
 
     public static synchronized boolean ensureInitialized(Context context) {
+        boolean staging = context.getResources().getBoolean(R.bool.pag_staging_build);
+        if (staging && (!StagingPolicy.PACKAGE.equals(context.getPackageName()) ||
+                !StagingPolicy.accepts(context.getString(R.string.pag_firebase_project_id),
+                    context.getString(R.string.pag_firebase_sender_id), context.getString(R.string.pag_firebase_application_id)))) return false;
         if (!initialized) initialized = initFirebase(context.getApplicationContext());
+        if (staging && initialized) {
+            try {
+                FirebaseOptions active = FirebaseApp.getInstance().getOptions();
+                if (!StagingPolicy.accepts(active.getProjectId(), active.getGcmSenderId(), active.getApplicationId()) ||
+                        !context.getString(R.string.pag_firebase_application_id).equals(active.getApplicationId())) return false;
+            } catch (IllegalStateException unavailableDefaultApp) { return false; }
+        }
         if (!initialized) return false;
         if (!firestoreConfigured) {
             try {

@@ -13,9 +13,13 @@ class StagingTests(unittest.TestCase):
     def test_missing_and_production_fields_rejected(self):
         for key in staging.FIELDS:
             missing = synthetic(); missing[key] = ''
-            with self.assertRaises(ValueError): staging.validate(missing, 'synthetic-test-project')
+            if key != 'pag_owner_gateway_url':
+                with self.assertRaises(ValueError): staging.validate(missing, 'synthetic-test-project')
             prod = synthetic(); prod[key] = staging.production_values()[key]
             with self.assertRaises(ValueError): staging.validate(prod, 'synthetic-test-project')
+    def test_missing_gateway_keeps_auth_only_configuration(self):
+        config=synthetic();config['pag_owner_gateway_url']=''
+        self.assertEqual(staging.validate(config,'synthetic-test-project')['pag_owner_gateway_url'],'')
     def test_wrong_project_and_package_rejected(self):
         with self.assertRaises(ValueError): staging.validate(synthetic(), 'different-project')
         config = synthetic(); config['android_package'] = 'com.pinedaagencygroup.leads'

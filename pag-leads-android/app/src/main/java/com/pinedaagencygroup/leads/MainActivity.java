@@ -352,6 +352,7 @@ public class MainActivity extends Activity {
     }
 
     private URL legacyUrl() {
+        if (getResources().getBoolean(R.bool.pag_staging_build)) return null;
         try {
             URL url = new URL(getSharedPreferences("pag_native", MODE_PRIVATE).getString("url", ""));
             if ("https".equals(url.getProtocol()) && "script.google.com".equals(url.getHost()) &&

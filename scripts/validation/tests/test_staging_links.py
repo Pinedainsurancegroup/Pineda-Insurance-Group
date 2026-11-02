@@ -11,5 +11,8 @@ class LinkTests(unittest.TestCase):
         self.assertEqual(hosts,['demo-local-review.firebaseapp.com'])
         self.assertNotIn(b'pag-leads-8c6ef',data)
         self.assertEqual(len(activity.findall('intent-filter')),2)
+        service=root.find('application/service')
+        self.assertEqual(service.attrib[android+'name'],'com.pinedaagencygroup.leads.LeadMonitorService')
+        self.assertEqual(service.attrib[tools+'node'],'remove')
     def test_production_link_host_rejected(self):
         with self.assertRaises(ValueError):client.staging_manifest('pag-leads-8c6ef')

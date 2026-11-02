@@ -2,4 +2,5 @@
 <resources>
     <string name="pag_app_name">PAG Leads</string>
     <bool name="pag_qa_build">false</bool>
+    <bool name="pag_staging_build">false</bool>
 </resources>
