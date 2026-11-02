@@ -108,6 +108,7 @@ final class SecureStore {
         return "secure_secret_" + safeSlot(slot) + "_iv";
     }
 
+    @androidx.annotation.RequiresApi(23)
     private static SecretKey getOrCreateKey() throws Exception {
         KeyStore ks = KeyStore.getInstance("AndroidKeyStore");
         ks.load(null);
