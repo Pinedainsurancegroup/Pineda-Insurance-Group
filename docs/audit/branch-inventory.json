@@ -1,0 +1,177 @@
+[
+  {
+    "branch": "origin/dependabot/github_actions/actions/checkout-6",
+    "sha": "dd308e63a072842d0b90e220ad2fa73a68deb938",
+    "files": 19,
+    "tests": [],
+    "manifests": []
+  },
+  {
+    "branch": "origin/feature/pag-leads-crm-bridge-phase0-20261029",
+    "sha": "fbbe987e83ae4b4153f1dfe4d7bc051ca80f69bc",
+    "files": 101,
+    "tests": [
+      ".github/workflows/test-pag-leads-bridge.yml",
+      ".github/workflows/test-pag-leads-firestore.yml",
+      "firebase/functions/tests/owner-gateway.test.cjs",
+      "firebase/tests/agents.test.cjs",
+      "firebase/tests/invitations.test.cjs",
+      "firebase/tests/owner-password.test.cjs",
+      "firebase/tests/recruitment-sync.test.cjs",
+      "firebase/tests/rules.test.cjs",
+      "pag-leads-android/app/src/androidTest/java/com/pinedaagencygroup/leads/UpgradeStorageInstrumentation.java",
+      "pag-leads-android/tests/AccessCheckTest.java",
+      "pag-leads-android/tests/make-upgrade-fixture.py",
+      "pag-leads-android/tests/ui-lifecycle.test.cjs",
+      "pag-leads-bridge/tests/audit.test.cjs",
+      "pag-leads-bridge/tests/bridge.test.cjs",
+      "pag-leads-bridge/tests/hardening.test.cjs",
+      "pag-leads-bridge/tests/integration-controls.test.cjs",
+      "pag-leads-bridge/tests/preview.test.cjs",
+      "pag-leads-private-api/SparkAgentAssignments.test.cjs",
+      "pag-leads-private-api/SparkOwnerGateway.test.cjs",
+      "pag-leads-private-api/SparkPushSender.test.cjs",
+      "pag-leads-private-api/SparkRecruitmentIdentity.test.cjs"
+    ],
+    "manifests": [
+      "firebase/functions/package.json",
+      "firebase/package.json",
+      "pag-leads-android/app/build.gradle",
+      "pag-leads-android/build.gradle"
+    ]
+  },
+  {
+    "branch": "origin/main",
+    "sha": "ef4dba532c9221e7a12c0b23dc768812c155be81",
+    "files": 30,
+    "tests": [],
+    "manifests": [
+      "pag-leads-android/app/build.gradle",
+      "pag-leads-android/build.gradle"
+    ]
+  },
+  {
+    "branch": "origin/my-pages",
+    "sha": "913198f7d63797157a67a1905d431100edacb8e7",
+    "files": 20,
+    "tests": [],
+    "manifests": []
+  },
+  {
+    "branch": "origin/pag-leads-v1.8-fcm",
+    "sha": "083c839ff5f3c73e61b23c60949e3f46ef97ba9e",
+    "files": 78,
+    "tests": [
+      ".github/workflows/test-pag-leads-firestore.yml",
+      "firebase/functions/tests/owner-gateway.test.cjs",
+      "firebase/tests/owner-password.test.cjs",
+      "firebase/tests/recruitment-sync.test.cjs",
+      "firebase/tests/rules.test.cjs",
+      "pag-leads-android/app/src/androidTest/java/com/pinedaagencygroup/leads/UpgradeStorageInstrumentation.java",
+      "pag-leads-android/tests/AccessCheckTest.java",
+      "pag-leads-android/tests/make-upgrade-fixture.py",
+      "pag-leads-android/tests/ui-lifecycle.test.cjs",
+      "pag-leads-private-api/SparkOwnerGateway.test.cjs",
+      "pag-leads-private-api/SparkPushSender.test.cjs",
+      "pag-leads-private-api/SparkRecruitmentIdentity.test.cjs"
+    ],
+    "manifests": [
+      "firebase/functions/package.json",
+      "firebase/package.json",
+      "pag-leads-android/app/build.gradle",
+      "pag-leads-android/build.gradle"
+    ]
+  },
+  {
+    "branch": "origin/pag-leads-v1.9-agents",
+    "sha": "be70a838662d92ad8673329136fb4a8745451200",
+    "files": 87,
+    "tests": [
+      ".github/workflows/test-pag-leads-firestore.yml",
+      "firebase/functions/tests/owner-gateway.test.cjs",
+      "firebase/tests/agents.test.cjs",
+      "firebase/tests/invitations.test.cjs",
+      "firebase/tests/owner-password.test.cjs",
+      "firebase/tests/recruitment-sync.test.cjs",
+      "firebase/tests/rules.test.cjs",
+      "pag-leads-android/app/src/androidTest/java/com/pinedaagencygroup/leads/UpgradeStorageInstrumentation.java",
+      "pag-leads-android/tests/AccessCheckTest.java",
+      "pag-leads-android/tests/make-upgrade-fixture.py",
+      "pag-leads-android/tests/ui-lifecycle.test.cjs",
+      "pag-leads-private-api/SparkAgentAssignments.test.cjs",
+      "pag-leads-private-api/SparkOwnerGateway.test.cjs",
+      "pag-leads-private-api/SparkPushSender.test.cjs",
+      "pag-leads-private-api/SparkRecruitmentIdentity.test.cjs"
+    ],
+    "manifests": [
+      "firebase/functions/package.json",
+      "firebase/package.json",
+      "pag-leads-android/app/build.gradle",
+      "pag-leads-android/build.gradle"
+    ]
+  },
+  {
+    "branch": "origin/pimflextv-ios-20261029",
+    "sha": "518d65fc60f888680bf3d2e489cf214c5b675bd6",
+    "files": 115,
+    "tests": [
+      "pimflextv-ios/Tests/PimflexCoreTests/CoreTests.swift",
+      "pimflextv-ios/UITests/LoginTests.swift"
+    ],
+    "manifests": [
+      "pag-leads-android/app/build.gradle",
+      "pag-leads-android/build.gradle",
+      "pimflextv-rebuild/app/build.gradle",
+      "pimflextv-rebuild/build.gradle"
+    ]
+  },
+  {
+    "branch": "origin/pimflextv-production-hardening",
+    "sha": "f5071a187011987c4b7b51f6e0bc548192724313",
+    "files": 94,
+    "tests": [],
+    "manifests": [
+      "pag-leads-android/app/build.gradle",
+      "pag-leads-android/build.gradle",
+      "pimflextv-rebuild/app/build.gradle",
+      "pimflextv-rebuild/build.gradle"
+    ]
+  },
+  {
+    "branch": "origin/pimflextv-rebuild",
+    "sha": "88190604b111a59eba738ae75426f6fc7cc7e434",
+    "files": 90,
+    "tests": [],
+    "manifests": [
+      "pag-leads-android/app/build.gradle",
+      "pag-leads-android/build.gradle",
+      "pimflextv-rebuild/app/build.gradle",
+      "pimflextv-rebuild/build.gradle"
+    ]
+  },
+  {
+    "branch": "origin/pimflextv-reference-402-20261007",
+    "sha": "2e898d2a6c1aaeb757b5797c4f9826f8939d5afa",
+    "files": 107,
+    "tests": [
+      "pimflextv-rebuild/app/src/test/java/com/pimflextv/next/PortableBackupStoreTest.java",
+      "pimflextv-rebuild/app/src/test/java/com/pimflextv/next/PortableBackupTest.java"
+    ],
+    "manifests": [
+      "pag-leads-android/app/build.gradle",
+      "pag-leads-android/build.gradle",
+      "pimflextv-rebuild/app/build.gradle",
+      "pimflextv-rebuild/build.gradle"
+    ]
+  },
+  {
+    "branch": "origin/tatynails-android-build",
+    "sha": "64a333bf8baa0d6f5785ff6e56b33ca9dbe787ae",
+    "files": 48,
+    "tests": [],
+    "manifests": [
+      "pag-leads-android/app/build.gradle",
+      "pag-leads-android/build.gradle"
+    ]
+  }
+]

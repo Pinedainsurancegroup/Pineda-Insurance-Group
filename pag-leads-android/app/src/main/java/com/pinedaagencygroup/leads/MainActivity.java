@@ -54,6 +54,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
         // Recruitment must not remain readable in Android's recent-apps preview.
         if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false);
         authGate = new PAGAuthGate(this, new PAGAuthGate.Listener() {
@@ -175,7 +176,7 @@ public class MainActivity extends Activity {
         SharedPreferences p = getSharedPreferences("pag_native", MODE_PRIVATE);
         if (!getResources().getBoolean(R.bool.pag_qa_build) &&
                 p.getBoolean("notifications", true) && !p.getString("url", "").isEmpty() &&
-                !p.getString("token", "").isEmpty()) {
+                !TokenVault.read(p).isEmpty()) {
             Intent monitor = new Intent(this, LeadMonitorService.class);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(monitor);
             else startService(monitor);
@@ -193,17 +194,35 @@ public class MainActivity extends Activity {
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
-        s.setAllowFileAccess(true);
-        s.setAllowContentAccess(true);
-        s.setAllowFileAccessFromFileURLs(true);
-        s.setAllowUniversalAccessFromFileURLs(true);
+        s.setAllowFileAccess(false);
+        s.setAllowContentAccess(false);
+        s.setAllowFileAccessFromFileURLs(false);
+        s.setAllowUniversalAccessFromFileURLs(false);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
 
-        webView.addJavascriptInterface(new PAGNativeBridge(), "PAGNative");
+        // Read the previous origin with no native bridge and an inert document.
+        final boolean[] migrating = {true};
+        final String[] oldStorage = {"{}"};
 
+        final androidx.webkit.WebViewAssetLoader assets = new androidx.webkit.WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", new androidx.webkit.WebViewAssetLoader.AssetsPathHandler(this)).build();
         webView.setWebViewClient(new WebViewClient() {
+            @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, android.webkit.WebResourceRequest request) {
+                if ("file:///android_asset/index.html".equals(request.getUrl().toString()))
+                    return new android.webkit.WebResourceResponse("text/html", "UTF-8",
+                        new java.io.ByteArrayInputStream("<!doctype html><title>Migration</title>".getBytes(StandardCharsets.UTF_8)));
+                android.webkit.WebResourceResponse response = assets.shouldInterceptRequest(request.getUrl());
+                if (response != null) {
+                    java.util.Map<String,String> headers = new java.util.HashMap<>();
+                    headers.put("Content-Security-Policy", "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'");
+                    response.setResponseHeaders(headers);
+                    return response;
+                }
+                return new android.webkit.WebResourceResponse("text/plain", "UTF-8", 403, "Blocked", java.util.Collections.emptyMap(), new java.io.ByteArrayInputStream(new byte[0]));
+            }
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if ("file:///android_asset/index.html".equals(url)) return false;
+                if ("https://appassets.androidplatform.net/assets/index.html".equals(url)) return false;
                 if (url == null) return true;
                 Uri target = Uri.parse(url);
                 String scheme = target.getScheme();
@@ -220,9 +239,40 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                if (view != webView || !"file:///android_asset/index.html".equals(url)) return;
-                pageReady = true;
-                if (ownerVerified) resumePage();
+                if (view != webView) return;
+                if (migrating[0] && "file:///android_asset/index.html".equals(url)) {
+                    migrating[0] = false;
+                    view.evaluateJavascript("JSON.stringify(Object.fromEntries(Object.keys(localStorage).filter(k=>k==='pagov'||k==='pagset12'||k.startsWith('pagcloud:')).map(k=>[k,localStorage.getItem(k)])))", value -> {
+                        if (view != webView) return;
+                        try {
+                            JSONObject stored = new JSONObject(new org.json.JSONTokener(value).nextValue().toString());
+                            if (stored.has("pagset12")) {
+                                JSONObject settings = new JSONObject(stored.getString("pagset12"));
+                                String oldToken = settings.optString("tok", "");
+                                SharedPreferences nativePrefs = getSharedPreferences("pag_native", MODE_PRIVATE);
+                                if (!oldToken.isEmpty() && TokenVault.read(nativePrefs).isEmpty()) {
+                                    if (!TokenVault.save(nativePrefs, oldToken)) return;
+                                    nativePrefs.edit().putString("url", settings.optString("url", "")).commit();
+                                }
+                                settings.remove("tok"); settings.remove("url");
+                                stored.put("pagset12", settings.toString());
+                                view.evaluateJavascript("localStorage.setItem('pagset12'," + JSONObject.quote(settings.toString()) + ")", null);
+                            }
+                            oldStorage[0] = stored.toString();
+                        }
+                        catch (Exception ignored) { oldStorage[0] = "{}"; }
+                        view.addJavascriptInterface(new PAGNativeBridge(), "PAGNative");
+                        view.loadUrl("https://appassets.androidplatform.net/assets/index.html");
+                    });
+                    return;
+                }
+                if (!"https://appassets.androidplatform.net/assets/index.html".equals(url)) return;
+                String migration = "(()=>{const old=JSON.parse(" + JSONObject.quote(oldStorage[0]) + ");for(const k of Object.keys(old)){if(localStorage.getItem(k)===null)localStorage.setItem(k,old[k]);}})()";
+                view.evaluateJavascript(migration, ignored -> {
+                    if (view != webView) return;
+                    pageReady = true;
+                    if (ownerVerified) resumePage();
+                });
             }
         });
 
@@ -290,6 +340,16 @@ public class MainActivity extends Activity {
         viewUid = null;
     }
 
+    private URL legacyUrl() {
+        try {
+            URL url = new URL(getSharedPreferences("pag_native", MODE_PRIVATE).getString("url", ""));
+            if ("https".equals(url.getProtocol()) && "script.google.com".equals(url.getHost()) &&
+                url.getUserInfo() == null && (url.getPort() == -1 || url.getPort() == 443) &&
+                url.getPath().matches("/macros/s/[^/]+/exec")) return url;
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     private URL gatewayUrl() {
         try {
             URL url = new URL(getString(R.string.pag_owner_gateway_url).trim());
@@ -327,7 +387,7 @@ public class MainActivity extends Activity {
 
     // Apps Script ContentService redirects its JSON response to a Google content host.
     // The ID token stays exclusively in the initial POST body, never in a redirect.
-    private String readGatewayResponse(HttpURLConnection initial) throws Exception {
+    static String readGatewayResponse(HttpURLConnection initial) throws Exception {
         HttpURLConnection connection = initial;
         try {
             for (int redirect = 0; redirect <= 2; redirect++) {
@@ -389,7 +449,7 @@ public class MainActivity extends Activity {
                 final int generation = requestGeneration;
                 FirebaseFirestore.getInstance().collection("users").document(user.getUid()).get(Source.SERVER)
                     .addOnCompleteListener(MainActivity.this, t -> {
-                        if (!resumed || !ownerVerified || generation != requestGeneration || !t.isSuccessful()) return;
+                        if (!resumed || !ownerVerified || generation != requestGeneration || !t.isSuccessful() || FirebaseAuth.getInstance().getCurrentUser() == null || !user.getUid().equals(FirebaseAuth.getInstance().getCurrentUser().getUid()) || t.getResult() == null || !t.getResult().exists()) return;
                         workspaceSelected = true; showWorkspace(t.getResult()); workspace.importRecruitment(contact, id);
                     });
             });
@@ -449,7 +509,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public boolean hasOwnerGateway() {
-            return ownerVerified && gatewayUrl() != null;
+            return ownerVerified && (gatewayUrl() != null || (legacyUrl() != null && !TokenVault.read(getSharedPreferences("pag_native", MODE_PRIVATE)).isEmpty()));
         }
 
         @JavascriptInterface
@@ -462,7 +522,8 @@ public class MainActivity extends Activity {
                     requestId == null || !requestId.matches("[0-9]{1,12}")) return;
             final WebView requestView = webView;
             final int generation = requestGeneration;
-            URL endpoint = gatewayUrl();
+            final boolean legacy = gatewayUrl() == null;
+            final URL endpoint = legacy ? legacyUrl() : gatewayUrl();
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             if (endpoint == null || user == null) {
                 runOnUiThread(() -> deliverRecruitment(requestView, generation, requestId, false, "{}"));
@@ -491,7 +552,7 @@ public class MainActivity extends Activity {
                         connection.setInstanceFollowRedirects(false);
                         JSONObject request = new JSONObject();
                         request.put("action", action);
-                        request.put("idToken", token);
+                        request.put(legacy ? "token" : "idToken", legacy ? TokenVault.read(getSharedPreferences("pag_native", MODE_PRIVATE)) : token);
                         byte[] body = request.toString().getBytes(StandardCharsets.UTF_8);
                         connection.setFixedLengthStreamingMode(body.length);
                         try (OutputStream out = connection.getOutputStream()) { out.write(body); }
@@ -526,12 +587,12 @@ public class MainActivity extends Activity {
             try {
                 JSONObject j = new JSONObject();
                 j.put("url", p.getString("url", ""));
-                j.put("tok", p.getString("token", ""));
+                // Credentials stay native; JavaScript receives only configuration status.
                 j.put("auto", p.getBoolean("auto", true));
                 j.put("notify", p.getBoolean("notifications", true));
                 j.put("configured",
                         !p.getString("url", "").trim().isEmpty() &&
-                        !p.getString("token", "").trim().isEmpty());
+                        !TokenVault.read(p).trim().isEmpty());
                 return j.toString();
             } catch (Exception ignored) {
                 return "{}";
@@ -549,7 +610,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 if (getResources().getBoolean(R.bool.pag_qa_build)) return;
                 if (notificationsEnabled && !prefs.getString("url", "").isEmpty()
-                        && !prefs.getString("token", "").isEmpty()) {
+                        && !TokenVault.read(prefs).isEmpty()) {
                     requestNotificationPermissionIfNeeded();
                     Intent monitor = new Intent(MainActivity.this, LeadMonitorService.class);
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(monitor);
@@ -564,9 +625,9 @@ public class MainActivity extends Activity {
         public void saveSettings(String url, String token, boolean autoRefresh, boolean notificationsEnabled) {
             if (!ownerVerified) return;
             SharedPreferences p = getSharedPreferences("pag_native", MODE_PRIVATE);
+            if (!TokenVault.save(p, token == null ? "" : token.trim())) return;
             p.edit()
                 .putString("url", url == null ? "" : url.trim())
-                .putString("token", token == null ? "" : token.trim())
                 .putBoolean("auto", autoRefresh)
                 .putBoolean("notifications", notificationsEnabled)
                 .apply();

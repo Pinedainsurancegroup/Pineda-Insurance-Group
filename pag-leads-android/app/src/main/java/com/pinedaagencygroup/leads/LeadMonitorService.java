@@ -141,7 +141,7 @@ public class LeadMonitorService extends Service {
         }
 
         String endpoint = prefs.getString("url", "");
-        String token = prefs.getString("token", "");
+        String token = TokenVault.read(prefs);
         if (endpoint == null || endpoint.trim().isEmpty() || token == null || token.trim().isEmpty()) return;
 
         JSONObject body = new JSONObject();
@@ -234,10 +234,13 @@ public class LeadMonitorService extends Service {
 
     private String post(String endpoint, String json) throws Exception {
         URL url = new URL(endpoint);
+        if (!"https".equals(url.getProtocol()) || !"script.google.com".equals(url.getHost()) ||
+                url.getUserInfo() != null || (url.getPort() != -1 && url.getPort() != 443) ||
+                !url.getPath().matches("/macros/s/[^/]+/exec")) throw new IllegalArgumentException("Invalid endpoint");
         HttpURLConnection c = (HttpURLConnection) url.openConnection();
         c.setConnectTimeout(15000);
         c.setReadTimeout(20000);
-        c.setInstanceFollowRedirects(true);
+        c.setInstanceFollowRedirects(false);
         c.setRequestMethod("POST");
         c.setRequestProperty("Content-Type", "text/plain;charset=utf-8");
         c.setRequestProperty("Accept", "application/json");
@@ -248,15 +251,6 @@ public class LeadMonitorService extends Service {
             os.write(bytes);
         }
 
-        int code = c.getResponseCode();
-        InputStream is = code >= 200 && code < 400 ? c.getInputStream() : c.getErrorStream();
-        if (is == null) throw new IllegalStateException("Sin respuesta del endpoint");
-
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = br.readLine()) != null) sb.append(line);
-        }
-        return sb.toString();
+        return MainActivity.readGatewayResponse(c);
     }
 }

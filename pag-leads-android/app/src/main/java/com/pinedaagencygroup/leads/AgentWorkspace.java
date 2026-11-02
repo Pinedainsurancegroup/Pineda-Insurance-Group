@@ -33,9 +33,9 @@ final class AgentWorkspace {
         this.activity=activity;this.legacy=legacy;uid=profile.getId();owner="owner".equals(profile.getString("role"));
         clients=owner||Boolean.TRUE.equals(profile.get("scopes.clients"));
         recruitment=owner||Boolean.TRUE.equals(profile.get("scopes.recruitment"));
-        root=new LinearLayout(activity);root.setOrientation(1);root.setBackgroundColor(Color.rgb(247,243,234));
+        root=new LinearLayout(activity);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Color.rgb(247,243,234));
         TextView brand=new TextView(activity);brand.setText("Pineda Agency Group\nPineda Insurance Group · v1.9 PRUEBA QA3");brand.setTextColor(Color.WHITE);brand.setTextSize(18);brand.setPadding(24,20,24,20);brand.setBackgroundColor(NAVY);root.addView(brand);
-        ScrollView scroll=new ScrollView(activity);body=new LinearLayout(activity);body.setOrientation(1);body.setPadding(24,12,24,28);scroll.setFillViewport(true);scroll.addView(body);root.addView(scroll);
+        ScrollView scroll=new ScrollView(activity);body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(24,12,24,28);scroll.setFillViewport(true);scroll.addView(body);root.addView(scroll);
         home();
     }
     View view(){return root;}
@@ -178,7 +178,7 @@ final class AgentWorkspace {
     private void records(String bucket,DocumentSnapshot cursor){int ticket=screen(bucket.equals("clients")?"Clientes Final Expense":"Reclutamiento asignado");back();
         if(owner)button("Agregar prospecto",()->editContact(bucket,null,null));
         Query q=store.db.collection(bucket);if(!owner)q=q.whereEqualTo("assignedTo",uid);q=q.orderBy(FieldPath.documentId()).limit(50);if(cursor!=null)q=q.startAfter(cursor);
-        LinearLayout rows=new LinearLayout(activity);rows.setOrientation(1);body.addView(rows);
+        LinearLayout rows=new LinearLayout(activity);rows.setOrientation(LinearLayout.VERTICAL);body.addView(rows);
         watches.add(q.addSnapshotListener(MetadataChanges.INCLUDE,(snap,e)->{if(!current(ticket))return;if(e!=null){rows.removeAllViews();error(e);return;}if(snap==null||snap.getMetadata().isFromCache()||snap.getMetadata().hasPendingWrites())return;
             rows.removeAllViews();message.setText(snap.isEmpty()?"No hay prospectos en esta página.":"Actualizado · "+snap.size()+" prospectos en esta página");
             for(DocumentSnapshot d:snap){Button row=new Button(activity);row.setAllCaps(false);String kind=bucket.equals("clients")?" · "+value(d,"classification")+" · "+value(d,"status"):"";row.setText(value(d,"name")+kind+"\n"+(value(d,"assignedTo").isEmpty()?"Sin asignar":"Asignado"));rows.addView(row);row.setOnClickListener(v->detail(bucket,d.getId()));}

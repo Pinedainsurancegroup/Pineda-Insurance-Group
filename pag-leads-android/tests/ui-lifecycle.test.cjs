@@ -162,7 +162,7 @@ test('upgrade keeps legacy configuration and notes while using the authenticated
  const settings={url:'https://example.invalid/legacy',tok:'synthetic-upgrade-only',auto:false,notify:true};
  const a=app({cloud:true,nativeSettings:settings,initialStorage:{pagov:old,pagset12:JSON.stringify(settings)}});
  const first=a.resume();assert.deepEqual(a.requests.map(x=>x.action),['list']);a.result(0,cloudLeads);await first;
- assert.deepEqual(JSON.parse(a.storage.get('pagset12')),settings);
+ assert.deepEqual(JSON.parse(a.storage.get('pagset12')),{auto:false,notify:true});
  assert.equal(a.storage.get('pagov'),old);
  a.cloudResult({[stableOne]:{status:'Completado',note:'Nota actual de la cuenta',revision:4},[stableTwo]:null});
  assert.equal(a.run('st.leads[0].note'),'Nota actual de la cuenta');
@@ -170,4 +170,12 @@ test('upgrade keeps legacy configuration and notes while using the authenticated
  assert.equal(a.run('localCandidates().length'),1);
  assert.equal(a.storage.get('pagov'),old,'old local note must stay available for reviewed backup');
  a.elements.reviewLocal.onclick();assert.equal(a.syncRequests.length,0,'opening review must not import automatically');
+});
+
+test('persistent settings omit credentials and preserve notes', () => {
+ const a=app({nativeSettings:{url:'https://example.invalid',tok:'synthetic',auto:false,notify:true},initialStorage:{pagov:JSON.stringify({x:{note:'retained'}})}});
+ a.run('loadSet();persistSet();savePrefs()');
+ const saved=JSON.parse(a.storage.get('pagset12'));
+ assert.equal(saved.tok,undefined);assert.equal(saved.url,undefined);assert.equal(saved.auto,false);
+ assert.equal(a.run('st.set.tok'),'synthetic');assert.equal(JSON.parse(a.storage.get('pagov')).x.note,'retained');
 });

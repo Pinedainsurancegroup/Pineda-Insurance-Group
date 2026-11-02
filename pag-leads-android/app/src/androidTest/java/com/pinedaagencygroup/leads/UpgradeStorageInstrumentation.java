@@ -30,9 +30,21 @@ public class UpgradeStorageInstrumentation extends Instrumentation {
             require(context.getPackageName().equals("com.pinedaagencygroup.leads"), "wrong target");
             require(context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionCode == 18,
                     "agent candidate version not installed");
+            SharedPreferences vaultTest = context.getSharedPreferences("vault_synthetic_test", Context.MODE_PRIVATE);
+            vaultTest.edit().clear().putString("token", "synthetic-vault-only").commit();
+            require(TokenVault.read(vaultTest).equals("synthetic-vault-only"), "vault migration failed");
+            require(!vaultTest.contains("token"), "plaintext token retained");
+            String encrypted = vaultTest.getString("token_ciphertext", "");
+            require(!encrypted.contains("synthetic-vault-only"), "vault contains plaintext");
+            require(TokenVault.save(vaultTest, "synthetic-vault-only"), "vault write failed");
+            require(!encrypted.equals(vaultTest.getString("token_ciphertext", "")), "IV reused");
+            vaultTest.edit().putString("token_ciphertext", "invalid:ciphertext").commit();
+            require(TokenVault.read(vaultTest).isEmpty(), "corrupt vault did not fail closed");
+            vaultTest.edit().clear().commit();
             SharedPreferences prefs = context.getSharedPreferences("pag_native", Context.MODE_PRIVATE);
             require(prefs.getString("url", "").equals("https://example.invalid/legacy"), "private URL lost");
-            require(prefs.getString("token", "").equals("synthetic-upgrade-only"), "legacy credential lost");
+            require(TokenVault.read(prefs).equals("synthetic-upgrade-only"), "legacy credential lost");
+            require(!prefs.contains("token"), "plaintext token retained");
             require(!prefs.getBoolean("auto", true) && prefs.getBoolean("notifications", false), "preferences lost");
             require(prefs.getBoolean("monitor_initialized", false), "monitor baseline lost");
             require(prefs.getStringSet("seen_ids", java.util.Collections.emptySet()).size() == 2, "seen IDs lost");

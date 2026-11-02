@@ -29,7 +29,7 @@ final class EmailInvitationAccess {
     }
     void login(Runnable done) {
         close(); final int ticket = generation;
-        LinearLayout fields = new LinearLayout(activity); fields.setOrientation(1); fields.setPadding(28,20,28,20);
+        LinearLayout fields = new LinearLayout(activity); fields.setOrientation(LinearLayout.VERTICAL); fields.setPadding(28,20,28,20);
         TextView text = new TextView(activity); text.setText("Escribe el correo que Juan autorizó. Recibirás un enlace para entrar sin contraseña."); fields.addView(text);
         EditText email = new EditText(activity); email.setHint("Correo autorizado"); email.setSingleLine(true);
         email.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS); fields.addView(email);
@@ -66,7 +66,7 @@ final class EmailInvitationAccess {
         String host=activity.getString(R.string.pag_firebase_project_id)+".firebaseapp.com";
         if(!"https".equals(uri.getScheme()) || !host.equals(uri.getHost()) || !FirebaseAuth.getInstance().isSignInWithEmailLink(link)) return false;
         close(); final int ticket=generation;
-        LinearLayout fields=new LinearLayout(activity);fields.setOrientation(1);fields.setPadding(28,20,28,20);
+        LinearLayout fields=new LinearLayout(activity);fields.setOrientation(LinearLayout.VERTICAL);fields.setPadding(28,20,28,20);
         TextView info=new TextView(activity);info.setText("Confirma el correo al que Juan envió la invitación.");fields.addView(info);
         EditText email=new EditText(activity);email.setHint("Correo de la invitación");email.setSingleLine(true);
         email.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);

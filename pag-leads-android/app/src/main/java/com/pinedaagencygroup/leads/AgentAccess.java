@@ -22,7 +22,7 @@ final class AgentAccess {
     }
     void account(boolean create, Runnable done) {
         close(); final int ticket = generation;
-        LinearLayout fields = new LinearLayout(activity); fields.setOrientation(1); fields.setPadding(28,20,28,20);
+        LinearLayout fields = new LinearLayout(activity); fields.setOrientation(LinearLayout.VERTICAL); fields.setPadding(28,20,28,20);
         EditText email = field(fields,"Correo", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         EditText password = field(fields,"Contraseña de PAG Leads", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         EditText repeat = create ? field(fields,"Repite tu contraseña", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD) : null;
@@ -77,7 +77,7 @@ final class AgentAccess {
             if(!current(ticket))return;
             if(!t.isSuccessful()){message("No se pudo consultar tu solicitud. Revisa tu conexión.");return;}
             if(t.getResult().exists()){message("Tu solicitud ya está registrada. Juan debe aprobarla o revisar tu acceso.");return;}
-            LinearLayout fields=new LinearLayout(activity);fields.setOrientation(1);fields.setPadding(28,20,28,20);
+            LinearLayout fields=new LinearLayout(activity);fields.setOrientation(LinearLayout.VERTICAL);fields.setPadding(28,20,28,20);
             EditText name=field(fields,"Nombre completo",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_CAP_WORDS);
             if(user.getDisplayName()!=null)name.setText(user.getDisplayName());
             TextView info=new TextView(activity);info.setText(user.getEmail()+"\nSolo Juan puede aprobar tus permisos.");fields.addView(info);
