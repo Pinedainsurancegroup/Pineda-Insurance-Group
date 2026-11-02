@@ -1,0 +1,19 @@
+// Artifact-only overrides. Independent IDs, debug signing and offline manifests.
+// This script does not install applications or change service configuration.
+final File overlay = new File(initscript.sourceFile.parentFile, 'offline-manifest.xml')
+gradle.beforeProject { p ->
+    p.plugins.withId('com.android.application') {
+        p.extensions.getByName('androidComponents').finalizeDsl { android ->
+            def debug = android.buildTypes.getByName('debug')
+            debug.applicationIdSuffix = '.audit'
+            debug.versionNameSuffix = '-AUDIT-OFFLINE'
+            android.sourceSets.getByName('debug').manifest.srcFile overlay
+            def qa = android.buildTypes.findByName('qa')
+            if (qa != null) {
+                qa.signingConfig = android.signingConfigs.getByName('debug')
+                qa.versionNameSuffix = '-QA-OFFLINE'
+                android.sourceSets.getByName('qa').manifest.srcFile overlay
+            }
+        }
+    }
+}

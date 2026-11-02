@@ -1,0 +1,35 @@
+[
+  {
+    "file": "PAG-Leads-1.9-QA-OFFLINE.apk",
+    "bytes": 6831473,
+    "sha256": "d33dde0874c0d1ec1c410a4276e9a6271602203b6d72809f5e43ae62e5f6032f",
+    "certificate_sha256": "538c07ce2b208fd500bb4b1731164816d2c99cd3a65616030f725850f4e49781",
+    "package": "com.pinedaagencygroup.leads.qa",
+    "version": "package: name='com.pinedaagencygroup.leads.qa' versionCode='18' versionName='1.9-INVITATIONS-QA3-QA-OFFLINE' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'",
+    "source": "aa74ef9",
+    "overlay": "scripts/validation/qa.init.gradle + offline-manifest.xml",
+    "limitations": "Offline, debug/test certificate; not installed or validated on device; not a production build"
+  },
+  {
+    "file": "PIMFLEX-TV-2.1.1-AUDIT-OFFLINE.apk",
+    "bytes": 107446430,
+    "sha256": "1e992841366f13009c805086df2db81f64a883221b29bf9f535aed8bca82c536",
+    "certificate_sha256": "538c07ce2b208fd500bb4b1731164816d2c99cd3a65616030f725850f4e49781",
+    "package": "com.pimflextv.next.audit",
+    "version": "package: name='com.pimflextv.next.audit' versionCode='12' versionName='2.1.1-AUDIT-OFFLINE' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'",
+    "source": "8a0de0f",
+    "overlay": "scripts/validation/qa.init.gradle + offline-manifest.xml",
+    "limitations": "Offline, debug/test certificate; not installed or validated on device; not a production build"
+  },
+  {
+    "file": "Taty-Nails-4.1-AUDIT-OFFLINE.apk",
+    "bytes": 68539,
+    "sha256": "4b9a6f8954b665a8dd1c7521ed0beea3b645e9218a608dca00ebf32e0e92df8b",
+    "certificate_sha256": "538c07ce2b208fd500bb4b1731164816d2c99cd3a65616030f725850f4e49781",
+    "package": "com.tatynails.app.audit",
+    "version": "package: name='com.tatynails.app.audit' versionCode='5' versionName='4.1-AUDIT-OFFLINE' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'",
+    "source": "64a333bf8baa0d6f5785ff6e56b33ca9dbe787ae+overlays",
+    "overlay": "scripts/validation/qa.init.gradle + offline-manifest.xml",
+    "limitations": "Offline, debug/test certificate; not installed or validated on device; not a production build"
+  }
+]
