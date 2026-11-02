@@ -1,0 +1,28 @@
+// Only use with an overlay produced by prepare_staging.py, outside the checkout.
+import groovy.json.JsonSlurper
+import java.security.MessageDigest
+
+def directory = gradle.startParameter.projectProperties['pagStagingOverlay']
+if (!directory) throw new GradleException('Missing -PpagStagingOverlay=/validated/staging/directory')
+def overlay = new File(directory).canonicalFile
+def metadata = new JsonSlurper().parse(new File(overlay, 'validated.json'))
+def resource = new File(overlay, 'res/values/staging.xml')
+def digest = MessageDigest.getInstance('SHA-256').digest(resource.bytes).encodeHex().toString()
+if (metadata.environment != 'staging' || metadata.package != 'com.pinedaagencygroup.leads.staging' || digest != metadata.resource_sha256)
+    throw new GradleException('Invalid or modified staging overlay; regenerate using prepare_staging.py')
+gradle.beforeProject { p ->
+    p.plugins.withId('com.android.application') {
+        def android = p.extensions.getByName('android')
+        def staging = android.buildTypes.create('staging')
+        staging.initWith(android.buildTypes.getByName('debug'))
+        staging.applicationIdSuffix = '.staging'
+        staging.versionNameSuffix = '-STAGING'
+        staging.signingConfig = android.signingConfigs.getByName('debug')
+        staging.matchingFallbacks = ['debug']
+        android.testBuildType = 'staging'
+        android.sourceSets.getByName('staging').res.srcDir new File(overlay, 'res')
+        p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+            dsl.defaultConfig.testInstrumentationRunner = 'com.pinedaagencygroup.leads.StagingFunctionalInstrumentation'
+        }
+    }
+}

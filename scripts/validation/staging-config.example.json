@@ -1,0 +1,10 @@
+{
+  "environment": "staging",
+  "android_package": "com.pinedaagencygroup.leads.staging",
+  "pag_firebase_project_id": "",
+  "pag_firebase_application_id": "",
+  "pag_firebase_api_key": "",
+  "pag_firebase_sender_id": "",
+  "pag_firebase_web_client_id": "",
+  "pag_owner_gateway_url": ""
+}
