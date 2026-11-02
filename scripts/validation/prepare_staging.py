@@ -44,6 +44,28 @@ def validate(config, expected_project):
         raise ValueError('Expected a separate HTTPS Apps Script staging gateway')
     return config
 
+def staging_manifest(project):
+    if not re.fullmatch(r'[a-z][a-z0-9-]{4,28}[a-z0-9]', project) or project == production_values()['pag_firebase_project_id']:
+        raise ValueError('Independent project ID required for staging app links')
+    template = '''<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <activity android:name="com.pinedaagencygroup.leads.MainActivity" android:launchMode="singleTop" android:exported="true" tools:node="replace">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="STAGING_HOST" android:pathPrefix="/__/auth/links" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+'''
+    return template.replace('STAGING_HOST', project + '.firebaseapp.com').encode('utf-8')
+
 def generate(config, expected_project, output):
     validate(config, expected_project)
     # Reject values from either known production or legacy QA resource sets.
@@ -63,8 +85,11 @@ def generate(config, expected_project, output):
     path = output / 'res/values/staging.xml'
     path.parent.mkdir(parents=True)
     path.write_bytes(xml)
+    manifest = staging_manifest(expected_project)
+    (output / 'AndroidManifest.xml').write_bytes(manifest)
     (output / 'validated.json').write_text(json.dumps({
         'environment': 'staging', 'package': PACKAGE, 'project': expected_project,
+        'manifest_sha256': hashlib.sha256(manifest).hexdigest(),
         'resource_sha256': hashlib.sha256(xml).hexdigest()}, indent=2) + '\n')
     return output
 

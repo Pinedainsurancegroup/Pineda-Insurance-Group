@@ -1,0 +1,99 @@
+{
+  "commits": 305,
+  "blobs_scanned": 550,
+  "keyword_matches": [
+    {
+      "object": "b03efe261f2a922bb60f9dee0e7cf59df01a2773",
+      "path": "docs/audit/ARCHITECTURE-AND-RECOVERY.md",
+      "matches": 4
+    },
+    {
+      "object": "a57e9be014733f571c3816ddb8764bdf4cc5f0f9",
+      "path": "docs/audit/INTEGRATION-PLAN.md",
+      "matches": 3
+    },
+    {
+      "object": "912783a7a77cce1c6229398963660fc071d37e40",
+      "path": "docs/audit/TECHNICAL-AUDIT-2026-11-02.md",
+      "matches": 3
+    },
+    {
+      "object": "e56b2b002b2e57e86fb8b3235abc042f65c132d8",
+      "path": "docs/functional-tests/DEVICE-AND-ACCESS-BLOCKERS.md",
+      "matches": 3
+    },
+    {
+      "object": "cc679bb88b96fcea0422a9423b8173018b5a0b54",
+      "path": "docs/functional-tests/STATUS-FROM-ada5e1c.md",
+      "matches": 3
+    },
+    {
+      "object": "07beaef278596a81448c6c1b2e411dfcaf05f4ee",
+      "path": "firebase/AGENTS_QA2.md",
+      "matches": 1
+    },
+    {
+      "object": "874b8f069883ef6f3851b55a90c203d190c9836d",
+      "path": "integration-sandbox/README.md",
+      "matches": 1
+    },
+    {
+      "object": "60467cf0a32ac5d2ba978bccec9b9c6264e1d833",
+      "path": "integration-sandbox/vendor/integration-controls.cjs",
+      "matches": 1
+    },
+    {
+      "object": "f13b3f6857bd04480131a76399cd9ee61332d870",
+      "path": "pag-leads-bridge/AUDIT.md",
+      "matches": 3
+    },
+    {
+      "object": "482ef4ad156a4271031f0aa860fb1e06fb74dddf",
+      "path": "pag-leads-bridge/INTEGRATION_CONTROLS.md",
+      "matches": 4
+    },
+    {
+      "object": "172f1b49ebfd53fcb5a153bf6ce08dffd9e4bb3a",
+      "path": "pag-leads-bridge/README.md",
+      "matches": 4
+    },
+    {
+      "object": "7c7ccdcc32cc39bcc709bd33e7263b8490885fa4",
+      "path": "pag-leads-bridge/README.md",
+      "matches": 4
+    },
+    {
+      "object": "647b759e2c0b91ed50612d8eb8da573c17303d65",
+      "path": "pag-leads-bridge/README.md",
+      "matches": 6
+    },
+    {
+      "object": "2f3060e429bda2586540da67064deb288ca0b628",
+      "path": "firebase/AGENTS_QA2.md",
+      "matches": 1
+    },
+    {
+      "object": "681f3cec7e7078a35de18e3f22e47d3fcb151da6",
+      "path": "firebase/AGENTS_QA2.md",
+      "matches": 1
+    }
+  ],
+  "zip_archives": [
+    {
+      "object": "ae01b989ee68d20011861351b323c09d34123447",
+      "path": "pineda-insurance-site.zip",
+      "sha256": "9e2c3395611da73bde9a95abc7e222baf49d0a7027b5ba07793ceeefa82dafc3",
+      "members": [
+        "index.html"
+      ],
+      "crc_ok": true
+    }
+  ],
+  "excluded_sensitive_paths": [
+    {
+      "object": "d9af353f0482a2d12d22c2c41aeab248820f04ed",
+      "path": "pimflextv-rebuild/qa-signing.jks.b64"
+    }
+  ],
+  "limitations": "Reachable local history only; keywords are references, not proof of complete implementations. Signing material not decoded."
+}

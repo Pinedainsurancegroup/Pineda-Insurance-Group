@@ -7,8 +7,10 @@ if (!directory) throw new GradleException('Missing -PpagStagingOverlay=/validate
 def overlay = new File(directory).canonicalFile
 def metadata = new JsonSlurper().parse(new File(overlay, 'validated.json'))
 def resource = new File(overlay, 'res/values/staging.xml')
+def manifest = new File(overlay, 'AndroidManifest.xml')
+def manifestDigest = MessageDigest.getInstance('SHA-256').digest(manifest.bytes).encodeHex().toString()
 def digest = MessageDigest.getInstance('SHA-256').digest(resource.bytes).encodeHex().toString()
-if (metadata.environment != 'staging' || metadata.package != 'com.pinedaagencygroup.leads.staging' || digest != metadata.resource_sha256)
+if (metadata.environment != 'staging' || metadata.package != 'com.pinedaagencygroup.leads.staging' || digest != metadata.resource_sha256 || manifestDigest != metadata.manifest_sha256)
     throw new GradleException('Invalid or modified staging overlay; regenerate using prepare_staging.py')
 gradle.beforeProject { p ->
     p.plugins.withId('com.android.application') {
@@ -21,6 +23,7 @@ gradle.beforeProject { p ->
         staging.matchingFallbacks = ['debug']
         android.testBuildType = 'staging'
         android.sourceSets.getByName('staging').res.srcDir new File(overlay, 'res')
+        android.sourceSets.getByName('staging').manifest.srcFile manifest
         p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
             dsl.defaultConfig.testInstrumentationRunner = 'com.pinedaagencygroup.leads.StagingFunctionalInstrumentation'
         }
