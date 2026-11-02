@@ -22,3 +22,8 @@ test('stored values remain data, including quotes and script-looking text',()=>{
  const payload='"; throw new Error("injection"); //</script>\u2028';
  assert.equal(migrate({pagov:payload},{}).pagov,payload);
 });
+test('migration reports success explicitly and does not hide storage write failures',()=>{
+ const script=match[1]+JSON.stringify(JSON.stringify({pagov:'notes'}))+match[2];
+ assert.equal(vm.runInNewContext(script,{localStorage:{getItem:()=>null,setItem(){}}}),true);
+ assert.throws(()=>vm.runInNewContext(script,{localStorage:{getItem:()=>null,setItem(){throw Error('quota')}}}),/quota/);
+});

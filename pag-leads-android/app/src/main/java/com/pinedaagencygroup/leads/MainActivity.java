@@ -208,9 +208,6 @@ public class MainActivity extends Activity {
             .addPathHandler("/assets/", new androidx.webkit.WebViewAssetLoader.AssetsPathHandler(this)).build();
         webView.setWebViewClient(new WebViewClient() {
             @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, android.webkit.WebResourceRequest request) {
-                if ("file:///android_asset/index.html".equals(request.getUrl().toString()))
-                    return new android.webkit.WebResourceResponse("text/html", "UTF-8",
-                        new java.io.ByteArrayInputStream("<!doctype html><title>Migration</title>".getBytes(StandardCharsets.UTF_8)));
                 android.webkit.WebResourceResponse response = assets.shouldInterceptRequest(request.getUrl());
                 if (response != null) {
                     java.util.Map<String,String> headers = new java.util.HashMap<>();
@@ -251,8 +248,8 @@ public class MainActivity extends Activity {
                                 String oldToken = settings.optString("tok", "");
                                 SharedPreferences nativePrefs = getSharedPreferences("pag_native", MODE_PRIVATE);
                                 if (!oldToken.isEmpty() && TokenVault.read(nativePrefs).isEmpty()) {
-                                    if (!TokenVault.save(nativePrefs, oldToken)) return;
-                                    nativePrefs.edit().putString("url", settings.optString("url", "")).commit();
+                                    if (!TokenVault.save(nativePrefs, oldToken)) { migrationFailed(view); return; }
+                                    if (!nativePrefs.edit().putString("url", settings.optString("url", "")).commit()) { migrationFailed(view); return; }
                                 }
                                 settings.remove("tok"); settings.remove("url");
                                 stored.put("pagset12", settings.toString());
@@ -260,23 +257,37 @@ public class MainActivity extends Activity {
                             }
                             oldStorage[0] = stored.toString();
                         }
-                        catch (Exception ignored) { oldStorage[0] = "{}"; }
+                        catch (Exception ignored) { migrationFailed(view); return; }
                         view.addJavascriptInterface(new PAGNativeBridge(), "PAGNative");
                         view.loadUrl("https://appassets.androidplatform.net/assets/index.html");
                     });
                     return;
                 }
                 if (!"https://appassets.androidplatform.net/assets/index.html".equals(url)) return;
-                String migration = "(()=>{const old=JSON.parse(" + JSONObject.quote(oldStorage[0]) + ");for(const k of Object.keys(old)){if(localStorage.getItem(k)===null)localStorage.setItem(k,old[k]);}})()";
-                view.evaluateJavascript(migration, ignored -> {
+                String migration = "(()=>{const old=JSON.parse(" + JSONObject.quote(oldStorage[0]) + ");for(const k of Object.keys(old)){if(localStorage.getItem(k)===null)localStorage.setItem(k,old[k]);}return true;})()";
+                view.evaluateJavascript(migration, result -> {
                     if (view != webView) return;
+                    if (!"true".equals(result)) { migrationFailed(view); return; }
                     pageReady = true;
                     if (ownerVerified) resumePage();
                 });
             }
         });
 
-        webView.loadUrl("file:///android_asset/index.html");
+        // Asset URLs are not guaranteed to invoke shouldInterceptRequest.
+        // Supply the inert migration document directly, retaining the old origin.
+        webView.loadDataWithBaseURL("file:///android_asset/index.html",
+                "<!doctype html><title>Migration</title>", "text/html", "UTF-8", null);
+    }
+
+    private void migrationFailed(WebView view) {
+        if (view != webView) return;
+        pageReady = false;
+        view.removeJavascriptInterface("PAGNative");
+        android.widget.TextView message = new android.widget.TextView(this);
+        message.setText("No se pudo recuperar el almacenamiento local. Los datos originales se conservan. Cierre y abra la aplicación para reintentar; si continúa, contacte soporte.");
+        message.setPadding(24, 24, 24, 24);
+        setContentView(message);
     }
 
     private void resumePage() {
