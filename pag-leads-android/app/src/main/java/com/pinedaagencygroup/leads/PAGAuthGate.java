@@ -225,7 +225,11 @@ final class PAGAuthGate {
                         }
                     }
                     @Override public void onError(GetCredentialException e) {
-                        show("No se completó el acceso con Google. Puedes volver a intentarlo.", true);
+                        if (e instanceof androidx.credentials.exceptions.NoCredentialException) {
+                            show("No hay una cuenta Google disponible. Añade una cuenta de pruebas en Android y vuelve a intentarlo.", true);
+                        } else {
+                            show("No se completó el acceso con Google. Puedes volver a intentarlo.", true);
+                        }
                     }
                 });
     }

@@ -44,6 +44,11 @@ public class LeadMonitorService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        // Defense in depth: staging disables this legacy service in its manifest.
+        if (getResources().getBoolean(R.bool.pag_staging_build)) {
+            stopSelf();
+            return;
+        }
         prefs = getSharedPreferences("pag_native", MODE_PRIVATE);
         createChannels();
         startForeground(FOREGROUND_ID, monitorNotification());
@@ -53,6 +58,10 @@ public class LeadMonitorService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (getResources().getBoolean(R.bool.pag_staging_build) || prefs == null) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         boolean enabled = prefs.getBoolean("notifications", true);
         if (!enabled) {
             stopSelf();

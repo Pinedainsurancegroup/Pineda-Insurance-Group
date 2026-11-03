@@ -51,7 +51,7 @@ def staging_manifest(project):
         raise ValueError('Independent project ID required for staging app links')
     template = '''<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <application>
-        <service android:name="com.pinedaagencygroup.leads.LeadMonitorService" tools:node="remove" />
+        <service android:name="com.pinedaagencygroup.leads.LeadMonitorService" android:enabled="false" android:foregroundServiceType="specialUse" />
         <activity android:name="com.pinedaagencygroup.leads.MainActivity" android:launchMode="singleTop" android:exported="true" tools:node="replace">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -81,7 +81,7 @@ def generate(config, expected_project, output):
         raise ValueError('Output already exists; choose a new directory to preserve existing configuration')
     resource = ET.Element('resources')
     for key in FIELDS:
-        ET.SubElement(resource, 'string', name=key).text = config[key]
+        ET.SubElement(resource, 'string', name=key, translatable='false').text = config[key]
     ET.SubElement(resource, 'string', name='pag_app_name').text = 'PAG Leads STAGING'
     ET.SubElement(resource, 'bool', name='pag_qa_build').text = 'true'
     ET.SubElement(resource, 'bool', name='pag_staging_build').text = 'true'

@@ -13,6 +13,7 @@ class LinkTests(unittest.TestCase):
         self.assertEqual(len(activity.findall('intent-filter')),2)
         service=root.find('application/service')
         self.assertEqual(service.attrib[android+'name'],'com.pinedaagencygroup.leads.LeadMonitorService')
-        self.assertEqual(service.attrib[tools+'node'],'remove')
+        self.assertEqual(service.attrib[android+'enabled'],'false')
+        self.assertEqual(service.attrib[android+'foregroundServiceType'],'specialUse')
     def test_production_link_host_rejected(self):
         with self.assertRaises(ValueError):client.staging_manifest('pag-leads-8c6ef')
