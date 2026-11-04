@@ -46,7 +46,7 @@ final class EmailInvitationAccess {
                 if (t.isSuccessful()) {
                     activity.getSharedPreferences("pag_email_access",0).edit().putString("email",address).apply();
                     text.setText("Enlace enviado. Ábrelo en este teléfono. Si el correo está en otro dispositivo, copia el enlace y usa Tengo el enlace. Revisa también spam.");
-                } else text.setText("No se pudo enviar el enlace. Revisa la conexión o inténtalo más tarde.");
+                } else text.setText(OperationErrors.describe("Auth sendSignInLinkToEmail",t.getException()));
             });
         });
         d.getButton(-3).setOnClickListener(v->pasteLink(done));
@@ -84,7 +84,7 @@ final class EmailInvitationAccess {
                 if(t.isSuccessful()) {
                     activity.getSharedPreferences("pag_email_access",0).edit().putString("email",address).apply();
                     activity.getIntent().setData(null);close();done.run();
-                } else {d.getButton(-1).setEnabled(true);info.setText("El enlace no es válido para ese correo o ya venció. Solicita un enlace nuevo en Entrar como agente.");}
+                } else {d.getButton(-1).setEnabled(true);info.setText(OperationErrors.describe("Auth signInWithEmailLink",t.getException()));}
             });
         });
         return true;

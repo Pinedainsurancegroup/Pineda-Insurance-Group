@@ -107,7 +107,7 @@ final class PAGAuthGate {
             if (!isCurrent(ticket)) return;
             pause();
             listener.onAccessRevoked();
-            show("No se pudo comprobar el acceso. Revisa tu conexión y vuelve a intentar.", true);
+            show(OperationMessages.describe("users GET timeout", "CLIENT_TIMEOUT"), true);
         };
         handler.postDelayed(timeout, 15000);
         // A cached profile is never sufficient: suspension must apply to an old session.
@@ -129,9 +129,9 @@ final class PAGAuthGate {
                             invitations.redeem().addOnCompleteListener(activity, claim -> {
                                 if (!isCurrent(claimTicket)) return;
                                 if (claim.isSuccessful()) verify();
-                                else show("Juan debe invitar este correo y autorizar sus permisos. Si ya te invitó, revisa la conexión y vuelve a comprobar.", true);
+                                else show(OperationErrors.describe("invitation/users/accessRequests TRANSACTION + audit",claim.getException()), true);
                             });
-                        } else show("Cuenta sin acceso activo. Juan debe revisar tu autorización.", true);
+                        } else show(task.isSuccessful()?"Cuenta sin acceso activo. Juan debe revisar tu autorización.":OperationErrors.describe("users GET",task.getException()), true);
                     }
                 });
     }
@@ -150,7 +150,7 @@ final class PAGAuthGate {
                     if (error != null || (doc != null && !doc.getMetadata().isFromCache() && !allowed(doc))) {
                         pause();
                         listener.onAccessRevoked();
-                        show("Cuenta sin acceso activo.", true);
+                        show(error==null?"Cuenta sin acceso activo.":OperationErrors.describe("users LISTEN",error), true);
                     } else if (doc != null && !doc.getMetadata().isFromCache() &&
                         !java.util.Objects.equals(doc.getData(), original.getData())) {
                         listener.onAccessRevoked(); verify();
@@ -218,7 +218,7 @@ final class PAGAuthGate {
                                     GoogleAuthProvider.getCredential(idToken, null))
                                     .addOnCompleteListener(activity, task -> {
                                         if (task.isSuccessful()) verify();
-                                        else show("No se pudo iniciar sesión con Google.", true);
+                                        else show(OperationErrors.describe("Auth Google signInWithCredential",task.getException()), true);
                                     });
                         } catch (Exception e) {
                             show("No se pudo leer la cuenta de Google.", true);

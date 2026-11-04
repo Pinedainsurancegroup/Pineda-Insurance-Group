@@ -50,7 +50,8 @@ final class AgentWorkspace {
     private Spinner select(String label,String[] values,String selected){text(label,14);Spinner s=new Spinner(activity);ArrayAdapter<String>a=new ArrayAdapter<>(activity,android.R.layout.simple_spinner_dropdown_item,values);s.setAdapter(a);for(int i=0;i<values.length;i++)if(values[i].equals(selected))s.setSelection(i);body.addView(s);return s;}
     private String value(DocumentSnapshot d,String key){String s=d.getString(key);return s==null?"":s;}
     private String input(EditText e){return e.getText().toString().trim();}
-    private void error(Exception e){message.setText(AgentStore.conflict(e)?"Otro teléfono cambió este registro. Tu edición sigue aquí; vuelve a abrirlo para revisar la versión actual antes de guardar.":"No se pudo completar. Revisa tu conexión y permisos; no se confirmó ningún cambio.");}
+    private void error(Exception e){error("workspace",e);}
+    private void error(String operation,Exception e){message.setText(OperationErrors.describe(operation,e));}
     private void back(){button("Volver al inicio",this::home);}
     void home(){screen(owner?"Administrar mi equipo":"Mis prospectos");text(owner?"Aprueba accesos y asigna prospectos a cada agente.":"Aquí aparecen solo las secciones autorizadas y los prospectos que Juan te asignó.",16);
         if(owner) {button("Invitar agente",()->invite(null)); button("Invitaciones enviadas",()->invitations(null)); button("Solicitudes y agentes",()->accounts(null));}
@@ -79,15 +80,15 @@ final class AgentWorkspace {
             if(input(name).isEmpty()||!android.util.Patterns.EMAIL_ADDRESS.matcher(address).matches()||(!fe.isChecked()&&!rec.isChecked())){message.setText("Completa nombre, correo y al menos una sección.");return;}
             send.setEnabled(false);
             store.db.collection("agentInvitations").document(address).get(Source.SERVER).addOnCompleteListener(activity,t->{
-                if(!current(ticket))return;if(!t.isSuccessful()){send.setEnabled(true);error(t.getException());return;}
+                if(!current(ticket))return;if(!t.isSuccessful()){send.setEnabled(true);error("agentInvitations GET",t.getException());return;}
                 DocumentSnapshot old=t.getResult();
                 if(old.exists()&&!value(old,"claimedUid").isEmpty()){send.setEnabled(true);message.setText("Este agente ya aceptó. Modifica sus permisos en Solicitudes y agentes. Puede solicitar otro enlace desde su teléfono.");return;}
                 Map<String,Object>d=new HashMap<>(),scopes=new HashMap<>();scopes.put("clients",fe.isChecked());scopes.put("recruitment",rec.isChecked());
                 d.put("email",address);d.put("name",input(name));d.put("scopes",scopes);d.put("active",true);d.put("claimedUid","");d.put("claimedAt",null);
                 store.save("agentInvitations",address,d,AgentStore.revision(old)).addOnCompleteListener(activity,saved->{
-                    if(!current(ticket))return;if(!saved.isSuccessful()){send.setEnabled(true);error(saved.getException());return;}
+                    if(!current(ticket))return;if(!saved.isSuccessful()){send.setEnabled(true);error("agentInvitations TRANSACTION + audit",saved.getException());return;}
                     EmailInvitationAccess.send(activity,address).addOnCompleteListener(activity,sent->{
-                        if(!current(ticket))return;send.setEnabled(true);message.setText(sent.isSuccessful()?"Invitación enviada a "+address+". El agente debe abrirla con la app QA3 instalada.":"Permisos guardados, pero el correo no se pudo enviar. Pulsa de nuevo para reintentar.");
+                        if(!current(ticket))return;send.setEnabled(true);message.setText(sent.isSuccessful()?"Invitación enviada a "+address+". El agente debe abrirla con la app QA3 instalada.":"Permisos guardados. "+OperationErrors.describe("Auth sendSignInLinkToEmail",sent.getException()));
                     });
                 });
             });
@@ -179,7 +180,7 @@ final class AgentWorkspace {
         if(owner)button("Agregar prospecto",()->editContact(bucket,null,null));
         Query q=store.db.collection(bucket);if(!owner)q=q.whereEqualTo("assignedTo",uid);q=q.orderBy(FieldPath.documentId()).limit(50);if(cursor!=null)q=q.startAfter(cursor);
         LinearLayout rows=new LinearLayout(activity);rows.setOrientation(LinearLayout.VERTICAL);body.addView(rows);
-        watches.add(q.addSnapshotListener(MetadataChanges.INCLUDE,(snap,e)->{if(!current(ticket))return;if(e!=null){rows.removeAllViews();error(e);return;}if(snap==null||snap.getMetadata().isFromCache()||snap.getMetadata().hasPendingWrites())return;
+        watches.add(q.addSnapshotListener(MetadataChanges.INCLUDE,(snap,e)->{if(!current(ticket))return;if(e!=null){rows.removeAllViews();error(bucket+" LIST/listen",e);return;}if(snap==null||snap.getMetadata().isFromCache()||snap.getMetadata().hasPendingWrites())return;
             rows.removeAllViews();message.setText(snap.isEmpty()?"No hay prospectos en esta página.":"Actualizado · "+snap.size()+" prospectos en esta página");
             for(DocumentSnapshot d:snap){Button row=new Button(activity);row.setAllCaps(false);String kind=bucket.equals("clients")?" · "+value(d,"classification")+" · "+value(d,"status"):"";row.setText(value(d,"name")+kind+"\n"+(value(d,"assignedTo").isEmpty()?"Sin asignar":"Asignado"));rows.addView(row);row.setOnClickListener(v->detail(bucket,d.getId()));}
             if(snap.size()==50){Button more=new Button(activity);more.setText("Siguiente página");rows.addView(more);more.setOnClickListener(v->records(bucket,snap.getDocuments().get(49)));}
@@ -240,14 +241,14 @@ final class AgentWorkspace {
             if(bucket.equals("clients")){d.put("classification",classification.getSelectedItem().toString());d.put("status",Objects.toString(base.get("status"),"Nuevo"));d.put("note",Objects.toString(base.get("note"),""));}
             String selected=names.get(agents.getSelectedItemPosition());
             dialog=new AlertDialog.Builder(activity).setTitle("Confirmar asignación").setMessage(input(name)+"\n"+selected+"\nEl agente elegido podrá ver el contacto, las notas y el historial de este prospecto.").setNegativeButton("Revisar",null).setPositiveButton("Guardar",(x,w)->{
-                save.setEnabled(false);store.save(bucket,id,d,existing==null?0:AgentStore.revision(existing)).addOnCompleteListener(activity,t->{if(!current(ticket))return;if(t.isSuccessful())detail(bucket,id);else{save.setEnabled(true);error(t.getException());}});
+                save.setEnabled(false);store.save(bucket,id,d,existing==null?0:AgentStore.revision(existing)).addOnCompleteListener(activity,t->{if(!current(ticket))return;if(t.isSuccessful())detail(bucket,id);else{save.setEnabled(true);error(bucket+" TRANSACTION + audit + assignmentNotices",t.getException());}});
             }).show();
         });
         text("Los cambios conservan el historial. Al retirar o reasignar, el agente anterior pierde acceso a nuevas consultas.",14);
     }
     private void loadAssignees(String module,DocumentSnapshot cursor,ArrayList<String>uids,ArrayList<String>names,Runnable done,int ticket){
         Query q=store.db.collection("users").whereEqualTo("role","agent").orderBy(FieldPath.documentId()).limit(100);if(cursor!=null)q=q.startAfter(cursor);
-        q.get(Source.SERVER).addOnCompleteListener(activity,t->{if(!current(ticket))return;if(!t.isSuccessful()){error(t.getException());return;}
+        q.get(Source.SERVER).addOnCompleteListener(activity,t->{if(!current(ticket))return;if(!t.isSuccessful()){error("users LIST assignees",t.getException());return;}
             for(DocumentSnapshot p:t.getResult())if(Boolean.TRUE.equals(p.getBoolean("active"))&&!Boolean.TRUE.equals(p.getBoolean("suspended"))&&Boolean.TRUE.equals(p.get("scopes."+module))){int i=uids.indexOf(p.getId());String label=value(p,"name")+" · "+value(p,"email");if(i>=0)names.set(i,label);else{uids.add(p.getId());names.add(label);}}
             if(t.getResult().size()==100)loadAssignees(module,t.getResult().getDocuments().get(99),uids,names,done,ticket);else done.run();
         });

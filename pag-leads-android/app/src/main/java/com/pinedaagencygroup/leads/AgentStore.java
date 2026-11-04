@@ -12,7 +12,10 @@ final class AgentStore {
         Long n = doc.getLong("revision"); return n == null ? 0L : n;
     }
     Task<Void> save(String bucket, String id, Map<String,Object> values, long expected) {
-        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        com.google.firebase.auth.FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return com.google.android.gms.tasks.Tasks.forException(
+            new FirebaseFirestoreException("Session required", FirebaseFirestoreException.Code.UNAUTHENTICATED));
+        String uid = user.getUid();
         DocumentReference ref = db.collection(bucket).document(id);
         DocumentReference event = ref.collection("audit").document(UUID.randomUUID().toString());
         return db.runTransaction(tx -> {

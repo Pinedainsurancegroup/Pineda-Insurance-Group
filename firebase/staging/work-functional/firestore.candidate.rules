@@ -1,0 +1,325 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function active() {
+      return signedIn() && profile().data.active == true &&
+        profile().data.suspended != true &&
+        (profile().data.role == 'owner' || (request.auth.token.email_verified == true &&
+          request.auth.token.email == profile().data.email));
+    }
+    function owner() { return active() && profile().data.role == 'owner'; }
+    function agent() { return active() && profile().data.role == 'agent'; }
+    function leader() { return active() && profile().data.role == 'leader'; }
+    function scope(module) {
+      return owner() || (agent() && profile().data.scopes[module] == true);
+    }
+    function assignmentAccess(d, module) {
+      return owner() || (scope(module) && d.assignedTo == request.auth.uid);
+    }
+    function canReadClient(id) {
+      return owner() || (scope('clients') && get(/databases/$(database)/documents/clients/$(id)).data.assignedTo == request.auth.uid);
+    }
+    function canReadRecruitment(id) {
+      return owner() || (scope('recruitment') &&
+        get(/databases/$(database)/documents/recruitmentAssignments/$(id)).data.assignedTo == request.auth.uid);
+    }
+    function targetAllowed(uid, module) {
+      let p = /databases/$(database)/documents/users/$(uid);
+      return uid == '' || (get(p).data.role == 'agent' && get(p).data.active == true &&
+        get(p).data.suspended == false && get(p).data.scopes[module] == true);
+    }
+    // Two-way atomic audit binding. Every mutation requires a new immutable event.
+    function audited(bucket, id) {
+      let d = request.resource.data;
+      let p = /databases/$(database)/documents/$(bucket)/$(id);
+      let e = /databases/$(database)/documents/$(bucket)/$(id)/audit/$(d.lastEventId);
+      return d.revision is int && d.revision == (exists(p) ? get(p).data.get('revision', 0) : 0) + 1 &&
+        d.lastEventId.matches('[a-zA-Z0-9_-]{16,80}') && d.updatedBy == request.auth.uid &&
+        d.updatedAt == request.time && !exists(e) &&
+        getAfter(e).data.after == d && getAfter(e).data.before == (exists(p) ? get(p).data : {}) &&
+        getAfter(e).data.actorUid == request.auth.uid && getAfter(e).data.createdAt == request.time;
+    }
+    function auditEvent(bucket, id, eventId) {
+      let p = /databases/$(database)/documents/$(bucket)/$(id);
+      let e = request.resource.data;
+      return e.keys().hasOnly(['before', 'after', 'actorUid', 'createdAt']) &&
+        e.actorUid == request.auth.uid && e.createdAt == request.time &&
+        e.before == (exists(p) ? get(p).data : {}) && e.after == getAfter(p).data &&
+        e.after.lastEventId == eventId &&
+        e.after.revision == (exists(p) ? get(p).data.get('revision', 0) : 0) + 1 &&
+        e.after.updatedAt == request.time && e.after.updatedBy == request.auth.uid;
+    }
+    function validScopes(s) {
+      return s.keys().hasAll(['clients', 'recruitment']) && s.keys().hasOnly(['clients', 'recruitment']) &&
+        s.clients is bool && s.recruitment is bool;
+    }
+    function validAgent(uid) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['role', 'active', 'suspended', 'email', 'name', 'scopes', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        d.keys().hasOnly(['role', 'active', 'suspended', 'email', 'name', 'scopes', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        d.role == 'agent' && d.active is bool && d.suspended is bool &&
+        d.name is string && d.name.size() > 0 && d.name.size() <= 120 &&
+        d.email == getAfter(/databases/$(database)/documents/accessRequests/$(uid)).data.email &&
+        validScopes(d.scopes) && audited('users', uid);
+    }
+    function invited(uid) {
+      let key = request.auth.token.email.lower();
+      let path = /databases/$(database)/documents/agentInvitations/$(key);
+      let i = get(path).data;
+      let d = getAfter(/databases/$(database)/documents/users/$(uid)).data;
+      return signedIn() && request.auth.uid == uid && request.auth.token.email_verified == true &&
+        !exists(/databases/$(database)/documents/users/$(uid)) &&
+        i.active == true && i.claimedUid == '' && i.email == key &&
+        getAfter(path).data.claimedUid == uid && getAfter(path).data.claimedAt == request.time &&
+        d.role == 'agent' && d.active == true && d.suspended == false &&
+        d.name == i.name && d.email == request.auth.token.email && d.scopes == i.scopes;
+    }
+    function validInvitation(key) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['email', 'name', 'scopes', 'active', 'claimedUid', 'claimedAt', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        d.keys().hasOnly(['email', 'name', 'scopes', 'active', 'claimedUid', 'claimedAt', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        key.size() <= 254 && d.email == key && d.email == d.email.lower() &&
+        d.name is string && d.name.size() > 0 && d.name.size() <= 120 &&
+        validScopes(d.scopes) && (d.scopes.clients || d.scopes.recruitment) && d.active is bool &&
+        (exists(/databases/$(database)/documents/agentInvitations/$(key)) ?
+          (d.claimedUid == resource.data.claimedUid && d.claimedAt == resource.data.claimedAt) :
+          (d.claimedUid == '' && d.claimedAt == null)) && audited('agentInvitations', key);
+    }
+    match /agentInvitations/{email} {
+      allow get: if owner() || (signedIn() && request.auth.token.email_verified == true && request.auth.token.email.lower() == email);
+      allow list: if owner();
+      allow create: if owner() && validInvitation(email);
+      allow update: if (owner() && validInvitation(email)) ||
+        (invited(request.auth.uid) && request.auth.token.email.lower() == email &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedUid', 'claimedAt']));
+      allow delete: if false;
+      match /audit/{eventId} {
+        allow read: if owner();
+        allow create: if owner() && auditEvent('agentInvitations', email, eventId);
+        allow update, delete: if false;
+      }
+    }
+
+    match /accessRequests/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || owner());
+      allow list: if owner();
+      allow create: if signedIn() && uid == request.auth.uid && request.auth.token.email_verified == true &&
+        !exists(/databases/$(database)/documents/users/$(uid)) &&
+        request.resource.data.keys().hasOnly(['email', 'name', 'createdAt']) &&
+        request.resource.data.email == request.auth.token.email &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 120 &&
+        request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // Owner profiles remain admin-provisioned and immutable from clients.
+    // The active owner approves verified requests as agents with audited scopes.
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || owner());
+      allow list: if owner();
+      allow create: if ((owner() && uid != request.auth.uid) || invited(uid)) && validAgent(uid);
+      allow update: if owner() && uid != request.auth.uid && resource.data.role == 'agent' &&
+        request.resource.data.email == resource.data.email && validAgent(uid);
+      allow delete: if false;
+      match /audit/{eventId} {
+        allow read: if owner();
+        allow create: if (owner() || invited(uid)) && auditEvent('users', uid, eventId);
+        allow update, delete: if false;
+      }
+      match /preferences/{prefId} {
+        allow read: if active() && (owner() || request.auth.uid == uid);
+        allow create, update: if active() && request.auth.uid == uid &&
+          prefId == 'operational' && request.resource.data.keys().hasOnly([
+            'autoRefresh', 'notifications', 'updatedAt'
+          ]) && request.resource.data.autoRefresh is bool &&
+          request.resource.data.notifications is bool &&
+          request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
+      match /devices/{deviceId} {
+        allow read: if active() && (owner() || request.auth.uid == uid);
+        // FCM tokens and device authorization are managed by a trusted server.
+        allow write: if false;
+      }
+      // A client may submit its current FCM token for later administrative
+      // approval. This request is never an authorized device or a send target.
+      match /deviceRequests/{deviceId} {
+        allow read: if active() && (owner() || request.auth.uid == uid);
+        allow create, update: if active() && request.auth.uid == uid &&
+          deviceId.size() >= 16 && deviceId.size() <= 80 &&
+          request.resource.data.keys().hasAll(['fcmToken', 'platform', 'appVersion', 'updatedAt']) &&
+          request.resource.data.keys().hasOnly(['fcmToken', 'platform', 'appVersion', 'updatedAt']) &&
+          request.resource.data.fcmToken is string &&
+          request.resource.data.fcmToken.size() >= 20 &&
+          request.resource.data.fcmToken.size() <= 4096 &&
+          request.resource.data.platform == 'android' &&
+          request.resource.data.appVersion is string &&
+          request.resource.data.appVersion.size() <= 40 &&
+          request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
+    }
+
+    // Recruitment stays owner-only. Sheets/Apps Script remains the source.
+    // A trusted server may mirror identifiers after deduplication; the app
+    // cannot import recruitment PII into this collection directly.
+    match /recruitment/{leadId} {
+      allow read: if owner();
+      allow write: if false;
+      match /activity/{eventId} {
+        allow read: if owner();
+        allow write: if false;
+      }
+    }
+
+    // Source registration is administrative and contains no prospect contact data.
+    match /recruitmentSources/{leadId} {
+      allow read: if owner();
+      allow write: if false;
+    }
+    function registeredRecruitment(id) {
+      return id.matches('r_[a-f0-9-]{36}') &&
+        ((exists(/databases/$(database)/documents/recruitmentSources/$(id)) &&
+          get(/databases/$(database)/documents/recruitmentSources/$(id)).data.enabled == true) ||
+         exists(/databases/$(database)/documents/recruitmentAssignments/$(id)));
+    }
+    function validRecruitmentValues(d) {
+      return d.status in ['Nuevo', 'Contactado', 'Cita', 'Seguimiento', 'Completado'] &&
+        d.note is string && d.note.size() <= 4000;
+    }
+    function statePath(id) { return /databases/$(database)/documents/recruitmentState/$(id); }
+    function beforeRevision(id) { return exists(statePath(id)) ? get(statePath(id)).data.revision : 0; }
+    function beforeStatus(id) { return exists(statePath(id)) ? get(statePath(id)).data.status : 'Nuevo'; }
+    function beforeNote(id) { return exists(statePath(id)) ? get(statePath(id)).data.note : ''; }
+    function stateHasEvent(id) {
+      let d = request.resource.data;
+      let path = /databases/$(database)/documents/recruitmentState/$(id)/activity/$(d.lastEventId);
+      let event = getAfter(path).data;
+      return !exists(path) && event.kind in ['edit', 'import'] &&
+        event.status == d.status && event.note == d.note && event.revision == d.revision &&
+        event.actorUid == request.auth.uid && event.createdAt == request.time;
+    }
+    match /recruitmentState/{leadId} {
+      allow read: if canReadRecruitment(leadId);
+      allow create, update: if canReadRecruitment(leadId) && registeredRecruitment(leadId) &&
+        request.resource.data.keys().hasOnly(['status', 'note', 'revision', 'lastEventId', 'updatedBy', 'updatedAt']) &&
+        validRecruitmentValues(request.resource.data) &&
+        request.resource.data.revision is int && request.resource.data.revision == beforeRevision(leadId) + 1 &&
+        request.resource.data.lastEventId is string && request.resource.data.lastEventId.matches('[a-zA-Z0-9_-]{16,80}') &&
+        request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time &&
+        stateHasEvent(leadId);
+      allow delete: if false;
+      match /activity/{eventId} {
+        allow read: if canReadRecruitment(leadId);
+        allow create: if canReadRecruitment(leadId) && registeredRecruitment(leadId) &&
+          (owner() || request.resource.data.kind == 'edit') &&
+          eventId.matches('[a-zA-Z0-9_-]{16,80}') &&
+          request.resource.data.keys().hasOnly(['actorUid', 'deviceId', 'kind', 'status', 'note',
+            'previousStatus', 'previousNote', 'baseRevision', 'revision', 'createdAt', 'originalUpdatedAt']) &&
+          validRecruitmentValues(request.resource.data) &&
+          request.resource.data.actorUid == request.auth.uid &&
+          request.resource.data.deviceId is string && request.resource.data.deviceId.size() >= 16 && request.resource.data.deviceId.size() <= 80 &&
+          request.resource.data.createdAt == request.time &&
+          request.resource.data.originalUpdatedAt is string && request.resource.data.originalUpdatedAt.size() <= 80 &&
+          request.resource.data.baseRevision is int && request.resource.data.revision is int &&
+          request.resource.data.baseRevision == beforeRevision(leadId) &&
+          request.resource.data.previousStatus == beforeStatus(leadId) && request.resource.data.previousNote == beforeNote(leadId) &&
+          ((request.resource.data.kind in ['edit', 'import'] &&
+            request.resource.data.revision == beforeRevision(leadId) + 1 &&
+            getAfter(statePath(leadId)).data.lastEventId == eventId &&
+            getAfter(statePath(leadId)).data.revision == request.resource.data.revision &&
+            getAfter(statePath(leadId)).data.status == request.resource.data.status &&
+            getAfter(statePath(leadId)).data.note == request.resource.data.note &&
+            getAfter(statePath(leadId)).data.updatedAt == request.time) ||
+           (request.resource.data.kind == 'backup' && exists(statePath(leadId)) &&
+            request.resource.data.revision == beforeRevision(leadId) &&
+            getAfter(statePath(leadId)).data == get(statePath(leadId)).data));
+        allow update, delete: if false;
+      }
+    }
+
+    function validContact(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 200 &&
+        d.phone is string && d.phone.size() <= 40 && d.email is string && d.email.size() <= 254 &&
+        d.region is string && d.region.size() <= 120 && d.assignedTo is string && d.assignedTo.size() <= 128;
+    }
+    function validAssignment(d) {
+      return d.keys().hasAll(['name', 'phone', 'email', 'region', 'assignedTo', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        d.keys().hasOnly(['name', 'phone', 'email', 'region', 'assignedTo', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) && validContact(d);
+    }
+    match /recruitmentAssignments/{id} {
+      allow read: if owner() || (scope('recruitment') && resource.data.assignedTo == request.auth.uid);
+      allow create, update: if owner() && id.matches('r_[a-f0-9-]{36}') &&
+        validAssignment(request.resource.data) &&
+        ((resource != null && request.resource.data.assignedTo == resource.data.assignedTo) || targetAllowed(request.resource.data.assignedTo, 'recruitment')) &&
+        audited('recruitmentAssignments', id);
+      allow delete: if false;
+      match /audit/{eventId} {
+        allow read: if canReadRecruitment(id);
+        allow create: if owner() && auditEvent('recruitmentAssignments', id, eventId);
+        allow update, delete: if false;
+      }
+    }
+    function validClient(d) {
+      return d.keys().hasAll(['name', 'phone', 'email', 'region', 'assignedTo', 'classification', 'status', 'note', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        d.keys().hasOnly(['name', 'phone', 'email', 'region', 'assignedTo', 'classification', 'status', 'note', 'revision', 'lastEventId', 'updatedAt', 'updatedBy']) &&
+        validContact(d) && d.classification in ['LEAD', 'B_LEAD'] && validRecruitmentValues(d);
+    }
+    match /clients/{id} {
+      allow read: if owner() || (scope('clients') && resource.data.assignedTo == request.auth.uid);
+      allow create: if owner() && validClient(request.resource.data) &&
+        targetAllowed(request.resource.data.assignedTo, 'clients') && audited('clients', id);
+      allow update: if validClient(request.resource.data) && audited('clients', id) &&
+        ((owner() && (request.resource.data.assignedTo == resource.data.assignedTo || targetAllowed(request.resource.data.assignedTo, 'clients'))) ||
+         (scope('clients') && resource.data.assignedTo == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'note', 'revision', 'lastEventId', 'updatedAt', 'updatedBy'])));
+      allow delete: if false;
+      match /audit/{eventId} {
+        allow read: if canReadClient(id);
+        allow create: if canReadClient(id) && auditEvent('clients', id, eventId);
+        allow update, delete: if false;
+      }
+      // Historical collections remain read-only.
+      match /assignments/{eventId} { allow read: if canReadClient(id); allow write: if false; }
+      match /activity/{eventId} { allow read: if canReadClient(id); allow write: if false; }
+    }
+
+    match /agentDevices/{deviceId} {
+      allow read: if owner();
+      allow create, update: if owner() &&
+        request.resource.data.keys().hasOnly(['userId','deviceId','enabled','approvedTokenSha256','revision','lastEventId','updatedAt','updatedBy']) &&
+        request.resource.data.deviceId == deviceId && deviceId.matches('[a-zA-Z0-9_-]{16,80}') &&
+        request.resource.data.userId is string && request.resource.data.enabled is bool &&
+        request.resource.data.approvedTokenSha256.matches('[a-f0-9]{64}') &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.userId)).data.role == 'agent' &&
+        exists(/databases/$(database)/documents/users/$(request.resource.data.userId)/deviceRequests/$(deviceId)) &&
+        audited('agentDevices', deviceId);
+      allow delete: if false;
+      match /audit/{eventId} {
+        allow read: if owner();
+        allow create: if owner() && auditEvent('agentDevices', deviceId, eventId);
+        allow update, delete: if false;
+      }
+    }
+    match /assignmentNotices/{eventId} {
+      allow read: if owner();
+      allow create: if owner() &&
+        request.resource.data.keys().hasOnly(['bucket','recordId','targetUid','state','createdAt']) &&
+        request.resource.data.bucket in ['clients','recruitmentAssignments'] &&
+        request.resource.data.state == 'pending' && request.resource.data.createdAt == request.time &&
+        request.resource.data.targetUid is string && request.resource.data.targetUid.size() > 0 &&
+        (!exists(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)) ||
+         get(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)).data.assignedTo != request.resource.data.targetUid) &&
+        getAfter(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)).data.assignedTo == request.resource.data.targetUid &&
+        getAfter(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)).data.lastEventId == eventId &&
+        getAfter(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)).data.updatedAt == request.time &&
+        !exists(/databases/$(database)/documents/$(request.resource.data.bucket)/$(request.resource.data.recordId)/audit/$(eventId));
+      allow update, delete: if false;
+      match /deliveries/{deviceId} { allow read: if owner(); allow write: if false; }
+    }
+
+    match /{path=**} { allow read, write: if false; }
+  }
+}

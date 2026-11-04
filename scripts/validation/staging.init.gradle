@@ -18,13 +18,14 @@ gradle.beforeProject { p ->
         def staging = android.buildTypes.create('staging')
         staging.initWith(android.buildTypes.getByName('debug'))
         staging.applicationIdSuffix = '.staging'
-        staging.versionNameSuffix = '-STAGING'
+        staging.versionNameSuffix = '-STAGING-FUNCTIONAL1'
         staging.signingConfig = android.signingConfigs.getByName('debug')
         staging.matchingFallbacks = ['debug']
         android.testBuildType = 'staging'
         android.sourceSets.getByName('staging').res.srcDir new File(overlay, 'res')
         android.sourceSets.getByName('staging').manifest.srcFile manifest
         p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+            dsl.defaultConfig.versionCode = dsl.defaultConfig.versionCode + 1
             dsl.defaultConfig.testInstrumentationRunner = 'com.pinedaagencygroup.leads.StagingFunctionalInstrumentation'
         }
     }

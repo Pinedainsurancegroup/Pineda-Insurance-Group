@@ -113,6 +113,7 @@ public class MainActivity extends Activity {
         closeWorkspace();
         workspace = new AgentWorkspace(this, profile, () -> {
             if (!resumed || !ownerVerified) return;
+            if (stagingBaseMissing()) { showStagingBaseMissing(); return; }
             closeWorkspace(); workspaceSelected = false; openRecruitment();
         });
         setContentView(workspace.view());
@@ -171,7 +172,22 @@ public class MainActivity extends Activity {
                 .collection("preferences").document("operational").set(fields);
     }
 
+    private boolean stagingBaseMissing() {
+        return getResources().getBoolean(R.bool.pag_staging_build) &&
+            getString(R.string.pag_owner_gateway_url).trim().isEmpty();
+    }
+    private void showStagingBaseMissing() {
+        new android.app.AlertDialog.Builder(this).setTitle("Base de pruebas no configurada")
+            .setMessage("Esta compilación no tiene un gateway de datos sintéticos. Puedes usar Reclutamiento asignado cuando sus reglas estén habilitadas en staging.")
+            .setPositiveButton("Volver", null).show();
+    }
     private void openRecruitment() {
+        if (stagingBaseMissing()) {
+            workspaceSelected = true;
+            openWorkspace();
+            showStagingBaseMissing();
+            return;
+        }
         FirebasePushManager.initialize(this);
         SharedPreferences p = getSharedPreferences("pag_native", MODE_PRIVATE);
         if (!getResources().getBoolean(R.bool.pag_qa_build) &&

@@ -12,7 +12,7 @@ const {initializeTestEnvironment, assertFails} = require('@firebase/rules-unit-t
   assert.equal(process.env.FIREBASE_AUTH_EMULATOR_HOST, '127.0.0.1:9099');
   const projectId = 'demo-pag-leads';
   const env = await initializeTestEnvironment({projectId, firestore:{host:'127.0.0.1',port:8085,
-    rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
+    rules:require('./rules-under-test.cjs')}});
   const apps=[];
   function phone(name) {
     const app=initializeApp({projectId, apiKey:'fake-emulator-key',appId:'emulator-only'},name);apps.push(app);

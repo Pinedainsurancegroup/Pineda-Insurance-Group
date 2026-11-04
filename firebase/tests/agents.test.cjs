@@ -1,7 +1,7 @@
 const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
 const {initializeTestEnvironment,assertSucceeds,assertFails}=require('@firebase/rules-unit-testing');
 const {doc,getDoc,getDocs,collection,query,where,setDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch}=require('firebase/firestore');
-const envOptions={projectId:'demo-pag-leads',firestore:{host:'127.0.0.1',port:8085,rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}};
+const envOptions={projectId:'demo-pag-leads',firestore:{host:'127.0.0.1',port:8085,rules:require('./rules-under-test.cjs')}};
 let env,serial=0,passed=0;
 const eventId=()=>`event_agents_${String(++serial).padStart(16,'0')}`;
 const email=uid=>`${uid}@example.test`;

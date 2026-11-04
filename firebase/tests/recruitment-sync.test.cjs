@@ -2,7 +2,7 @@ const fs=require('fs'), path=require('path'), assert=require('node:assert/strict
 const {initializeTestEnvironment,assertSucceeds,assertFails}=require('@firebase/rules-unit-testing');
 const {doc,getDoc,getDocs,collection,setDoc,updateDoc,deleteDoc,writeBatch,runTransaction,serverTimestamp,onSnapshot}=require('firebase/firestore');
 (async()=>{
- const env=await initializeTestEnvironment({projectId:'demo-pag-leads',firestore:{host:'127.0.0.1',port:8085,rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
+ const env=await initializeTestEnvironment({projectId:'demo-pag-leads',firestore:{host:'127.0.0.1',port:8085,rules:require('./rules-under-test.cjs')}});
  await env.clearFirestore();
  const one='r_11111111-1111-4111-8111-111111111111',two='r_22222222-2222-4222-8222-222222222222',unknown='r_33333333-3333-4333-8333-333333333333';
  const owner=env.authenticatedContext('juan').firestore(), phone2=env.authenticatedContext('juan').firestore();

@@ -3,7 +3,7 @@ const path = require('path');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
 const { doc, getDoc, getDocs, collection, query, where, serverTimestamp, setDoc, updateDoc } = require('firebase/firestore');
 (async () => {
-  const env = await initializeTestEnvironment({projectId:'demo-pag-leads',firestore:{host:'127.0.0.1',port:8085,rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
+  const env = await initializeTestEnvironment({projectId:'demo-pag-leads',firestore:{host:'127.0.0.1',port:8085,rules:require('./rules-under-test.cjs')}});
   try {
     await env.withSecurityRulesDisabled(async c => {
       const d = c.firestore();
