@@ -144,19 +144,21 @@ struct HomeView: View {
     var body: some View {
         GeometryReader { geometry in
             let wide = geometry.size.width > 650 && !textSize.isAccessibilitySize
-            let panelHeight = min(265.0, max(145.0, geometry.size.height - 148.0))
-            let portraitCardWidth = max(1.0, min(1100.0, geometry.size.width) - 32.0)
             let referenceCardHeightRatio: CGFloat = 451.0 / 509.0
+            let sidebarWidth = min(120.0, geometry.size.width * 0.14)
+            let landscapeContentWidth = min(1100.0, geometry.size.width - sidebarWidth - 12.0)
+            let landscapeCardHeight = max(1.0, (landscapeContentWidth - 14.0 - 32.0) / 3.0) * referenceCardHeightRatio
+            let portraitCardWidth = max(1.0, min(1100.0, geometry.size.width) - 32.0)
             HStack(spacing: 12) {
-                if wide { sidebar.frame(width: min(120, geometry.size.width * 0.14)) }
+                if wide { sidebar.frame(width: sidebarWidth) }
                 ScrollView {
                     VStack(spacing: wide ? 14 : 20) {
                         header(wide: wide)
                         if wide {
                             HStack(spacing: 16) {
-                                mediaTile(.live, height: panelHeight)
-                                mediaTile(.movie, height: panelHeight)
-                                mediaTile(.series, height: panelHeight)
+                                mediaTile(.live, height: landscapeCardHeight)
+                                mediaTile(.movie, height: landscapeCardHeight)
+                                mediaTile(.series, height: landscapeCardHeight)
                             }
                         } else {
                             mediaTile(.live, height: portraitCardWidth * referenceCardHeightRatio)
