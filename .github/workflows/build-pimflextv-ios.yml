@@ -29,16 +29,22 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath DeviceBuild CODE_SIGNING_ALLOWED=NO build
-      - name: Login UI regression test
+      - name: Reference UI regression tests
         run: |
           set -o pipefail
           device_id=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for k,v in d["devices"].items() if "iOS" in k for x in v if "iPhone" in x["name"]))')
-          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Debug -destination "platform=iOS Simulator,id=$device_id" -derivedDataPath DerivedData -resultBundlePath LoginTests.xcresult CODE_SIGNING_ALLOWED=NO test
+          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Debug -destination "platform=iOS Simulator,id=$device_id" -derivedDataPath DerivedData -resultBundlePath LoginTests.xcresult CODE_SIGNING_ALLOWED=NO test | tee ui-tests.log
+      - name: Export UI screenshots
+        if: always()
+        run: |
+          if [ -d LoginTests.xcresult ]; then
+            xcrun xcresulttool export attachments --path LoginTests.xcresult --output-path Screenshots
+          fi
       - name: Package simulator app and generated source project
         run: |
           ditto -c -k --keepParent DerivedData/Build/Products/Debug-iphonesimulator/PimflexTV.app PIMFLEXTV-iOS-Simulator.zip
           mkdir -p SourcePackage
-          cp -R App Sources Tests UITests Resources scripts PimflexTV.xcodeproj Package.swift project.yml README.md PARITY.md SourcePackage/
+          cp -R App Sources Tests UITests Resources scripts PimflexTV.xcodeproj Package.swift project.yml *.md SourcePackage/
           ditto -c -k --keepParent SourcePackage PIMFLEXTV-iOS-Source.zip
       - name: Upload simulator and source artifacts
         uses: actions/upload-artifact@v4
@@ -56,3 +62,5 @@ jobs:
           path: |
             pimflextv-ios/build.log
             pimflextv-ios/LoginTests.xcresult
+            pimflextv-ios/ui-tests.log
+            pimflextv-ios/Screenshots/

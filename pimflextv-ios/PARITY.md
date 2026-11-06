@@ -1,32 +1,38 @@
-# Alcance y diferencias con Android 4.0.2
+# Equivalencia con PIMFLEX TV Android 4.0.2
 
-Inspección directa del APK/AAB del proyecto el 29-10-2026: archivos ZIP sin errores CRC; los tres DEX coinciden entre ambos. Las huellas coinciden con la revisión anterior:
+## Referencia verificable
 
 - APK SHA-256: `c1fa614b2e2aec9399bbde9ca91491b8a4f03e010bd47a4074e57d7b0f6f6a36`
 - AAB SHA-256: `852be7a751dfb44264deccb2f85aa0b2a2375f7d1146ca1a71d5d4d410ef6fe9`
 
-Se observaron nombres de actividades de TV, VOD, series, M3U, EPG, grabación, VPN, WHMCS, Cast y acceso por código; marcadores `player_api.php`, `get_live_streams`, `get_vod_streams`, `get_series_info` y `get_short_epg`. Su presencia no demuestra disponibilidad en un servidor concreto. No se ejecutó la referencia aquí ni se copiaran sus bibliotecas Android, servicios comerciales o claves.
+`REFERENCE_402.md` explica la selección real de layouts y recursos. `Resources/ReferenceAssets.json` registra los hashes de los assets copiados y la composición del icono. Se inspeccionaron recursos y DEX; no se ejecutó la referencia Android en esta sesión. No se afirma equivalencia pixel por pixel ni completa equivalencia funcional.
 
-| Función | Candidata iOS | Validación que falta |
-|---|---|---|
-| Login Xtream | Implementado, HTTPS y cuenta activa | Cuenta real y comportamiento del proveedor |
-| M3U | URL, categorías y deduplicación | Listas reales; importación local pendiente |
-| TV / películas | Catálogo, búsqueda y reproducción AVKit | Codec, HLS y carga real |
-| Series | Temporadas y episodios | Respuesta real del proveedor |
-| EPG | Guía corta Xtream | XMLTV completo pendiente |
-| Favoritos / reanudar | Locales, separados por cuenta | Ciclo de vida en dispositivo |
-| Audio / subtítulos | Controles de AVKit si el medio ofrece pistas | Subtítulos externos / OpenSubtitles pendientes |
-| Salida AirPlay | AVPlayer permite salida externa | Dispositivo/stream real; no equivale a Chromecast |
-| PiP | Desactivado en esta candidata | Ciclo de vida y pruebas de dispositivo |
-| HTTP sin cifrar | No habilitado | Confirmar HTTPS del proveedor o diseñar excepción de alcance limitado |
-| MKV / AVI / IJK / VLC | No se trasladan binarios Android | Motor iOS adicional o transcodificación; revisar licencias |
-| Radio | URL de audio compatible en M3U | Sección dedicada pendiente |
-| Catch up / XMLTV / Stalker | Pendiente | Implementación y portal autorizado |
-| Grabación / descargas / multipantalla | Pendiente | Implementación nativa y límites de iOS |
-| Control parental | Pendiente | PIN, bloqueo efectivo y pruebas antes de uso familiar |
-| Múltiples cuentas / respaldo importable | Una sesión; preferencias separadas | Selector e importación de respaldo Android pendientes |
-| VPN / WHMCS / anuncios / push / código TV | Pendiente | Servicios y configuración del propietario |
-| Fidelidad visual | Logo propio, inicio equivalente adaptado a móvil | Comparación en dispositivo; no se afirma clon píxel por píxel |
-| Distribución | Proyecto Xcode y CI | Firma, icono de tienda, metadatos, privacidad, TestFlight y revisión |
+| Función | Implementación iOS actual | Comprobación pendiente |
+| --- | --- | --- |
+| Apariencia de acceso e inicio | Recursos originales del login y dashboard `_cl`, fuentes y etiquetas ES; sidebar y tres tarjetas en horizontal | Comparación en dispositivo, estados del proveedor y tamaños físicos |
+| Vertical | Adaptación adicional de iPhone | No tiene equivalente exacto: Android declara `sensorLandscape` |
+| Login Xtream | Cuenta activa, normalización de portal y credenciales Keychain | Autenticación real del proveedor |
+| HTTP histórico | Opt-in explícito; dominio exacto `moonspelltools.cc`; ATS limitado | Validación en iPhone y endpoint HTTPS preferido |
+| Usuarios guardados | Vault Keychain único, activar, salir, eliminar y migrar sesión anterior | Migración persistente y errores Keychain en dispositivo |
+| M3U | URL, categorías, enlaces relativos, redirección del mismo origen | Listas reales; archivo local pendiente |
+| TV, Cine y Series | Catálogo, categorías, grilla, búsqueda y episodios | Datos y streams reales |
+| Búsqueda maestra | TV/Cine/Series en una vista | Volumen y velocidad con catálogo real |
+| Favoritos y reanudar | Separados por cuenta | Ciclos de vida reales |
+| EPG | Guía corta Xtream | XMLTV completo y datos reales |
+| Pantalla múltiple | Dos/cuatro canales, un audio, selección y limpieza | Codecs, carga de dispositivo y límite de conexiones del proveedor |
+| Audio/subtítulos/AirPlay | Controles de AVPlayer cuando el medio los ofrece | Dispositivo y pistas reales; no equivale a Chromecast |
+| Catch up | Entrada visible marcada no disponible | Archivo, ventana de retención, zona horaria y ruta del proveedor |
+| Grabación/descargas | Pendiente | Implementación y límites iOS |
+| Control parental | Pendiente | PIN, bloqueo efectivo y pruebas |
+| VPN | Pendiente | Servicio y configuración/entitlements del propietario |
+| PiP | Desactivado en candidata | Ciclo de vida y pruebas físicas |
+| MKV/AVI y motores Android | No incorporados | Motor iOS o transcodificación y compatibilidad |
+| Stalker, WHMCS, notificaciones, código TV | Pendiente | Servicios y configuración propios |
+| Respaldo Android `.pimbackup` | No importado | Compatibilidad de formato y cifrado |
+| Distribución | Código, proyecto Xcode, icono y CI | Firma Apple, pruebas reales, ficha/privacidad y TestFlight |
 
-La API no autentica contra servidores embebidos en el APK; el propietario introduce su servicio autorizado. La contraseña nunca se incorpora al código ni al repositorio. Una lista M3U sin metadatos de temporadas no puede convertirse fiablemente en catálogo de series: esos archivos se presentan como películas o transmisiones.
+La pantalla de acceso muestra la URL del servidor porque todavía no se ha establecido una configuración de proveedor verificable para ocultarla. Algunos controles de la referencia se adaptan a navegación y controles nativos de iOS. Los datos de muestra usados para pruebas están aislados detrás de `#if DEBUG` y no demuestran funcionamiento de un servicio real.
+
+## Criterio de finalización
+
+No etiquetar esta candidata como clon completo o app instalable hasta cerrar la comparación visual, probar la cuenta y los streams reales, resolver las funciones solicitadas pendientes y generar una distribución Apple firmada. CI sólo certifica lo que sus pasos y artefactos muestran para el SHA exacto.

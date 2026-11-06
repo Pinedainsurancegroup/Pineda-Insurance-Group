@@ -8,6 +8,7 @@ final class PlaybackModel: ObservableObject {
     @Published var error: String?
     @Published var waiting = true
     private var status: NSKeyValueObservation?
+    private var timeControl: NSKeyValueObservation?
     private var timer: Any?
     private var end: NSObjectProtocol?
     private var fail: NSObjectProtocol?
@@ -29,7 +30,7 @@ final class PlaybackModel: ObservableObject {
                     self.waiting = false; self.error = "No se pudo reproducir. Comprueba el canal y su compatibilidad con iPhone."; self.startTimeout?.cancel()
                 } else if item.status == .readyToPlay {
                     guard self.error == nil else { return }
-                    self.waiting = false; self.startTimeout?.cancel()
+                    self.waiting = true
                     let duration = item.duration.seconds
                     if resume > 5 && duration.isFinite && resume < duration - 10 {
                         await self.player.seek(to: CMTime(seconds: resume, preferredTimescale: 600))
@@ -38,24 +39,54 @@ final class PlaybackModel: ObservableObject {
                 }
             }
         }
-        timer = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 10, preferredTimescale: 1), queue: .main) { time in
-            Task { @MainActor [weak self] in self?.save?(time.seconds) }
+        timeControl = player.observe(\.timeControlStatus, options: [.new]) { [weak self] player, _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.player.currentItem === item, self.error == nil else { return }
+                if player.timeControlStatus == .playing {
+                    self.waiting = false; self.startTimeout?.cancel()
+                } else if player.timeControlStatus == .waitingToPlayAtSpecifiedRate {
+                    self.waiting = true; self.armTimeout(for: item)
+                } else if player.timeControlStatus == .paused {
+                    self.waiting = false; self.startTimeout?.cancel()
+                }
+            }
+        }
+        stalled = NotificationCenter.default.addObserver(forName: .AVPlayerItemPlaybackStalled, object: item, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.player.currentItem === item, self.error == nil else { return }
+                self.waiting = true; self.armTimeout(for: item)
+            }
+        }
+        timer = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 10, preferredTimescale: 1), queue: .main) { [weak self] time in
+            Task { @MainActor [weak self] in
+                guard let self, self.player.currentItem === item else { return }; self.save?(time.seconds)
+            }
         }
         end = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.save?(0); self?.save = nil }
+            Task { @MainActor [weak self] in
+                guard let self, self.player.currentItem === item else { return }; self.save?(0); self.save = nil
+            }
         }
         fail = NotificationCenter.default.addObserver(forName: .AVPlayerItemFailedToPlayToEndTime, object: item, queue: .main) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.error = "La transmisión se interrumpió. Intenta reproducirla de nuevo." }
+            Task { @MainActor [weak self] in
+                guard let self, self.player.currentItem === item else { return }
+                self.waiting = false; self.startTimeout?.cancel()
+                self.error = "La transmisión se interrumpió. Intenta reproducirla de nuevo."
+            }
         }
+        armTimeout(for: item)
+    }
+    private func armTimeout(for item: AVPlayerItem) {
+        startTimeout?.cancel()
         startTimeout = Task { [weak self] in
             do { try await Task.sleep(nanoseconds: 30_000_000_000) } catch { return }
-            guard let self, self.waiting else { return }
+            guard let self, self.waiting, self.player.currentItem === item else { return }
             self.player.pause(); self.waiting = false; self.error = "El canal tardó demasiado en responder. Intenta de nuevo."
         }
     }
     func stop() {
         save?(player.currentTime().seconds); save = nil; player.pause()
-        status = nil; startTimeout?.cancel(); startTimeout = nil
+        status = nil; timeControl = nil; startTimeout?.cancel(); startTimeout = nil
         if let timer { player.removeTimeObserver(timer) }; timer = nil
         for observer in [end, fail, stalled].compactMap({ $0 }) { NotificationCenter.default.removeObserver(observer) }
         end = nil; fail = nil; stalled = nil; player.replaceCurrentItem(with: nil)
@@ -81,6 +112,7 @@ struct PlayerScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var playback = PlaybackModel()
+    @State private var playbackAccount: Account?
     let item: MediaItem
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -98,14 +130,18 @@ struct PlayerScreen: View {
         }.task { start() }
             .onDisappear { playback.stop() }
             .onChange(of: scenePhase) { phase in
-                if phase == .background { model.savePosition(playback.player.currentTime().seconds, item: item) }
+                if phase == .background, model.account == playbackAccount { model.savePosition(playback.player.currentTime().seconds, item: item) }
             }
     }
     private func start() {
         guard let account = model.account else { return }
+        playbackAccount = account
         do {
             let url = try Endpoint.playback(account, item: item)
-            playback.start(url: url, resume: model.positions[item.id] ?? 0) { model.savePosition($0, item: item) }
+            playback.start(url: url, resume: model.positions[item.id] ?? 0) {
+                guard model.account == account else { return }
+                model.savePosition($0, item: item)
+            }
         } catch { playback.waiting = false; playback.error = model.message(error) }
     }
 }

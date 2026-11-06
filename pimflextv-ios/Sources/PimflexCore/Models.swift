@@ -47,8 +47,12 @@ public struct Account: Codable, Equatable, Sendable {
     public let server: URL
     public let username: String
     public let password: String
-    public init(mode: SourceMode, server: URL, username: String = "", password: String = "") {
+    // Optional for compatibility with accounts saved before the explicit opt-in.
+    public let allowingInsecureHTTP: Bool?
+    public var insecureHTTPEnabled: Bool { allowingInsecureHTTP == true }
+    public init(mode: SourceMode, server: URL, username: String = "", password: String = "", allowingInsecureHTTP: Bool = false) {
         self.mode = mode; self.server = server; self.username = username; self.password = password
+        self.allowingInsecureHTTP = allowingInsecureHTTP
     }
     // Namespaces history/favorites without persisting credentials in preferences.
     public var storageID: String {
@@ -61,12 +65,12 @@ public enum PimflexError: Error, LocalizedError, Equatable {
     case invalidServer, insecureURL, invalidCredentials, inactiveAccount, invalidResponse, emptyPlaylist, unsupportedFormat, network, storage
     public var errorDescription: String? {
         switch self {
-        case .invalidServer: return "Revisa la dirección HTTPS de tu servidor."
-        case .insecureURL: return "Esta versión requiere una conexión HTTPS. Solicita la dirección segura a tu proveedor."
+        case .invalidServer: return "Revisa la dirección de tu servidor."
+        case .insecureURL: return "Usa una dirección HTTPS. El acceso HTTP al servidor original requiere tu autorización en la pantalla de acceso."
         case .invalidCredentials: return "El servidor no aceptó el usuario o la contraseña."
         case .inactiveAccount: return "Tu cuenta no está activa. Contacta a tu proveedor."
         case .invalidResponse: return "El servidor devolvió una respuesta que no pudimos leer."
-        case .emptyPlaylist: return "La lista no contiene transmisiones HTTPS compatibles."
+        case .emptyPlaylist: return "La lista no contiene transmisiones compatibles con esta conexión."
         case .unsupportedFormat: return "Este formato requiere otro motor de video. Pide a tu proveedor una versión HLS o MP4 compatible con iPhone."
         case .network: return "No se pudo conectar. Revisa tu conexión y la dirección del servidor."
         case .storage: return "No se pudo guardar la cuenta de forma segura en este dispositivo."
@@ -75,21 +79,38 @@ public enum PimflexError: Error, LocalizedError, Equatable {
 }
 
 public enum Endpoint {
-    public static func server(_ raw: String, playlist: Bool = false) throws -> URL {
+    public static let approvedInsecureHTTPHost = "moonspelltools.cc"
+
+    public static func server(_ raw: String, playlist: Bool = false, allowingInsecureHTTP: Bool = false) throws -> URL {
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard var c = URLComponents(string: value), c.host?.isEmpty == false,
               c.user == nil, c.password == nil, c.fragment == nil else { throw PimflexError.invalidServer }
-        guard c.scheme?.lowercased() == "https" else { throw PimflexError.insecureURL }
+        let scheme = c.scheme?.lowercased()
+        let approvedHTTP = allowingInsecureHTTP && scheme == "http" && c.host?.lowercased() == approvedInsecureHTTPHost
+        guard scheme == "https" || approvedHTTP else { throw PimflexError.insecureURL }
+        guard c.port.map({ (1...65535).contains($0) }) ?? true else { throw PimflexError.invalidServer }
+        c.scheme = scheme
         if !playlist {
-            guard c.query == nil else { throw PimflexError.invalidServer }
-            c.path = c.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            c.path = c.path.isEmpty ? "" : "/" + c.path
+            // Users often paste a portal or playlist address instead of its base.
+            // Remove only a known terminal route. Keep encoded slashes in tenant paths
+            // and leave M3U query credentials untouched in playlist mode.
+            var path = c.percentEncodedPath
+            while path.hasSuffix("/") { path.removeLast() }
+            let route = path.split(separator: "/", omittingEmptySubsequences: false).last?.lowercased() ?? ""
+            if ["login.php", "player_api.php", "get.php"].contains(route) {
+                path = String(path.dropLast(route.count))
+                while path.hasSuffix("/") { path.removeLast() }
+                c.query = nil // Xtream uses the separately entered credentials.
+            } else if c.query != nil { throw PimflexError.invalidServer }
+            c.percentEncodedPath = path
         }
         guard let url = c.url else { throw PimflexError.invalidServer }; return url
     }
     public static func api(_ account: Account, action: String? = nil, extra: [URLQueryItem] = []) throws -> URL {
         guard account.mode == .xtream else { throw PimflexError.invalidServer }
-        var c = URLComponents(url: account.server.appendingPathComponent("player_api.php"), resolvingAgainstBaseURL: false)!
+        let base = try server(account.server.absoluteString, allowingInsecureHTTP: account.insecureHTTPEnabled)
+        guard var c = URLComponents(url: base, resolvingAgainstBaseURL: false) else { throw PimflexError.invalidServer }
+        c.percentEncodedPath += "/player_api.php"
         c.queryItems = [URLQueryItem(name: "username", value: account.username), URLQueryItem(name: "password", value: account.password)]
         if let action { c.queryItems?.append(URLQueryItem(name: "action", value: action)) }
         c.queryItems?.append(contentsOf: extra)
@@ -99,19 +120,20 @@ public enum Endpoint {
     }
     public static func playback(_ account: Account, item: MediaItem) throws -> URL {
         if let direct = item.directURL {
-            guard direct.scheme?.lowercased() == "https" else { throw PimflexError.insecureURL }
-            if ["mkv", "avi", "flv", "wmv"].contains(direct.pathExtension.lowercased()) { throw PimflexError.unsupportedFormat }
-            return direct
+            let validated = try server(direct.absoluteString, playlist: true, allowingInsecureHTTP: account.insecureHTTPEnabled)
+            if ["mkv", "avi", "flv", "wmv"].contains(validated.pathExtension.lowercased()) { throw PimflexError.unsupportedFormat }
+            return validated
         }
+        guard account.mode == .xtream else { throw PimflexError.invalidServer }
         guard !item.providerID.isEmpty, item.providerID.allSatisfy({ $0.isASCII && $0.isNumber }) else { throw PimflexError.invalidResponse }
         let ext = item.kind == .live ? "m3u8" : item.fileExtension.lowercased()
         guard ["m3u8", "mp4", "m4v", "mov", "mp3", "m4a", "aac"].contains(ext) else { throw PimflexError.unsupportedFormat }
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-._~"))
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")
         let path = [item.kind.rawValue, account.username, account.password, item.providerID + "." + ext]
             .map { $0.addingPercentEncoding(withAllowedCharacters: allowed)! }.joined(separator: "/")
-        var c = URLComponents(url: account.server, resolvingAgainstBaseURL: false)!
-        let prefix = c.percentEncodedPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        c.percentEncodedPath = "/" + (prefix.isEmpty ? "" : prefix + "/") + path
+        let base = try server(account.server.absoluteString, allowingInsecureHTTP: account.insecureHTTPEnabled)
+        guard var c = URLComponents(url: base, resolvingAgainstBaseURL: false) else { throw PimflexError.invalidServer }
+        c.percentEncodedPath += "/" + path
         guard let url = c.url else { throw PimflexError.invalidServer }; return url
     }
 }

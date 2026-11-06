@@ -1,0 +1,170 @@
+{
+  "reference_version": "4.0.2",
+  "apk_sha256": "c1fa614b2e2aec9399bbde9ca91491b8a4f03e010bd47a4074e57d7b0f6f6a36",
+  "aab_sha256": "852be7a751dfb44264deccb2f85aa0b2a2375f7d1146ca1a71d5d4d410ef6fe9",
+  "assets": [
+    {
+      "asset": "ReferenceBackground",
+      "source_resource": "black_background",
+      "filename": "black_background.jpg",
+      "sha256": "dbf1222045b07f9b8b79cabf815a99bd4d1029f4186847743b337d68435e70fd"
+    },
+    {
+      "asset": "ReferenceLoginBackground",
+      "source_resource": "login_bg",
+      "filename": "login_bg.jpg",
+      "sha256": "d29124c52e0643b6b77e7a5167ec7d07d9df23971fd52ca6ddc23230439473d0"
+    },
+    {
+      "asset": "ReferenceLoginPanel",
+      "source_resource": "login_box",
+      "filename": "login_box.png",
+      "sha256": "bf4e846e7876c487a270ca1c2067d0d5737a7b183a3e616ed0d0f3e0fa7569a1"
+    },
+    {
+      "asset": "ReferenceBrand",
+      "source_resource": "logo_white_long",
+      "filename": "logo_white_long.png",
+      "sha256": "5dd2e090b1374cd61b902902f3631485eee2fc377cd38b9250fcf30a4fe744cb"
+    },
+    {
+      "asset": "ReferenceLoginBrand",
+      "source_resource": "logo",
+      "filename": "logo.png",
+      "sha256": "0386c3ac828a5c55f59cc3ba3e1a2c39f214d5613d92819bfeb5e60d936c070e"
+    },
+    {
+      "asset": "ReferenceButton",
+      "source_resource": "login_button",
+      "filename": "login_button.png",
+      "sha256": "c126e65e2b3007214fdd44ae40c768f959f1fd4f72018514987911012293d83a"
+    },
+    {
+      "asset": "ReferenceLive",
+      "source_resource": "livetv_icon",
+      "filename": "livetv_icon.png",
+      "sha256": "79604894f9f725cf0c33c132f22d5ec543fefb5a004bebb7e5bfc374a8bb35c5"
+    },
+    {
+      "asset": "ReferenceMovies",
+      "source_resource": "vod_icon",
+      "filename": "vod_icon.png",
+      "sha256": "38f6ae3c6474bd20ff1578f3e0757ea9c4c7125ea4a0922a0138bc5b07ac0e19"
+    },
+    {
+      "asset": "ReferenceSeries",
+      "source_resource": "series_icon",
+      "filename": "series_icon.png",
+      "sha256": "5da444e5fc320214e21b2fe939cd3d25fa9c7977b8808ef1648f33a2869442ab"
+    },
+    {
+      "asset": "ReferenceSettings",
+      "source_resource": "gear_white",
+      "filename": "gear_white.png",
+      "sha256": "3c9f52f1f2a8b90e4742cc3a2904d73cda899c135d2cb03e9e47767af148c6b8"
+    },
+    {
+      "asset": "ReferenceAccount",
+      "source_resource": "account_info",
+      "filename": "account_info.png",
+      "sha256": "562e5b0f269eb83a1a4d05bab2fcf7d48cbef73bf01100845e58a8d79fa36d48"
+    },
+    {
+      "asset": "ReferenceGuide",
+      "source_resource": "guide_icon",
+      "filename": "guide_icon.png",
+      "sha256": "b507ef3d690e0da7558e2008a9b21d3f4fc118722b9d305b8131d9c77fd4d6bd"
+    },
+    {
+      "asset": "Fonts/open_sans.ttf",
+      "source_resource": "assets/fonts/open_sans.ttf",
+      "sha256": "5894a3649b213cf5b2d673b6e7a871815fd1d120fa68a463592f27db14eae323"
+    },
+    {
+      "asset": "Fonts/open_sans_regular.ttf",
+      "source_resource": "assets/fonts/open_sans_regular.ttf",
+      "sha256": "e64e508b2aa2880f907e470c4550980ec4c0694d103a43f36150ac3f93189bee"
+    },
+    {
+      "asset": "ReferenceLiveCard",
+      "source_resource": "live_tv",
+      "filename": "live_tv.png",
+      "sha256": "b4ba6edbaf17bc8f16487885a9f3ac56239f6c5d9b90097219d1e30a786cc30d"
+    },
+    {
+      "asset": "ReferenceMoviesCard",
+      "source_resource": "movies",
+      "filename": "movies.png",
+      "sha256": "d2c413cbc27e710a586d3242d1bf96116486c67904a69a341768b2dc6ef4fd27"
+    },
+    {
+      "asset": "ReferenceSeriesCard",
+      "source_resource": "series",
+      "filename": "series.png",
+      "sha256": "5eec3b5d74aecbb582846a2fabd4da2d3f5a0f1f9921f607156efb909a3ccf0e"
+    },
+    {
+      "asset": "ReferenceCatchup",
+      "source_resource": "catchup",
+      "filename": "catchup.png",
+      "sha256": "fa2d06b1e65cb59132486d5a6b7a3cdb5c3945bb6b44030c91be7e36cc888a15"
+    },
+    {
+      "asset": "ReferenceMultiscreen",
+      "source_resource": "multiscreen",
+      "filename": "multiscreen.png",
+      "sha256": "853e7cc54ba7a8d6c3ae6a0e8533a7d2b0ef13885c86cb5470340fffa0d6e8f1"
+    },
+    {
+      "asset": "ReferenceEPG",
+      "source_resource": "live_with_epg",
+      "filename": "live_with_epg.png",
+      "sha256": "b889053acda7e2874e29abf2a84970ecbf9fa36166b07c2627bde0d91d981220"
+    },
+    {
+      "asset": "ReferenceSidebarAccount",
+      "source_resource": "user",
+      "filename": "user.png",
+      "sha256": "b343548f442f43843c00cd735e01637777412e7aa5496f937b9793afc7da9b4b"
+    },
+    {
+      "asset": "ReferenceSidebarSettings",
+      "source_resource": "settings",
+      "filename": "settings.png",
+      "sha256": "2d0eb7b962461c921b7187ed8a3f9ebe77c36f7f708585b70f6a077294328e31"
+    },
+    {
+      "asset": "ReferenceSidebarUsers",
+      "source_resource": "list_user",
+      "filename": "list_user.png",
+      "sha256": "f48e96145a3e0d5ac550faf76a574edc6bc046bd68db1c959ebfe080c6547bff"
+    },
+    {
+      "asset": "ReferenceSearch",
+      "source_resource": "master_search",
+      "filename": "master_search.png",
+      "sha256": "eeebc42da47096f3f62b6006535cdbc69b1b5484028675fd85af4d431574c233"
+    },
+    {
+      "asset": "ReferenceLoginField",
+      "source_resource": "login_field",
+      "filename": "login_field.png",
+      "sha256": "4a9c74edf68d1f7dae72eedd720eae1d917fe9127718ab561ece64341402f4ed"
+    },
+    {
+      "asset": "ReferenceLoginFieldFocused",
+      "source_resource": "login_field_focused",
+      "filename": "login_field_focused.png",
+      "sha256": "a93b579324e3cff6b00990023f14b72c55f433591bc2752598d821ffb344c03f"
+    }
+  ],
+  "derived_assets": [
+    {
+      "asset": "AppIcon",
+      "source_resource": "logo_dark.png",
+      "source_sha256": "480e6cb07444857e73d82774a0c1eba770a89617798cf75185c48b5e47754cf5",
+      "operation": "Original 800x312 pixels centered on an opaque white 1024x1024 canvas; no logo resampling or redesign",
+      "sha256": "4240893561c387ae34c1886b33d552628b418d1361b4f387c8a85fad009ad54d"
+    }
+  ]
+}
