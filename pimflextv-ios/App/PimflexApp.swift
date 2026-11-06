@@ -145,6 +145,8 @@ struct HomeView: View {
         GeometryReader { geometry in
             let wide = geometry.size.width > 650 && !textSize.isAccessibilitySize
             let panelHeight = min(265.0, max(145.0, geometry.size.height - 148.0))
+            let portraitCardWidth = max(1.0, min(1100.0, geometry.size.width) - 32.0)
+            let referenceCardHeightRatio: CGFloat = 451.0 / 509.0
             HStack(spacing: 12) {
                 if wide { sidebar.frame(width: min(120, geometry.size.width * 0.14)) }
                 ScrollView {
@@ -157,10 +159,10 @@ struct HomeView: View {
                                 mediaTile(.series, height: panelHeight)
                             }
                         } else {
-                            mediaTile(.live, height: 190)
+                            mediaTile(.live, height: portraitCardWidth * referenceCardHeightRatio)
                             HStack(spacing: 16) {
-                                mediaTile(.movie, height: 165)
-                                mediaTile(.series, height: 165)
+                                mediaTile(.movie, height: (portraitCardWidth - 16) / 2 * referenceCardHeightRatio)
+                                mediaTile(.series, height: (portraitCardWidth - 16) / 2 * referenceCardHeightRatio)
                             }
                         }
                         HStack(spacing: 14) {
@@ -229,7 +231,7 @@ struct HomeView: View {
                     Image(systemName: "magnifyingglass")
                     if wide { Text("Búsqueda maestra").font(ReferenceTheme.font(11)) }
                 }.padding(.horizontal, 14).frame(height: 38)
-                    .background { Image("ReferenceSearch").resizable() }
+                    .background { if wide { Image("ReferenceSearch").resizable() } }
             }.accessibilityLabel("Búsqueda maestra").accessibilityIdentifier("globalSearchButton")
             if !wide {
                 NavigationLink { SettingsView() } label: {

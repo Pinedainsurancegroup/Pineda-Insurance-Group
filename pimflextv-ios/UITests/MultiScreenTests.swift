@@ -29,7 +29,7 @@ final class MultiScreenTests: XCTestCase {
 
         // These DEBUG placeholders prove the test did not start external media.
         XCTAssertTrue(app.staticTexts["Vista previa · sin transmisión"].exists)
-        let attachment = XCTAttachment(screenshot: app.screenshot())
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "multi-screen-fixture-selection"
         attachment.lifetime = .keepAlways
         add(attachment)
