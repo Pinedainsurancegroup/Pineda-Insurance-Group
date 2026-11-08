@@ -4,7 +4,7 @@ Aplicación nativa SwiftUI / AVFoundation para iOS / iPadOS 16 o posterior. Cont
 
 ## Adaptación para iPad
 
-El mismo producto Apple `com.pimflextv.ios` admite iPhone y iPad (familias 1 y 2). Se conserva el diseño, los recursos y el núcleo existentes. En ventanas de al menos 900 puntos aparece una lista lateral de categorías; en ventanas menores vuelve el selector compacto. Búsqueda, categoría y favoritos conservan su estado al rotar o cambiar el ancho. Las carátulas mantienen proporción 2:3 y la grilla distribuye las columnas según el espacio disponible. Se conservan las cuatro orientaciones de iPad y la configuración que permite ventanas de distintos tamaños.
+El mismo producto Apple `com.pimflextv.ios` admite iPhone y iPad (familias 1 y 2). Se conserva el diseño, los recursos y el núcleo existentes. En ventanas de al menos 900 puntos aparece una lista lateral de categorías; en ventanas menores vuelve el selector compacto. Búsqueda, categoría y favoritos conservan su estado al rotar o cambiar el ancho. Las carátulas mantienen proporción 2:3 y la grilla distribuye las columnas según el espacio disponible. La vista de cuatro pantallas ajusta su ancho a la altura disponible en horizontal para mantener visibles los controles, conservando el video 16:9. Se conservan las cuatro orientaciones de iPad y la configuración que permite ventanas de distintos tamaños.
 
 Las pruebas UI incluyen iPhone, iPad mini y iPad Pro de 13 pulgadas. La prueba de contenido limitado a 390 puntos usa un contenedor Debug y no certifica Split View o Stage Manager del sistema. Consultar `IPAD_VALIDATION.md` para el estado comprobado.
 

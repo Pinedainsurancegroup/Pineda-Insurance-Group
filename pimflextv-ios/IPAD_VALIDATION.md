@@ -6,6 +6,7 @@ Base de código: `6d690679e7accf4514118579328b300c1b2aacb6`, rama `pimflextv-ios
 
 - Catálogo con categorías a la izquierda cuando el ancho de la ventana alcanza 900 pt. Al reducir el ancho o usar texto de accesibilidad vuelve al selector compacto. El estado vive fuera de las ramas de presentación.
 - Búsqueda y filtro de favoritos compartidos entre ambas disposiciones.
+- Cuatro pantallas en horizontal: grilla centrada limitada por la altura disponible, con cabecera medida y video 16:9; en ventanas demasiado pequeñas o texto de accesibilidad se conserva el desplazamiento.
 - Carátulas 2:3, con recorte del arte al tamaño del contenedor; columnas según ancho disponible.
 - Familias iPhone/iPad, mismo bundle ID, cuatro orientaciones iPad y ventanas redimensionables ya configurados y conservados.
 - Datos y ancho de muestra disponibles sólo con `DEBUG` y `--ui-testing`.

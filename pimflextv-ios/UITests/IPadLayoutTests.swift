@@ -96,6 +96,8 @@ final class IPadLayoutTests: XCTestCase {
         XCTAssertEqual(audio.value as? String, "Activado")
         XCTAssertTrue(app.staticTexts["Canal de muestra"].exists)
         XCTAssertTrue(app.buttons["selectChannel-3"].exists)
+        XCTAssertTrue(app.buttons["selectChannel-3"].isHittable)
+        XCTAssertLessThanOrEqual(app.buttons["audioSlot-3"].frame.maxY, app.windows.firstMatch.frame.maxY)
         capture("ipad-four-screens-landscape")
         rotate(.portrait, app: app)
         XCTAssertEqual(audio.value as? String, "Activado")

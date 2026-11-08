@@ -197,12 +197,14 @@ private final class MultiScreenSlot: ObservableObject {
 struct MultiScreenView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var textSize
     @StateObject private var playback = MultiScreenPlayback()
     @State private var channels: [MediaItem] = []
     @State private var loading = true
     @State private var error: String?
     @State private var sessionAccount: Account?
     @State private var target: ChannelTarget?
+    @State private var controlsHeight: CGFloat = 0
 
     private struct ChannelTarget: Identifiable { let id: Int }
 
@@ -210,24 +212,31 @@ struct MultiScreenView: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 16) {
-                    Picker("Pantallas", selection: Binding(get: { playback.count }, set: { playback.setCount($0) })) {
-                        Text("2 pantallas").tag(2)
-                        Text("4 pantallas").tag(4)
-                    }.pickerStyle(.segmented).accessibilityIdentifier("multiScreenCount")
-                    Text("Elige los canales. El audio se escucha de una pantalla a la vez.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                    if loading { ProgressView("Cargando canales…") }
-                    if let error {
-                        VStack(spacing: 8) {
-                            Text(error).font(.callout)
-                            Button("Cargar canales de nuevo") { Task { await loadChannels(refresh: true) } }
-                        }.multilineTextAlignment(.center)
-                    }
-                    if playback.suspended {
-                        Button("Reanudar pantallas") {
-                            guard scenePhase == .active, let account = model.account, account == sessionAccount else { return }
-                            playback.resume(account: account, fixture: model.usesTestFixtures)
-                        }.buttonStyle(.borderedProminent).accessibilityIdentifier("resumeMultiScreen")
+                    VStack(spacing: 16) {
+                        Picker("Pantallas", selection: Binding(get: { playback.count }, set: { playback.setCount($0) })) {
+                            Text("2 pantallas").tag(2)
+                            Text("4 pantallas").tag(4)
+                        }.pickerStyle(.segmented).accessibilityIdentifier("multiScreenCount")
+                        Text("Elige los canales. El audio se escucha de una pantalla a la vez.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        if loading { ProgressView("Cargando canales…") }
+                        if let error {
+                            VStack(spacing: 8) {
+                                Text(error).font(.callout)
+                                Button("Cargar canales de nuevo") { Task { await loadChannels(refresh: true) } }
+                            }.multilineTextAlignment(.center)
+                        }
+                        if playback.suspended {
+                            Button("Reanudar pantallas") {
+                                guard scenePhase == .active, let account = model.account, account == sessionAccount else { return }
+                                playback.resume(account: account, fixture: model.usesTestFixtures)
+                            }.buttonStyle(.borderedProminent).accessibilityIdentifier("resumeMultiScreen")
+                        }
+                    }.frame(maxWidth: .infinity)
+                    .background {
+                        GeometryReader { controls in
+                            Color.clear.preference(key: MultiScreenControlsHeight.self, value: controls.size.height)
+                        }
                     }
                     LazyVGrid(columns: columns(for: geometry.size.width), spacing: 14) {
                         ForEach(0..<playback.count, id: \.self) { index in
@@ -241,13 +250,14 @@ struct MultiScreenView: View {
                                             audio: { playback.makeAudible(index) },
                                             clear: { playback.clear(index) })
                         }
-                    }
+                    }.frame(maxWidth: gridWidth(for: geometry.size))
                     if !loading && channels.isEmpty && error == nil {
                         Text("Tu cuenta no devolvió canales de TV en directo.").font(.callout)
                     }
                 }.padding(16)
             }
         }.background { ReferenceBackground() }
+            .onPreferenceChange(MultiScreenControlsHeight.self) { controlsHeight = $0 }
             .navigationTitle("PANTALLA MÚLTIPLE").navigationBarTitleDisplayMode(.inline)
             .toolbar(.visible, for: .navigationBar)
             .task(id: model.account?.storageID) { await loadChannels() }
@@ -264,6 +274,17 @@ struct MultiScreenView: View {
 
     private func columns(for width: CGFloat) -> [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: 14), count: playback.count == 4 || width > 650 ? 2 : 1)
+    }
+
+    private func gridWidth(for size: CGSize) -> CGFloat {
+        let width = max(0, size.width - 32)
+        guard playback.count == 4, size.width > size.height, !textSize.isAccessibilitySize else { return width }
+        // Two rows of 16:9 video, each with a 40 pt title and 44 pt controls.
+        // Measure the actual header, including errors/restart, to fit the window.
+        let availableHeight = size.height - controlsHeight - 32 - 16
+        let videoHeight = (availableHeight - 14) / 2 - 84
+        let fittedWidth = 2 * max(0, videoHeight) * 16 / 9 + 14
+        return min(width, max(280, fittedWidth))
     }
 
     private func select(_ channel: MediaItem, at index: Int) {
@@ -283,6 +304,11 @@ struct MultiScreenView: View {
         } catch is CancellationError { }
         catch { if model.account == account { self.error = model.message(error) } }
     }
+}
+
+private struct MultiScreenControlsHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 private struct MultiScreenTile: View {
