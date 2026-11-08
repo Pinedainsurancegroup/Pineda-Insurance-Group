@@ -4,6 +4,18 @@
 
 Juan respondió expresamente «si autorizo» a la creación de la ficha interna PIMFLEX TV en App Store Connect, vinculada a com.pimflextv.ios, para TestFlight y sin publicación. Esta autorización ya está concedida: no pedirla nuevamente. Al retomar «Nueva app», App Store Connect redirigió a /login; no se llegó al formulario ni se creó ficha. La sesión Developer también estaba esperando inicio de sesión. Retomar tras autenticar en el navegador en la nube; reutilizar la clave cifrada y CSR ya guardados. No confundir las pantallas conservadas con sesiones vigentes.
 
+### Registros Apple creados — 2026-11-08
+
+La sesión pudo reutilizarse tras la nueva autenticación y recarga normal de las páginas. No se observó evidencia que permitiera atribuir los errores anteriores a bots ni se modificaron controles de seguridad.
+
+Se creó y verificó en la lista de Apps la ficha interna **PIMFLEX TV**, Apple ID **6832365413**, Bundle ID `com.pimflextv.ios`, SKU `PIMFLEXTV-IOS`, idioma principal Español (México), plataforma iOS universal para iPhone/iPad. Su versión inicial de ficha es 1.0, estado «En preparación para el envío»; el código candidato sigue siendo 0.3.0/build 3. No se envió a revisión ni se publicó.
+
+Apple emitió el certificado **Apple Distribution**, ID **4FQY49J2JC**, válido hasta **2027-11-08**, usando el CSR de la clave ya respaldada. La lista Certificates mostró exactamente un certificado Distribution. También se generó el perfil **PIMFLEX TV App Store 2026**, ID **92LSL5KN37**, tipo App Store, del App ID explícito `U47SH3LZM6.com.pimflextv.ios`, con ese único certificado y el mismo vencimiento.
+
+**Pendiente concreto:** las descargas oficiales fallaron en el navegador en la nube. El certificado falló con descarga normal y con la alternativa documentada `downloadMedia`; el perfil falló con descarga normal. No se obtuvo ninguno de los archivos. La inspección del historial interno de descargas fue bloqueada por la política del navegador; no intentar rutas alternativas para esa inspección. Se necesita recuperar el `.cer` y el `.mobileprovision` oficiales, mediante descarga manual del propietario si sigue fallando la descarga disponible. No crear certificados o perfiles duplicados.
+
+El respaldo privado de la clave/CSR se actualizó con estos identificadores; no incluye los archivos emitidos, aún no descargados. Falta comparar la clave pública del certificado con la clave/CSR, validar criptográficamente el perfil, preparar el PKCS#12 privado e instalar los materiales en un Mac/runner autorizado. No se generó IPA ni se cargó una compilación a TestFlight. La custodia/acceso de secretos del runner sigue sin configurarse.
+
 ### Exportación firmada preparada — 2026-11-08
 
 Se añadieron `scripts/archive-signed.sh`, el validador `scripts/signing_profile.py`, seis pruebas de perfiles sintéticos y `SIGNING.md`. El script requiere una identidad Apple Distribution ya instalada y un perfil App Store Connect válido. Genera archivo Release/exportación local y verifica firma, equipo, App ID, perfil y familias iPhone/iPad; no genera credenciales ni sube/publica la app. Las seis pruebas y `bash -n` pasaron en Linux; el workflow de previsualización ahora ejecuta esos controles también. **La exportación firmada en macOS aún no se ha ejecutado** porque no hay certificado emitido/perfil confirmado. No confundir estas pruebas con una IPA disponible.
