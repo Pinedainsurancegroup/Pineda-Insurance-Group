@@ -1,5 +1,17 @@
 # Continuidad de APP PIMFLEXTV en Codex
 
+## Firma Apple — 2026-11-08 (California)
+
+La activación fue confirmada por los correos oficiales de bienvenida de Apple Developer y App Store Connect. Tras el inicio de sesión realizado por Juan, el portal oficial muestra membresía individual vigente hasta el 8 de noviembre de 2027 y Team ID `U47SH3LZM6`. Certificates, Identifiers & Profiles está accesible.
+
+Se registró y verificó en la lista de Apple el App ID explícito **PIMFLEX TV**, `com.pimflextv.ios`, para el producto universal existente. No se habilitaron capacidades adicionales opcionales. `project.yml` ahora configura `DEVELOPMENT_TEAM: U47SH3LZM6` en el target de aplicación. No cambian las versiones ni el núcleo.
+
+La cuenta mostraba la pantalla inicial sin certificados. Se preparó el formulario **Apple Distribution** hasta la solicitud de CSR; no se generaron claves, CSR ni certificados. Su creación requiere confirmación específica del propietario porque crea una credencial de firma. No enviar materiales privados por chat, PR, commits o artefactos públicos. Antes de usar CI con firma, acordar custodia privada y acceso del runner a los materiales; no guardar secretos de firma en el repositorio público.
+
+App Store Connect reconoce la sesión, pero presenta el acuerdo **App Store Connect Terms of Service**, V100, actualizado el 4 de junio de 2018. No fue aceptado. Se requiere revisión/aceptación explícita antes de registrar la ficha de app o continuar allí. No se creó ficha, perfil ni IPA; no se publicó en TestFlight/App Store ni se repitieron pagos.
+
+Continuación: resolver los términos y la autorización de firma, generar/custodiar la identidad Apple Distribution y el perfil App Store Connect del App ID registrado; configurar compilación/exportación firmada en macOS y validar la IPA antes de distribuirla. Reutilizar el producto universal y preservar el PR #6 en borrador.
+
 ## Ampliación iPad — 2026-11-08 (California)
 
 El propietario solicita Android, iPhone e iPad, con toda la programación en Codex. Se amplía el producto universal existente; no se crea otro identificador ni se altera la producción Android. Candidata 0.3.0 / build 3: categorías laterales según ancho de ventana, controles compactos al reducirlo y carátulas 2:3. Se agregan cuatro pruebas específicas iPad y CI con iPhone, iPad mini y iPad Pro grande. Las cuatro pantallas se ajustan a la altura disponible en horizontal. El núcleo y las credenciales permanecen intactos. Ver `IPAD_VALIDATION.md`.
