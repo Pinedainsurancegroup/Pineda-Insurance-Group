@@ -1,0 +1,240 @@
+name: Build PIMFLEX TV Rebuild
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - pimflextv-rebuild
+    paths:
+      - 'pimflextv-rebuild/**'
+      - '.github/workflows/build-pimflextv.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'pimflextv-rebuild/**'
+      - '.github/workflows/build-pimflextv.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Restore QA signing key
+        shell: bash
+        run: base64 -d pimflextv-rebuild/qa-signing.jks.b64 > pimflextv-rebuild/qa-signing.jks
+
+      - name: Apply app feature patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_features.py
+
+      - name: Apply visual interface patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_visual.py
+
+      - name: Apply content details and history patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_content_core.py
+
+      - name: Apply family controls patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_parental.py
+
+      - name: Apply v1.4 settings and Catch-Up patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v14_settings.py
+
+      - name: Apply v1.4 saved accounts patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v14_accounts.py
+
+      - name: Apply v1.5 player tools patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v15.py
+
+      - name: Apply v2 account scoped data patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_scope.py
+
+      - name: Apply v2 global search patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_search.py
+
+      - name: Apply v2 multi-screen patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_multiscreen.py
+
+      - name: Apply v2 extras patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_extras.py
+
+      - name: Apply v2 M3U patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_m3u.py
+
+      - name: Apply v2 live zapping patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_zapping.py
+
+      - name: Apply v2 Now/Next guide patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_guide.py
+
+      - name: Apply v2 Chromecast patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v2_cast.py
+
+      - name: Apply IPTV player patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_player.py
+
+      - name: Apply audio and subtitle selector patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v21_tracks.py
+
+      - name: Apply v2.2 clone UI patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v22_clone_ui.py
+
+      - name: Apply v2.2 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v22_version.py
+
+      - name: Apply v2.3 reference video UI patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v23_video_clone.py
+
+      - name: Apply v2.3 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v23_version.py
+
+      - name: Apply v2.3.1 landscape layout hotfix
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v231_layout.py
+
+      - name: Apply v2.3.1 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v231_version.py
+
+      - name: Apply v2.4 live media parity patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v24_live_media.py
+
+      - name: Apply v2.4 sources parity patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v24_sources.py
+
+      - name: Apply v2.4 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v24_version.py
+
+      - name: Apply v2.5 user controlled utilities patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v25_control.py
+
+      - name: Apply v2.5 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v25_version.py
+
+      - name: Apply v2.6 EPG and subtitles patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v26_epg_subtitles.py
+
+      - name: Apply v2.6 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v26_version.py
+
+      - name: Apply v2.7 Stalker and player routing patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v27_stalker_players.py
+
+      - name: Apply v2.7 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v27_version.py
+
+      - name: Apply v2.8 tracks and automation patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v28_tracks_automation.py
+
+      - name: Apply v2.8 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v28_version.py
+
+      - name: Apply v2.9 foreground DVR patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v29_dvr_service.py
+
+      - name: Apply v2.9 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v29_version.py
+
+      - name: Apply v3.0 final parity patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v30_final_parity.py
+
+      - name: Apply v3.0 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v30_version.py
+
+      - name: Apply v3.1 official branding and polish patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v31_brand.py
+
+      - name: Apply v3.1 version patch
+        working-directory: pimflextv-rebuild
+        run: python3 patch_v31_version.py
+
+      - name: Build release APK and AAB
+        working-directory: pimflextv-rebuild
+        run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
+
+      - name: Rename release artifacts
+        run: |
+          cp pimflextv-rebuild/app/build/outputs/apk/release/app-release.apk PIMFLEX-TV-v3.1.0.apk
+          cp pimflextv-rebuild/app/build/outputs/bundle/release/app-release.aab PIMFLEX-TV-v3.1.0.aab
+
+      - name: Verify release APK
+        shell: bash
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose PIMFLEX-TV-v3.1.0.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging PIMFLEX-TV-v3.1.0.apk | head -n 25
+          sha256sum PIMFLEX-TV-v3.1.0.apk PIMFLEX-TV-v3.1.0.aab > PIMFLEX-TV-v3.1.0-SHA256.txt
+          cat > PIMFLEX-TV-v3.1.0-RELEASE.txt <<'EOF'
+          PIMFLEX TV v3.1.0
+          Final visual polish based on the device-confirmed stable v3.0.0 core.
+          - User-approved PIMFLEX TV logo integrated into splash, login, app icon, headers and Android TV banner.
+          - Playback core preserved from v3.0.0.
+          - Release APK signature verified during build.
+          - APK and AAB checksums included.
+          EOF
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PIMFLEX-TV-v3.1.0
+          path: |
+            PIMFLEX-TV-v3.1.0.apk
+            PIMFLEX-TV-v3.1.0.aab
+            PIMFLEX-TV-v3.1.0-SHA256.txt
+            PIMFLEX-TV-v3.1.0-RELEASE.txt
+          if-no-files-found: error
