@@ -1,5 +1,7 @@
 {
   "build_number": 3,
   "purpose": "PIMFLEX TV iPhone and iPad private signed export",
-  "owner_authorized": true
+  "owner_authorized": true,
+  "attempt": 2,
+  "reason": "Use the provisioning profile directory required by current Xcode"
 }
