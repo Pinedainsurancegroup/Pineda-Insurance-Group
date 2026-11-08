@@ -8,13 +8,22 @@ No generar otra clave al retomar ni incluir material privado en este repositorio
 
 ## Estado verificable
 
-La emisión del certificado aún no está confirmada. El portal vuelve a mostrar
-“Your session has expired” al efectuar la consulta, incluso después del inicio
-de sesión informado por el propietario. App Store Connect también muestra
-su pantalla de acceso. Una pantalla anterior conservada no acredita una sesión
-vigente. Inspeccionar la lista de certificados antes de repetir la emisión.
-Si existe un certificado, comparar su clave pública con el CSR guardado.
-La ficha de App Store Connect, el perfil y la IPA aún no se han creado.
+Se creó la ficha interna PIMFLEX TV, Apple ID **6832365413**, en Español
+(México), SKU `PIMFLEXTV-IOS`, del Bundle ID existente. Está en preparación
+para el envío, sin publicación ni compilaciones cargadas.
+
+Apple emitió el certificado Apple Distribution **4FQY49J2JC** y generó el
+perfil **PIMFLEX TV App Store 2026**, ID **92LSL5KN37**, del App ID explícito
+`U47SH3LZM6.com.pimflextv.ios`. Ambos vencen el **8 de noviembre de 2027**.
+Se usó el CSR existente y se verificó la presencia de un único certificado.
+
+Las descargas de los dos archivos fallaron en el navegador en la nube.
+Aún se necesitan los archivos oficiales `.cer` y `.mobileprovision`.
+No se ha comparado la clave pública del certificado ni validado el contenido
+del perfil: el registro visible del portal no sustituye esas comprobaciones.
+No crear nuevos certificados, perfiles o claves para resolver la descarga.
+El respaldo privado contiene la clave cifrada y el CSR, con metadatos de los
+registros emitidos, pero todavía no contiene los archivos descargables.
 
 El CI de `29f2a56ebf0cf14275c4c2dbf695cd6284c4193c` aprobó la configuración
 del equipo y la compilación sin firma. Eso no certifica una distribución firmada.
@@ -65,8 +74,8 @@ bash -n scripts/archive-signed.sh
 ```
 
 Los perfiles de prueba son sintéticos; no contienen certificados reales ni
-claves. La exportación Xcode con firma no se ha ejecutado: faltan el certificado
-emitido y el perfil. Una IPA exportada para App Store Connect se instala mediante
+claves. La exportación Xcode con firma no se ha ejecutado: faltan los archivos descargados del certificado
+emitido y del perfil. Una IPA exportada para App Store Connect se instala mediante
 TestFlight después de su carga/procesamiento; no es una instalación directa por
 descarga. La carga, el procesamiento y la prueba física siguen pendientes.
 
