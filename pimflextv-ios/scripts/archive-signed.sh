@@ -34,7 +34,7 @@ if sys.argv[2] not in identities:
 PY
 security cms -D -i "$PIMFLEX_PROFILE_PATH" > "$WORK_DIR/profile.plist"
 PROFILE_UUID="$(python3 "$SOURCE_DIR/scripts/signing_profile.py" "$WORK_DIR/profile.plist" "$WORK_DIR/ExportOptions.plist" "$IDENTITY")"
-XCODE_MAJOR="$(xcodebuild -version | python3 -c 'import re,sys; print(int(re.search(r""Xcode ([0-9]+)", sys.stdin.read()).group(1)))')"
+XCODE_MAJOR="$(xcodebuild -version | python3 -c 'import re,sys; print(int(re.search(r"Xcode ([0-9]+)", sys.stdin.read()).group(1)))')"
 if [[ "$XCODE_MAJOR" -ge 16 ]]; then
   PROFILE_DIR="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
 else
