@@ -152,8 +152,8 @@ final class AppModel: ObservableObject {
         case .movie: names = ["Película de muestra", "Aventura de muestra", "Documental de muestra"]
         case .series: names = ["Serie de muestra", "Historias de muestra", "Naturaleza de muestra"]
         }
-        return ([PimflexCore.Category(id: "sample", name: "Muestra")], names.enumerated().map {
-            MediaItem(providerID: String($0.offset + 1), name: $0.element, kind: kind, categoryID: "sample")
+        return ([PimflexCore.Category(id: "sample", name: "Muestra"), PimflexCore.Category(id: "extra", name: "Más títulos")], names.enumerated().map {
+            MediaItem(providerID: String($0.offset + 1), name: $0.element, kind: kind, categoryID: $0.offset == 2 ? "extra" : "sample")
         })
     }
     #endif

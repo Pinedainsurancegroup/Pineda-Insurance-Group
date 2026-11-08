@@ -1,5 +1,11 @@
 # Continuidad de APP PIMFLEXTV en Codex
 
+## Ampliación iPad — 2026-11-08 (California)
+
+El propietario solicita Android, iPhone e iPad, con toda la programación en Codex. Se amplía el producto universal existente; no se crea otro identificador ni se altera la producción Android. Candidata 0.3.0 / build 3: categorías laterales según ancho de ventana, controles compactos al reducirlo y carátulas 2:3. Se agregan cuatro pruebas específicas iPad y CI con iPhone, iPad mini y iPad Pro grande. El núcleo y las credenciales permanecen intactos. Ver `IPAD_VALIDATION.md`; comprobar los resultados para el SHA exacto antes de declarar validación.
+
+Juan informa que ya pagó la membresía y espera activación. Esta tarea no revisa ni modifica la cuenta Apple, los acuerdos, certificados o App Store Connect. No tomar ese pago reportado como confirmación técnica de activación.
+
 ## Objetivo del propietario
 
 Clonar la apariencia y las funciones de la app Android PIMFLEX TV 4.0.2 adjunta para iPhone, trabajando en Codex. Continuar este código nativo; no abrir otro repositorio ni regenerar APKs para esta tarea.

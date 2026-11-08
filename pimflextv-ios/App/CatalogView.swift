@@ -3,6 +3,7 @@ import PimflexCore
 
 struct CatalogView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.dynamicTypeSize) private var textSize
     let kind: MediaKind
     let guideMode: Bool
     @State private var categories: [PimflexCore.Category] = []
@@ -25,6 +26,25 @@ struct CatalogView: View {
             (search.isEmpty || $0.name.localizedCaseInsensitiveContains(search)) }
     }
     var body: some View {
+        GeometryReader { geometry in
+            // Use the current window, including Split View, rather than the device model.
+            let showsSidebar = geometry.size.width >= 900 && !textSize.isAccessibilitySize
+            HStack(spacing: 0) {
+                if showsSidebar {
+                    categorySidebar.frame(width: min(280, geometry.size.width * 0.24))
+                    Divider().overlay(.white.opacity(0.2))
+                }
+                catalog(showsSidebar: showsSidebar)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }.background { ReferenceBackground() }
+            .navigationTitle(guideMode ? "GUÍA DE TV" : kind.referenceTitle).navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
+            .task { await load() }
+            .fullScreenCover(item: $playback) { PlayerScreen(item: $0) }
+            .sheet(item: $guide) { GuideView(item: $0) }
+    }
+    private func catalog(showsSidebar: Bool) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.white.opacity(0.65))
@@ -36,10 +56,15 @@ struct CatalogView: View {
             }.padding(13).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.25), lineWidth: 1)).padding(.horizontal)
             HStack {
-                Picker("Categoría", selection: $category) {
-                    Text("Todas las categorías").tag("")
-                    ForEach(categories) { Text($0.name).tag($0.id) }
-                }.lineLimit(1).accessibilityIdentifier("categoryPicker")
+                if showsSidebar {
+                    Text(categories.first(where: { $0.id == category })?.name ?? "Todas las categorías")
+                        .font(.headline).lineLimit(2)
+                } else {
+                    Picker("Categoría", selection: $category) {
+                        Text("Todas las categorías").tag("")
+                        ForEach(categories) { Text($0.name).tag($0.id) }
+                    }.lineLimit(1).accessibilityIdentifier("categoryPicker")
+                }
                 Spacer()
                 Button { favoriteOnly.toggle() } label: {
                     Image(systemName: favoriteOnly ? "star.fill" : "star")
@@ -48,12 +73,35 @@ struct CatalogView: View {
                     .accessibilityIdentifier("favoriteFilter")
             }.padding(.horizontal)
             content
-        }.background { ReferenceBackground() }
-            .navigationTitle(guideMode ? "GUÍA DE TV" : kind.referenceTitle).navigationBarTitleDisplayMode(.inline)
-            .toolbar(.visible, for: .navigationBar)
-            .task { await load() }
-            .fullScreenCover(item: $playback) { PlayerScreen(item: $0) }
-            .sheet(item: $guide) { GuideView(item: $0) }
+        }
+    }
+    private var categorySidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("CATEGORÍAS").font(ReferenceTheme.font(15, bold: true)).padding(20)
+            ScrollView {
+                LazyVStack(spacing: 6) {
+                    categoryButton(id: "", title: "Todas las categorías")
+                    ForEach(categories) { group in
+                        categoryButton(id: group.id, title: group.name)
+                    }
+                }.padding(.horizontal, 12).padding(.bottom, 16)
+            }
+        }.frame(maxHeight: .infinity).background(ReferenceTheme.panel.opacity(0.8))
+            .accessibilityIdentifier("categorySidebar")
+    }
+    private func categoryButton(id: String, title: String) -> some View {
+        Button { category = id } label: {
+            HStack(spacing: 10) {
+                Text(title).multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+                if category == id { Image(systemName: "checkmark").accessibilityHidden(true) }
+            }.font(ReferenceTheme.font(14, bold: category == id))
+                .foregroundStyle(.white).padding(12).frame(maxWidth: .infinity, minHeight: 48)
+                .background(category == id ? ReferenceTheme.accent.opacity(0.3) : .clear,
+                            in: RoundedRectangle(cornerRadius: 8))
+                .contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityIdentifier("category-\(id.isEmpty ? "all" : id)")
+            .accessibilityAddTraits(category == id ? .isSelected : [])
     }
     @ViewBuilder private var content: some View {
         if loading { ProgressView("Cargando catálogo…").padding(); Spacer() }
@@ -80,7 +128,7 @@ struct CatalogView: View {
             }.listStyle(.plain).scrollContentBackground(.hidden).refreshable { await load(refresh: true) }
         } else {
             ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140, maximum: 220), spacing: 16)], spacing: 18) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: textSize.isAccessibilitySize ? 240 : 140, maximum: textSize.isAccessibilitySize ? 420 : 220), spacing: 16)], spacing: 18) {
                     ForEach(displayed) { item in
                         VStack(spacing: 0) {
                             if kind == .series {
@@ -124,18 +172,20 @@ struct CatalogView: View {
 struct PosterView: View {
     let item: MediaItem
     var body: some View {
-        ZStack {
-            Rectangle().fill(LinearGradient(colors: [.indigo.opacity(0.6), ReferenceTheme.panel], startPoint: .topLeading, endPoint: .bottomTrailing))
-            AsyncImage(url: item.artwork) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                VStack(spacing: 14) {
-                    Image(item.kind == .series ? "ReferenceSeries" : "ReferenceMovies")
-                        .resizable().scaledToFit().frame(width: 55, height: 55)
-                    Text(item.kind.referenceTitle).font(ReferenceTheme.font(11, bold: true))
-                }.foregroundStyle(.white.opacity(0.65))
-            }
-        }.frame(height: 190).clipped().accessibilityLabel(item.name)
+        GeometryReader { geometry in
+            ZStack {
+                Rectangle().fill(LinearGradient(colors: [.indigo.opacity(0.6), ReferenceTheme.panel], startPoint: .topLeading, endPoint: .bottomTrailing))
+                AsyncImage(url: item.artwork) { image in
+                    image.resizable().scaledToFill().frame(width: geometry.size.width, height: geometry.size.height).clipped()
+                } placeholder: {
+                    VStack(spacing: 14) {
+                        Image(item.kind == .series ? "ReferenceSeries" : "ReferenceMovies")
+                            .resizable().scaledToFit().frame(width: 55, height: 55)
+                        Text(item.kind.referenceTitle).font(ReferenceTheme.font(11, bold: true))
+                    }.foregroundStyle(.white.opacity(0.65))
+                }
+            }.frame(width: geometry.size.width, height: geometry.size.height).clipped()
+        }.aspectRatio(2.0 / 3.0, contentMode: .fit).accessibilityLabel(item.name)
     }
 }
 

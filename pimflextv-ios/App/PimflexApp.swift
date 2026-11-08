@@ -10,10 +10,27 @@ struct PimflexApp: App {
                 if model.account != nil { MainView().id(model.account?.storageID) }
                 else { LoginView() }
             }
+            .modifier(TestWindowWidth())
             .environmentObject(model)
             .tint(ReferenceTheme.accent)
             .preferredColorScheme(.dark)
         }
+    }
+}
+
+// A deterministic narrow content window for UI regression tests. Release builds
+// never read this environment variable; this does not simulate OS multitasking.
+private struct TestWindowWidth: ViewModifier {
+    func body(content: Content) -> some View {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing"),
+           let raw = ProcessInfo.processInfo.environment["PIMFLEX_TEST_CONTENT_WIDTH"],
+           let width = Double(raw), width.isFinite, width >= 320, width <= 600 {
+            content.frame(maxWidth: CGFloat(width)).frame(maxWidth: .infinity)
+        } else { content }
+        #else
+        content
+        #endif
     }
 }
 
@@ -150,7 +167,7 @@ struct HomeView: View {
             let landscapeCardHeight = max(1.0, (landscapeContentWidth - 14.0 - 32.0) / 3.0) * referenceCardHeightRatio
             let portraitCardWidth = max(1.0, min(1100.0, geometry.size.width) - 32.0)
             HStack(spacing: 12) {
-                if wide { sidebar.frame(width: sidebarWidth) }
+                if wide { sidebar.frame(width: sidebarWidth).accessibilityIdentifier("homeSidebar") }
                 ScrollView {
                     VStack(spacing: wide ? 14 : 20) {
                         header(wide: wide)

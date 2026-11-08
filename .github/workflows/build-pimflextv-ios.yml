@@ -1,4 +1,4 @@
-name: PIMFLEX TV iOS Preview
+name: PIMFLEX TV iPhone and iPad Preview
 on:
   pull_request:
     branches: [pimflextv-production-hardening]
@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 jobs:
-  validate-ios:
+  build-ios:
     runs-on: macos-15
     timeout-minutes: 30
     defaults:
@@ -21,25 +21,14 @@ jobs:
         run: |
           brew install xcodegen
           xcodegen generate
-      - name: Build iOS simulator app
+      - name: Build universal simulator app
         run: |
           set -o pipefail
           xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO build | tee build.log
-      - name: Build unsigned iPhone app
+      - name: Build unsigned universal iPhone and iPad app
         run: |
           set -o pipefail
-          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath DeviceBuild CODE_SIGNING_ALLOWED=NO build
-      - name: Reference UI regression tests
-        run: |
-          set -o pipefail
-          device_id=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for k,v in d["devices"].items() if "iOS" in k for x in v if "iPhone" in x["name"]))')
-          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Debug -destination "platform=iOS Simulator,id=$device_id" -derivedDataPath DerivedData -resultBundlePath LoginTests.xcresult CODE_SIGNING_ALLOWED=NO test | tee ui-tests.log
-      - name: Export UI screenshots
-        if: always()
-        run: |
-          if [ -d LoginTests.xcresult ]; then
-            xcrun xcresulttool export attachments --path LoginTests.xcresult --output-path Screenshots
-          fi
+          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath DeviceBuild CODE_SIGNING_ALLOWED=NO build | tee device-build.log
       - name: Package simulator app and generated source project
         run: |
           ditto -c -k --keepParent DerivedData/Build/Products/Debug-iphonesimulator/PimflexTV.app PIMFLEXTV-iOS-Simulator.zip
@@ -49,18 +38,52 @@ jobs:
       - name: Upload simulator and source artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PIMFLEXTV-iOS-PREVIEW-NOT-IPHONE-INSTALLER
+          name: PIMFLEXTV-iPhone-iPad-PREVIEW-NOT-INSTALLER
           path: |
             pimflextv-ios/PIMFLEXTV-iOS-Simulator.zip
             pimflextv-ios/PIMFLEXTV-iOS-Source.zip
           if-no-files-found: error
-      - name: Upload diagnostics
+      - name: Upload build diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: PIMFLEXTV-iOS-validation
+          name: PIMFLEXTV-iOS-build-validation
           path: |
             pimflextv-ios/build.log
-            pimflextv-ios/LoginTests.xcresult
+            pimflextv-ios/device-build.log
+  test-ui:
+    runs-on: macos-15
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [iphone, ipad-compact, ipad-large]
+    defaults:
+      run:
+        working-directory: pimflextv-ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Reference and adaptive layout UI tests
+        run: |
+          set -o pipefail
+          device_id=$(xcrun simctl list devices available -j | python3 scripts/select-simulator.py '${{ matrix.device }}')
+          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Debug -destination "platform=iOS Simulator,id=$device_id" -parallel-testing-enabled NO -derivedDataPath DerivedData -resultBundlePath UITests.xcresult CODE_SIGNING_ALLOWED=NO test | tee ui-tests.log
+      - name: Export UI screenshots
+        if: always()
+        run: |
+          if [ -d UITests.xcresult ]; then
+            xcrun xcresulttool export attachments --path UITests.xcresult --output-path Screenshots
+          fi
+      - name: Upload UI diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PIMFLEXTV-UI-${{ matrix.device }}
+          path: |
+            pimflextv-ios/UITests.xcresult
             pimflextv-ios/ui-tests.log
             pimflextv-ios/Screenshots/

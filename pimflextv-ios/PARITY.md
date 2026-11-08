@@ -10,7 +10,8 @@
 | Función | Implementación iOS actual | Comprobación pendiente |
 | --- | --- | --- |
 | Apariencia de acceso e inicio | Recursos originales del login y dashboard `_cl`, fuentes y etiquetas ES; sidebar y tres tarjetas en horizontal | Comparación en dispositivo, estados del proveedor y tamaños físicos |
-| Vertical | Adaptación adicional de iPhone | No tiene equivalente exacto: Android declara `sensorLandscape` |
+| iPhone e iPad | Producto universal; catálogo con categorías laterales desde 900 pt, selector compacto y carátulas 2:3 | Validación física y ventanas del sistema |
+| Vertical | Adaptación adicional de iPhone/iPad | No tiene equivalente exacto: Android declara `sensorLandscape` |
 | Login Xtream | Cuenta activa, normalización de portal y credenciales Keychain | Autenticación real del proveedor |
 | HTTP histórico | Opt-in explícito; dominio exacto `moonspelltools.cc`; ATS limitado | Validación en iPhone y endpoint HTTPS preferido |
 | Usuarios guardados | Vault Keychain único, activar, salir, eliminar y migrar sesión anterior | Migración persistente y errores Keychain en dispositivo |

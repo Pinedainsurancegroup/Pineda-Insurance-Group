@@ -1,6 +1,12 @@
-# PIMFLEX TV para iPhone — 0.2.0
+# PIMFLEX TV para iPhone y iPad — 0.3.0
 
-Aplicación nativa SwiftUI / AVFoundation para iOS 16 o posterior. Continúa la candidata de iPhone del PR #6 y usa la versión Android 4.0.2 aportada por el propietario como referencia. El desarrollo permanece en `pimflextv-ios-20261029`, sin integrar a producción.
+Aplicación nativa SwiftUI / AVFoundation para iOS / iPadOS 16 o posterior. Continúa la candidata de iPhone del PR #6 y usa la versión Android 4.0.2 aportada por el propietario como referencia. El desarrollo permanece en `pimflextv-ios-20261029`, sin integrar a producción.
+
+## Adaptación para iPad
+
+El mismo producto Apple `com.pimflextv.ios` admite iPhone y iPad (familias 1 y 2). Se conserva el diseño, los recursos y el núcleo existentes. En ventanas de al menos 900 puntos aparece una lista lateral de categorías; en ventanas menores vuelve el selector compacto. Búsqueda, categoría y favoritos conservan su estado al rotar o cambiar el ancho. Las carátulas mantienen proporción 2:3 y la grilla distribuye las columnas según el espacio disponible. Se conservan las cuatro orientaciones de iPad y la configuración que permite ventanas de distintos tamaños.
+
+Las pruebas UI incluyen iPhone, iPad mini y iPad Pro de 13 pulgadas. La prueba de contenido limitado a 390 puntos usa un contenedor Debug y no certifica Split View o Stage Manager del sistema. Consultar `IPAD_VALIDATION.md` para el estado comprobado.
 
 ## Implementado en esta revisión
 
