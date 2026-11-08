@@ -87,7 +87,6 @@ struct CatalogView: View {
                 }.padding(.horizontal, 12).padding(.bottom, 16)
             }
         }.frame(maxHeight: .infinity).background(ReferenceTheme.panel.opacity(0.8))
-            .accessibilityIdentifier("categorySidebar")
     }
     private func categoryButton(id: String, title: String) -> some View {
         Button { category = id } label: {

@@ -167,7 +167,7 @@ struct HomeView: View {
             let landscapeCardHeight = max(1.0, (landscapeContentWidth - 14.0 - 32.0) / 3.0) * referenceCardHeightRatio
             let portraitCardWidth = max(1.0, min(1100.0, geometry.size.width) - 32.0)
             HStack(spacing: 12) {
-                if wide { sidebar.frame(width: sidebarWidth).accessibilityIdentifier("homeSidebar") }
+                if wide { sidebar.frame(width: sidebarWidth) }
                 ScrollView {
                     VStack(spacing: wide ? 14 : 20) {
                         header(wide: wide)
