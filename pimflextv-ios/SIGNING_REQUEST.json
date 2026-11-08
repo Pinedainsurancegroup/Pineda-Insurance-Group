@@ -2,6 +2,6 @@
   "build_number": 3,
   "purpose": "PIMFLEX TV iPhone and iPad private signed export",
   "owner_authorized": true,
-  "attempt": 5,
-  "reason": "Preserve the exact case of Apple's provisioning profile UUID"
+  "attempt": 6,
+  "reason": "Use Xcode 26 and verify iOS 26 SDK required for current App Store Connect uploads"
 }

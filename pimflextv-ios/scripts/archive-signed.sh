@@ -78,10 +78,14 @@ codesign -d --entitlements :- "$EXPORTED_APP" > "$WORK_DIR/exported-entitlements
 security cms -D -i "$EXPORTED_APP/embedded.mobileprovision" > "$WORK_DIR/exported-profile.plist"
 python3 "$SOURCE_DIR/scripts/signing_profile.py" "$WORK_DIR/exported-profile.plist" "$WORK_DIR/VerifiedExportOptions.plist" "$IDENTITY" > /dev/null
 python3 - "$EXPORTED_APP/Info.plist" "$WORK_DIR/exported-entitlements.plist" "$IPA_PATH" "$WORK_DIR/verification.json" <<'PY'
-import hashlib, json, plistlib, sys
+import hashlib, json, plistlib, re, sys
 from pathlib import Path
 info = plistlib.loads(Path(sys.argv[1]).read_bytes())
 entitlements = plistlib.loads(Path(sys.argv[2]).read_bytes())
+sdk = info.get('DTSDKName', '')
+sdk_match = re.fullmatch(r'iphoneos([0-9]+)(?:\.[0-9]+)*', sdk)
+if sdk_match is None or int(sdk_match.group(1)) < 26:
+    raise SystemExit('App Store Connect requires an app built with iOS 26 SDK or later.')
 if info.get('CFBundleIdentifier') != 'com.pimflextv.ios' or set(info.get('UIDeviceFamily', [])) != {1, 2}:
     raise SystemExit('Exported app identity/device families do not match the universal PIMFLEX TV app.')
 if entitlements.get('application-identifier') != 'U47SH3LZM6.com.pimflextv.ios' or entitlements.get('get-task-allow') is not False:
@@ -97,7 +101,8 @@ digest = digest_state.hexdigest()
 Path(sys.argv[4]).write_text(json.dumps({'bundle_id': info['CFBundleIdentifier'], 'team_id': 'U47SH3LZM6',
     'version': info.get('CFBundleShortVersionString'), 'build': info.get('CFBundleVersion'),
     'device_families': info['UIDeviceFamily'], 'ipa_sha256': digest, 'codesign_verified': True,
-    'uploaded_to_apple': False}, indent=2) + '\n')
+    'build_sdk': sdk, 'xcode_version': info.get('DTXcode'),
+    'minimum_ios': info.get('MinimumOSVersion'), 'uploaded_to_apple': False}, indent=2) + '\n')
 PY
 mkdir "$PIMFLEX_EXPORT_DIR"
 cp "$IPA_PATH" "$WORK_DIR/verification.json" "$PIMFLEX_EXPORT_DIR/"

@@ -5,6 +5,8 @@ on:
     paths: ['pimflextv-ios/SIGNING_REQUEST.json']
 permissions:
   contents: read
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
 concurrency:
   group: pimflextv-apple-signing
   cancel-in-progress: false
@@ -24,6 +26,17 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Verify App Store Connect toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          python3 - <<'PY'
+          import re, subprocess
+          xcode = subprocess.check_output(['xcodebuild', '-version'], text=True)
+          sdk = subprocess.check_output(['xcrun', '--sdk', 'iphoneos', '--show-sdk-version'], text=True)
+          if int(re.search(r'Xcode ([0-9]+)', xcode).group(1)) < 26 or int(sdk.split('.')[0]) < 26:
+              raise SystemExit('App Store Connect requires Xcode 26 and iOS 26 SDK or later.')
+          PY
       - name: Validate signing request
         id: request
         run: |
@@ -65,6 +78,17 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Verify App Store Connect toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          python3 - <<'PY'
+          import re, subprocess
+          xcode = subprocess.check_output(['xcodebuild', '-version'], text=True)
+          sdk = subprocess.check_output(['xcrun', '--sdk', 'iphoneos', '--show-sdk-version'], text=True)
+          if int(re.search(r'Xcode ([0-9]+)', xcode).group(1)) < 26 or int(sdk.split('.')[0]) < 26:
+              raise SystemExit('App Store Connect requires Xcode 26 and iOS 26 SDK or later.')
+          PY
       - name: Prepare private paths and build tooling before importing credentials
         run: |
           printf 'SIGNING_DIR=%s/pimflex-private-signing\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
