@@ -17,23 +17,33 @@ El propietario adjuntó los dos archivos oficiales. Se comprobó que:
 - El certificado, el CSR y la clave privada existente comparten la misma clave pública.
 - La firma CMS del perfil es válida y su cadena se verifica contra Apple Root CA,
   con huella SHA-256 contrastada con la lista oficial de Apple.
-- El perfil UUID `ED0CBB48-09A0-4031-A16F-DB7C242C3181` corresponde al App ID
+- El perfil UUID `ed0cbb48-09a0-4031-a16f-db7c242c3181` corresponde al App ID
   explícito `U47SH3LZM6.com.pimflextv.ios`, al equipo correcto y al certificado
   seleccionado; es App Store Connect, no desarrollo/Ad Hoc/Enterprise.
 - Se creó un PKCS#12 cifrado y se verificó su recuperación. La clave no cambió.
 
 La huella SHA-1 de la identidad es `8C2189D902AEA4E06493D80603886E98E1A35BD6`.
 El material real y su recuperación se conservan privadamente, fuera del repositorio.
-Todavía no hay IPA firmada ni compilación cargada a TestFlight.
+La IPA **0.3.0 / build 3** universal se exportó y validó en macOS con
+Xcode **26.3**, SDK **iOS 26.2**, commit
+`5f6323b6acab811a77d38144e1c5c32cd7b7817c`.
+Ejecución: https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42533688228
+(`success`, preflight y signed-export correctos).
+SHA-256 de la IPA: `ab37d76ba2103ac7065d9a9c214215453a2f81c13cde4cff51116f77795741b4`.
+La firma, los entitlements, el perfil y las familias iPhone/iPad se comprobaron
+en el runner; tras recuperar el artefacto se verificaron HMAC, SHA-256 y la
+coincidencia exacta del perfil embebido con el original validado.
+La IPA y el informe se conservaron privadamente. **Todavía no se ha cargado a
+App Store Connect ni procesado en TestFlight**; falta carga con credenciales
+Apple autorizadas y prueba física. No se crearon credenciales de carga.
 
 ## Compilación protegida en GitHub Actions
 
 Se preparó `.github/workflows/sign-pimflextv-ios.yml`. No usa `pull_request_target`
 ni expone credenciales a los trabajos ordinarios de previsualización.
 Se activa únicamente al cambiar `pimflextv-ios/SIGNING_REQUEST.json` en la rama
-`pimflextv-ios-20261029`; ese archivo aún no se ha creado, así que la exportación
-no se ha solicitado. El archivo debe contener un `build_number` entero disponible
-entre 1 y 9999. El código se recupera por el SHA exacto del evento.
+`pimflextv-ios-20261029`. La solicitud existente pide build **3**. El archivo
+debe contener un `build_number` entero disponible entre 1 y 9999. El código se recupera por el SHA exacto del evento.
 
 Antes de firmar, un trabajo macOS comprueba núcleo, validadores y Release sin
 firma. El trabajo de firma usa el entorno `pimflextv-apple-signing`, una identidad
@@ -42,13 +52,25 @@ en llavero temporal y los secretos previstos:
 - `PIMFLEX_SIGNING_P12_PASSWORD`: contraseña de recuperación existente.
 - `PIMFLEX_PROFILE_B64`: perfil App Store Connect validado.
 
-El entorno vacío se creó con ID **26657933808**. **Su protección y secretos
-todavía no están configurados**: la revisión automática bloqueó guardar al
-propietario `Pinedainsurancegroup` como revisor por requerir autorización
-específica. Antes de cargar secretos se deben guardar/verificar ese revisor,
-la restricción a la rama exacta y la desactivación de la omisión de reglas por
-administradores. La autorización debe cubrir también el acceso del compilador
-macOS a estos tres secretos para firmar PIMFLEX TV.
+Juan autorizó y se verificó el entorno **26657933808** con el propietario
+`Pinedainsurancegroup` como revisor requerido, sólo la rama exacta
+`pimflextv-ios-20261029` permitida y sin omisión de reglas por administradores.
+Los tres secretos están configurados. Su uso en macOS para firmar está autorizado;
+no volver a solicitar esa autorización. La aprobación del trabajo libera el acceso
+a la identidad únicamente a esta ejecución protegida.
+
+El PKCS#12 persistido conserva su cifrado moderno. El importador de Apple rechazó
+ese formato; el runner lo convierte a un envoltorio compatible SHA-1/3DES sólo de
+forma temporal antes de importar en su llavero efímero. La clave en claro pasa por
+memoria y no se escribe en disco. Se conserva el mismo certificado y clave.
+La conversión local verificó que ambos coinciden. El identificador UUID se conserva
+exactamente como lo emite Apple, sin cambiar mayúsculas/minúsculas. La instalación
+del perfil usa la carpeta nueva de Xcode 16 o posterior.
+
+La exportación protegida selecciona Xcode **26.3** e iOS SDK **26.2** en macOS 15.
+El preflight verifica Xcode/SDK 26 o posterior y la IPA debe contener DTSDKName de
+iOS 26 o posterior. La versión predeterminada Xcode 16.4 del runner no satisface
+las cargas actuales de App Store Connect; no usarla para una entrega TestFlight.
 
 El resultado se cifra con AES-256-CBC/PBKDF2 y se autentica con HMAC-SHA256
 usando derivaciones separadas de la contraseña privada existente. Sólo se suben
@@ -61,7 +83,7 @@ No se sube a Apple ni se publica automáticamente.
 ## Preparación de exportación manual
 
 `scripts/archive-signed.sh` prepara un archivo Release y exporta una IPA para
-App Store Connect en macOS. Se necesita Xcode, XcodeGen y Python 3, una identidad
+App Store Connect en macOS. Se necesita Xcode 26 o posterior con SDK iOS 26 o posterior, XcodeGen y Python 3, una identidad
 Apple Distribution con su clave privada ya instalada en el llavero, y un perfil
 App Store Connect válido del App ID. La instalación/custodia de la identidad
 debe resolverse de forma privada antes de ejecutar el script.
@@ -87,15 +109,15 @@ bash pimflextv-ios/scripts/archive-signed.sh
 
 La huella se obtiene con `security find-identity -v -p codesigning` en el Mac
 que tiene la identidad instalada. No pegar contraseñas o claves en comandos,
-chat, commits, issues ni archivos de configuración públicos. Antes de configurar
-un runner de CI con la identidad, acordar el acceso y usar secretos privados
-protegidos; no se ha configurado ese acceso en esta tarea.
+chat, commits, issues ni archivos de configuración públicos. El runner autorizado
+usa los secretos del entorno protegido descrito arriba.
 
 ## Validación y límites
 
 Las pruebas de `scripts/tests/test_signing_profile.py` ejercitan el rechazo de
 perfiles de otro equipo/app, caducados, de desarrollo, Ad Hoc, Enterprise y de
-otra identidad. Tres pruebas adicionales comprueban cifrado/recuperación y
+otra identidad. Una comprobación conserva la forma exacta del UUID y rechaza formatos no canónicos.
+Tres pruebas adicionales comprueban cifrado/recuperación y
 rechazo de alteraciones o contraseñas incorrectas en los artefactos. Se pueden ejecutar con:
 
 ```bash
@@ -105,12 +127,15 @@ bash -n scripts/archive-signed.sh
 ```
 
 Los perfiles de prueba son sintéticos; no contienen certificados reales ni
-claves. La exportación Xcode con firma no se ha ejecutado: falta aprobar y configurar
-la custodia y el acceso del runner macOS a los secretos. Una IPA exportada para App Store Connect se instala mediante
+claves. La exportación firmada real terminó correctamente en la ejecución 42533688228,
+con 26 pruebas del núcleo y 10 pruebas de firma correctas en el preflight. Una IPA exportada para App Store Connect se instala mediante
 TestFlight después de su carga/procesamiento; no es una instalación directa por
 descarga. La carga, el procesamiento y la prueba física siguen pendientes.
 
 Fuentes oficiales:
+- https://cryptography.io/en/latest/hazmat/primitives/asymmetric/serialization/
+- https://developer.apple.com/documentation/xcode-release-notes/xcode-16-release-notes
+- https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds
 - https://support.apple.com/en-us/126047
 - https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
 - https://developer.apple.com/help/account/provisioning-profiles/create-an-app-store-provisioning-profile/

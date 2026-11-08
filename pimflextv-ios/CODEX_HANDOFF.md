@@ -1,46 +1,72 @@
 # Continuidad de APP PIMFLEXTV en Codex
 
-### Autorización de ficha interna y sesión — 2026-11-08
+## Estado actual de firma — 2026-11-08
 
-Juan respondió expresamente «si autorizo» a la creación de la ficha interna PIMFLEX TV en App Store Connect, vinculada a com.pimflextv.ios, para TestFlight y sin publicación. Esta autorización ya está concedida: no pedirla nuevamente. Al retomar «Nueva app», App Store Connect redirigió a /login; no se llegó al formulario ni se creó ficha. La sesión Developer también estaba esperando inicio de sesión. Retomar tras autenticar en el navegador en la nube; reutilizar la clave cifrada y CSR ya guardados. No confundir las pantallas conservadas con sesiones vigentes.
+La IPA **0.3.0 / build 3** universal se exportó y validó en macOS con
+Xcode **26.3**, SDK **iOS 26.2**, commit
+`5f6323b6acab811a77d38144e1c5c32cd7b7817c`.
+Ejecución: https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42533688228
+(`success`, preflight y signed-export correctos).
+SHA-256 de la IPA: `ab37d76ba2103ac7065d9a9c214215453a2f81c13cde4cff51116f77795741b4`.
+La firma, los entitlements, el perfil y las familias iPhone/iPad se comprobaron
+en el runner; tras recuperar el artefacto se verificaron HMAC, SHA-256 y la
+coincidencia exacta del perfil embebido con el original validado.
+La IPA y el informe se conservaron privadamente. **Todavía no se ha cargado a
+App Store Connect ni procesado en TestFlight**; falta carga con credenciales
+Apple autorizadas y prueba física. No se crearon credenciales de carga.
 
-### Material validado y compilación protegida preparada — 2026-11-08
+## Autorizaciones y custodia vigentes
 
-Juan adjuntó el certificado y el perfil oficiales. La clave pública del certificado coincide con la del CSR y la clave privada cifrada existente. Se verificó la firma CMS del perfil y su cadena contra Apple Root CA, huella SHA-256 B0B1730ECBC7FF4505142C49F1295E6EDA6BCAED7E2C68C5BE91B5A11001F024 publicada por Apple. Perfil UUID `ED0CBB48-09A0-4031-A16F-DB7C242C3181`, equipo/App ID correctos, un único certificado, vigentes hasta 2027-11-08. Se creó y comprobó el PKCS#12 cifrado sin cambiar la clave. Materiales y contraseña permanecen privados.
+La membresía individual se confirmó activa en correos oficiales y el portal,
+vigente hasta 2027-11-08; Team ID `U47SH3LZM6`. El App ID explícito es
+`com.pimflextv.ios`. App Store Connect contiene la ficha interna **PIMFLEX TV**,
+Apple ID **6832365413**, SKU `PIMFLEXTV-IOS`, Español (México), plataforma iOS.
+La versión inicial de ficha es 1.0, «En preparación para el envío»; el código
+candidato es 0.3.0/build 3. No hubo publicación ni envío a revisión.
 
-Se preparó el workflow protegido `.github/workflows/sign-pimflextv-ios.yml` y `scripts/signing_artifact.py`. La firma no está activada: falta el archivo de solicitud, no se han enviado secretos ni configurado acceso a ellos. Nueve pruebas locales, sintaxis shell, YAML y Python incrustado correctos. La exportación firmada macOS sigue pendiente. Artefactos públicos sólo cifrados y autenticados; sin subida automática a Apple.
+Juan aceptó personalmente los acuerdos y autorizó expresamente la ficha interna,
+la identidad Apple Distribution y el acceso de GitHub Actions macOS a los tres
+secretos de firma. El entorno `pimflextv-apple-signing` (**26657933808**) quedó
+configurado y verificado: revisor propietario `Pinedainsurancegroup`, rama exacta
+`pimflextv-ios-20261029`, sin omisión por administradores. Secretos:
+`PIMFLEX_SIGNING_P12_B64`, `PIMFLEX_SIGNING_P12_PASSWORD`,
+`PIMFLEX_PROFILE_B64`. Esta autorización ya está concedida; no pedirla otra vez.
+No incluye publicación en App Store, merge, otras claves ni cambios de credenciales.
 
-Se comprobó sesión GitHub autorizada y se creó el entorno vacío `pimflextv-apple-signing`, ID 26657933808. La revisión automática rechazó guardar la protección que designa a `Pinedainsurancegroup` como revisor por falta de autorización específica del destinatario/recurso/alcance. No se guardaron protecciones ni secretos. Solicitar una única autorización concreta para configurar revisor propietario, restricción a `pimflextv-ios-20261029`, no omitir protecciones, guardar los tres secretos indicados en SIGNING.md y utilizarlos en el runner macOS para firmar. Tras esa confirmación, verificar primero la protección guardada y sólo entonces cargar los secretos. No pedir datos secretos por chat. No ampliar esa autorización a publicación en App Store ni creación de otras claves.
+Identidad única Apple Distribution **4FQY49J2JC**, SHA-1
+`8C2189D902AEA4E06493D80603886E98E1A35BD6`; perfil
+**PIMFLEX TV App Store 2026**, ID **92LSL5KN37**, UUID exacto
+`ed0cbb48-09a0-4031-a16f-db7c242c3181`, ambos hasta 2027-11-08.
+El certificado, CSR y clave original coinciden. El CMS del perfil y su cadena se
+verificaron con Apple Root CA, huella contrastada con Apple. Se mantienen el
+PKCS#12 moderno cifrado, la clave PKCS#8 cifrada y su recuperación por separado
+en un respaldo privado. No regenerar identidades ni perfiles duplicados.
 
-### Registros Apple creados — 2026-11-08
+## Proceso validado y siguiente paso
 
-La sesión pudo reutilizarse tras la nueva autenticación y recarga normal de las páginas. No se observó evidencia que permitiera atribuir los errores anteriores a bots ni se modificaron controles de seguridad.
+El workflow protegido se activa sólo al modificar `SIGNING_REQUEST.json` en
+esta rama. Recupera el SHA exacto, comprueba Xcode/SDK 26 o posterior, ejecuta
+pruebas y Release sin firma, espera revisión del propietario y firma con llavero
+temporal. El PKCS#12 moderno se convierte a formato compatible sólo dentro del
+runner, sin escribir claves en claro. Se conserva el UUID exacto de Apple, emitido en minúsculas. Tras el error de perfil
+no encontrado se retiró su conversión a mayúsculas y se seleccionó Xcode 26.3.
+La salida pública de Actions contiene únicamente un artefacto cifrado y autenticado
+con retención de un día; la IPA recuperada permanece privada. La limpieza de
+llavero y archivos temporales terminó correctamente.
 
-Se creó y verificó en la lista de Apps la ficha interna **PIMFLEX TV**, Apple ID **6832365413**, Bundle ID `com.pimflextv.ios`, SKU `PIMFLEXTV-IOS`, idioma principal Español (México), plataforma iOS universal para iPhone/iPad. Su versión inicial de ficha es 1.0, estado «En preparación para el envío»; el código candidato sigue siendo 0.3.0/build 3. No se envió a revisión ni se publicó.
+El preflight final pasó **26 tests del núcleo + 10 de firma**, y la exportación
+firmada pasó con Xcode 26.3/iOS SDK 26.2. Las comprobaciones completas de interfaz
+anteriores (iPhone, iPad mini y iPad Pro) pasaron en 42532088588; la compilación
+sin firma y iPad mini de d1be897 también pasaron. No afirmar pruebas físicas ni
+de proveedor real, ni pruebas de interfaz en iOS 26: siguen pendientes.
 
-Apple emitió el certificado **Apple Distribution**, ID **4FQY49J2JC**, válido hasta **2027-11-08**, usando el CSR de la clave ya respaldada. La lista Certificates mostró exactamente un certificado Distribution. También se generó el perfil **PIMFLEX TV App Store 2026**, ID **92LSL5KN37**, tipo App Store, del App ID explícito `U47SH3LZM6.com.pimflextv.ios`, con ese único certificado y el mismo vencimiento.
-
-**Pendiente concreto:** las descargas oficiales fallaron en el navegador en la nube. El certificado falló con descarga normal y con la alternativa documentada `downloadMedia`; el perfil falló con descarga normal. No se obtuvo ninguno de los archivos. La inspección del historial interno de descargas fue bloqueada por la política del navegador; no intentar rutas alternativas para esa inspección. Se necesita recuperar el `.cer` y el `.mobileprovision` oficiales, mediante descarga manual del propietario si sigue fallando la descarga disponible. No crear certificados o perfiles duplicados.
-
-El respaldo privado de la clave/CSR se actualizó con estos identificadores; no incluye los archivos emitidos, aún no descargados. Falta comparar la clave pública del certificado con la clave/CSR, validar criptográficamente el perfil, preparar el PKCS#12 privado e instalar los materiales en un Mac/runner autorizado. No se generó IPA ni se cargó una compilación a TestFlight. La custodia/acceso de secretos del runner sigue sin configurarse.
-
-### Exportación firmada preparada — 2026-11-08
-
-Se añadieron `scripts/archive-signed.sh`, el validador `scripts/signing_profile.py`, seis pruebas de perfiles sintéticos y `SIGNING.md`. El script requiere una identidad Apple Distribution ya instalada y un perfil App Store Connect válido. Genera archivo Release/exportación local y verifica firma, equipo, App ID, perfil y familias iPhone/iPad; no genera credenciales ni sube/publica la app. Las seis pruebas y `bash -n` pasaron en Linux; el workflow de previsualización ahora ejecuta esos controles también. **La exportación firmada en macOS aún no se ha ejecutado** porque no hay certificado emitido/perfil confirmado. No confundir estas pruebas con una IPA disponible.
-
-Tras el último «ya inicié sesión», Certificates seguía mostrando la pantalla de inicio, pero su siguiente consulta volvió a responder «Your session has expired». Una página fresca de Account redirigió al inicio de sesión. App Store Connect seguía en /login. El bloqueo de sesión persiste: no asumir que las páginas conservadas acreditan autenticación ni crear claves nuevas al retomar.
-
-## Firma Apple — 2026-11-08 (California)
-
-La activación fue confirmada por los correos oficiales de bienvenida de Apple Developer y App Store Connect. Tras el inicio de sesión realizado por Juan, el portal oficial muestra membresía individual vigente hasta el 8 de noviembre de 2027 y Team ID `U47SH3LZM6`. Certificates, Identifiers & Profiles está accesible.
-
-Se registró y verificó en la lista de Apple el App ID explícito **PIMFLEX TV**, `com.pimflextv.ios`, para el producto universal existente. No se habilitaron capacidades adicionales opcionales. `project.yml` ahora configura `DEVELOPMENT_TEAM: U47SH3LZM6` en el target de aplicación. No cambian las versiones ni el núcleo.
-
-Juan autorizó expresamente crear el certificado Apple Distribution y su clave privada. Se generó una única clave RSA 2048 cifrada en PKCS#8 y un CSR SHA-256 cuya firma fue verificada. La clave cifrada, el CSR y los metadatos se respaldaron privadamente; la contraseña de recuperación quedó en un archivo privado separado. No regenerar la clave ni el CSR al retomar. Apple recibió el archivo CSR en el formulario, pero al pulsar Continue mostró «Your session has expired. Please log in.». Una consulta fresca de Certificates también redirigió al inicio de sesión. **La emisión no está confirmada**: inspeccionar primero la lista y comparar la clave pública antes de reintentar, para evitar certificados duplicados. No enviar materiales privados por chat, PR, commits o artefactos públicos. Antes de usar CI con firma, acordar custodia privada y acceso del runner a los materiales; no guardar secretos de firma en el repositorio público.
-
-Juan informó que aceptó los términos de App Store Connect; la inspección posterior confirmó acceso a Apps, sin el acuerdo bloqueante y con la lista vacía. La revisión automática bloqueó iniciar «Nueva app» por considerar que la creación de la ficha no estaba incluida en la autorización de firma. Se necesita autorización específica para crear la ficha interna de PIMFLEX TV vinculada al App ID existente; esto no equivale a publicación. No se creó ficha, perfil ni IPA; no se publicó en TestFlight/App Store ni se repitieron pagos. El CI 42527378218 confirmó success para el commit 29f2a56ebf0cf14275c4c2dbf695cd6284c4193c, que añade DEVELOPMENT_TEAM. Sigue siendo compilación sin firma.
-
-Continuación: resolver los términos y la autorización de firma, generar/custodiar la identidad Apple Distribution y el perfil App Store Connect del App ID registrado; configurar compilación/exportación firmada en macOS y validar la IPA antes de distribuirla. Reutilizar el producto universal y preservar el PR #6 en borrador.
+Siguiente paso: cargar la IPA privada a la ficha existente mediante
+Transporter/Xcode con autenticación Apple autorizada, esperar procesamiento y
+habilitar una prueba interna en TestFlight. No hay credenciales de carga
+configuradas en CI. No pedir contraseñas, códigos ni claves por chat, ni tratar
+la IPA App Store Connect como instalación directa. No repetir pagos ni aceptar
+acuerdos por el propietario. Conservar PR #6 en borrador y las exclusiones de
+otros proyectos descritas abajo.
 
 ## Ampliación iPad — 2026-11-08 (California)
 
@@ -48,7 +74,7 @@ El propietario solicita Android, iPhone e iPad, con toda la programación en Cod
 
 Cierre técnico: código `2eeeea894d3cdbfad5112914a85ec7949d3101d7`, CI https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42467076147, resultado `success`: 26 pruebas de núcleo, 6 UI iPhone, 10 UI iPad mini y 10 UI iPad Pro, sin fallos. Debug simulador y Release universal sin firma correctos. Las cuatro pruebas exclusivas iPad se omiten en iPhone. Capturas finales exportadas; revisión visual del catálogo y cuatro pantallas. El registro posterior sólo cambia Markdown. Continuar desde HEAD remoto, preservando estas mejoras; pendiente firma y prueba física/proveedor.
 
-Juan informa que ya pagó la membresía y espera activación. Esta tarea no revisa ni modifica la cuenta Apple, los acuerdos, certificados o App Store Connect. No tomar ese pago reportado como confirmación técnica de activación.
+La membresía Apple Developer se confirmó activa posteriormente mediante correos oficiales y el portal; véase el estado de firma al comienzo.
 
 ## Objetivo del propietario
 
@@ -87,4 +113,4 @@ Resolver las diferencias de `PARITY.md`, empezando por login/reproducción con e
 
 El control estricto de redirecciones revisado corresponde a las peticiones API y a la descarga M3U por `APIClient`: rechaza cambios de origen y degradaciones de HTTPS a HTTP. Las cargas nativas multimedia de AVPlayer y las imágenes de `AsyncImage` requieren comprobación propia; ese control no certifica su comportamiento.
 
-La cuenta Apple Developer y la firma seguían sin estar disponibles al iniciar esta revisión. No pedir contraseñas, certificados privados o tokens por chat o en un PR público. Preparar el código y las pruebas antes de solicitar la intervención necesaria para la distribución.
+No pedir contraseñas, certificados privados o tokens por chat o en un PR público. Reutilizar la identidad y el entorno protegido existentes.
