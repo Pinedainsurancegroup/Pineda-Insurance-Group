@@ -54,9 +54,6 @@ jobs:
     timeout-minutes: 35
     environment: pimflextv-apple-signing
     env:
-      SIGNING_DIR: ${{ runner.temp }}/pimflex-private-signing
-      PIMFLEX_EXPORT_DIR: ${{ runner.temp }}/pimflex-signed
-      PIMFLEX_PROFILE_PATH: ${{ runner.temp }}/pimflex-private-signing/PIMFLEXTV.mobileprovision
       PIMFLEX_SIGNING_IDENTITY: 8C2189D902AEA4E06493D80603886E98E1A35BD6
       PIMFLEX_BUILD_NUMBER: ${{ needs.preflight.outputs.build_number }}
     defaults:
@@ -68,8 +65,12 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Install build tooling before importing credentials
-        run: brew install xcodegen
+      - name: Prepare private paths and build tooling before importing credentials
+        run: |
+          printf 'SIGNING_DIR=%s/pimflex-private-signing\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'PIMFLEX_EXPORT_DIR=%s/pimflex-signed\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'PIMFLEX_PROFILE_PATH=%s/pimflex-private-signing/PIMFLEXTV.mobileprovision\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          brew install xcodegen
       - name: Import private signing identity into temporary keychain
         env:
           P12_B64: ${{ secrets.PIMFLEX_SIGNING_P12_B64 }}
