@@ -12,11 +12,29 @@ Base de código: `6d690679e7accf4514118579328b300c1b2aacb6`, rama `pimflextv-ios
 - Datos y ancho de muestra disponibles sólo con `DEBUG` y `--ui-testing`.
 - CI: 26 regresiones del núcleo, compilación universal Debug para simulador y Release sin firma, seis pruebas UI existentes y cuatro pruebas iPad en mini y Pro grande. En iPhone se omiten las cuatro exclusivas de iPad.
 
-## Estado de validación
+## Validación completada — 2026-11-08 (California)
 
-Comprobaciones locales: configuración universal y plist revisados, referencias de assets comprobadas, formato del workflow y cambios de código revisados. Este entorno Linux no dispone de Swift/Xcode. Los resultados Mac del nuevo commit se registrarán después de su ejecución; el CI anterior de iPhone no certifica esta candidata.
+Código validado: `2eeeea894d3cdbfad5112914a85ec7949d3101d7`.
+Mac CI: https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42467076147 — resultado global `success`.
 
-La prueba de 390 pt limita el contenido en el simulador: no automatiza Split View/Stage Manager. Rotación y conservación de filtros se comprueban en ambos iPad. No hay transmisión real en las pruebas ficticias.
+| Comprobación | Resultado |
+| --- | --- |
+| Núcleo Swift Package | 26 pruebas, 0 fallos |
+| Simulador universal Debug | Compilación correcta |
+| Dispositivos iPhone/iPad Release, sin firma | Compilación correcta |
+| iPhone 16 Pro | 6 pruebas UI, 0 fallos; las 4 exclusivas iPad se omiten |
+| iPad mini (A17 Pro) | 10 pruebas UI, 0 fallos |
+| iPad Pro 13-inch (M4) | 10 pruebas UI, 0 fallos |
+
+Las pruebas verifican login local, navegación, usuarios guardados, búsqueda/favoritos, episodios, selección y audio exclusivo de pantalla múltiple. Las pruebas iPad añaden conservación de categoría/búsqueda al girar, carátulas 2:3, contenido limitado a 390 pt y controles de las cuatro pantallas visibles en horizontal. Las capturas finales de ambos iPad se exportaron para revisión visual.
+
+La revisión visual de iPad mini y iPad Pro confirmó que las cuatro pantallas y sus controles quedan completos en horizontal y que el dashboard conserva el arte original. La grilla de Cine muestra las categorías a la izquierda y carátulas sin estirar. Los errores de identificadores detectados en la primera ejecución fueron corregidos antes del CI satisfactorio.
+
+La prueba de 390 pt limita el contenido en el simulador: no automatiza Split View/Stage Manager. No hay autenticación ni transmisión real en estas pruebas ficticias. Este entorno Linux no ejecutó Xcode localmente; las compilaciones y pruebas provienen del CI Mac indicado.
+
+Los 62 archivos del núcleo, reproductor individual y recursos se compararon con la base de iPhone y permanecen idénticos. Las clases de reproducción/audio de pantalla múltiple también se preservan; sólo cambia su disposición visual. Android, PAG y Taty no tienen cambios.
+
+Una actualización posterior de este registro modifica sólo Markdown; el SHA ejecutable probado sigue siendo el indicado arriba.
 
 ## Pendiente para instalar y distribuir
 
