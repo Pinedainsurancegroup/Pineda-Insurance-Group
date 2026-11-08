@@ -4,6 +4,12 @@
 
 Juan respondió expresamente «si autorizo» a la creación de la ficha interna PIMFLEX TV en App Store Connect, vinculada a com.pimflextv.ios, para TestFlight y sin publicación. Esta autorización ya está concedida: no pedirla nuevamente. Al retomar «Nueva app», App Store Connect redirigió a /login; no se llegó al formulario ni se creó ficha. La sesión Developer también estaba esperando inicio de sesión. Retomar tras autenticar en el navegador en la nube; reutilizar la clave cifrada y CSR ya guardados. No confundir las pantallas conservadas con sesiones vigentes.
 
+### Exportación firmada preparada — 2026-11-08
+
+Se añadieron `scripts/archive-signed.sh`, el validador `scripts/signing_profile.py`, seis pruebas de perfiles sintéticos y `SIGNING.md`. El script requiere una identidad Apple Distribution ya instalada y un perfil App Store Connect válido. Genera archivo Release/exportación local y verifica firma, equipo, App ID, perfil y familias iPhone/iPad; no genera credenciales ni sube/publica la app. Las seis pruebas y `bash -n` pasaron en Linux; el workflow de previsualización ahora ejecuta esos controles también. **La exportación firmada en macOS aún no se ha ejecutado** porque no hay certificado emitido/perfil confirmado. No confundir estas pruebas con una IPA disponible.
+
+Tras el último «ya inicié sesión», Certificates seguía mostrando la pantalla de inicio, pero su siguiente consulta volvió a responder «Your session has expired». Una página fresca de Account redirigió al inicio de sesión. App Store Connect seguía en /login. El bloqueo de sesión persiste: no asumir que las páginas conservadas acreditan autenticación ni crear claves nuevas al retomar.
+
 ## Firma Apple — 2026-11-08 (California)
 
 La activación fue confirmada por los correos oficiales de bienvenida de Apple Developer y App Store Connect. Tras el inicio de sesión realizado por Juan, el portal oficial muestra membresía individual vigente hasta el 8 de noviembre de 2027 y Team ID `U47SH3LZM6`. Certificates, Identifiers & Profiles está accesible.
