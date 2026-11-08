@@ -4,6 +4,14 @@
 
 Juan respondió expresamente «si autorizo» a la creación de la ficha interna PIMFLEX TV en App Store Connect, vinculada a com.pimflextv.ios, para TestFlight y sin publicación. Esta autorización ya está concedida: no pedirla nuevamente. Al retomar «Nueva app», App Store Connect redirigió a /login; no se llegó al formulario ni se creó ficha. La sesión Developer también estaba esperando inicio de sesión. Retomar tras autenticar en el navegador en la nube; reutilizar la clave cifrada y CSR ya guardados. No confundir las pantallas conservadas con sesiones vigentes.
 
+### Material validado y compilación protegida preparada — 2026-11-08
+
+Juan adjuntó el certificado y el perfil oficiales. La clave pública del certificado coincide con la del CSR y la clave privada cifrada existente. Se verificó la firma CMS del perfil y su cadena contra Apple Root CA, huella SHA-256 B0B1730ECBC7FF4505142C49F1295E6EDA6BCAED7E2C68C5BE91B5A11001F024 publicada por Apple. Perfil UUID `ED0CBB48-09A0-4031-A16F-DB7C242C3181`, equipo/App ID correctos, un único certificado, vigentes hasta 2027-11-08. Se creó y comprobó el PKCS#12 cifrado sin cambiar la clave. Materiales y contraseña permanecen privados.
+
+Se preparó el workflow protegido `.github/workflows/sign-pimflextv-ios.yml` y `scripts/signing_artifact.py`. La firma no está activada: falta el archivo de solicitud, no se han enviado secretos ni configurado acceso a ellos. Nueve pruebas locales, sintaxis shell, YAML y Python incrustado correctos. La exportación firmada macOS sigue pendiente. Artefactos públicos sólo cifrados y autenticados; sin subida automática a Apple.
+
+Se comprobó sesión GitHub autorizada y se creó el entorno vacío `pimflextv-apple-signing`, ID 26657933808. La revisión automática rechazó guardar la protección que designa a `Pinedainsurancegroup` como revisor por falta de autorización específica del destinatario/recurso/alcance. No se guardaron protecciones ni secretos. Solicitar una única autorización concreta para configurar revisor propietario, restricción a `pimflextv-ios-20261029`, no omitir protecciones, guardar los tres secretos indicados en SIGNING.md y utilizarlos en el runner macOS para firmar. Tras esa confirmación, verificar primero la protección guardada y sólo entonces cargar los secretos. No pedir datos secretos por chat. No ampliar esa autorización a publicación en App Store ni creación de otras claves.
+
 ### Registros Apple creados — 2026-11-08
 
 La sesión pudo reutilizarse tras la nueva autenticación y recarga normal de las páginas. No se observó evidencia que permitiera atribuir los errores anteriores a bots ni se modificaron controles de seguridad.

@@ -8,25 +8,55 @@ No generar otra clave al retomar ni incluir material privado en este repositorio
 
 ## Estado verificable
 
-Se creó la ficha interna PIMFLEX TV, Apple ID **6832365413**, en Español
-(México), SKU `PIMFLEXTV-IOS`, del Bundle ID existente. Está en preparación
-para el envío, sin publicación ni compilaciones cargadas.
+La ficha interna **PIMFLEX TV**, Apple ID **6832365413**, está creada en App
+Store Connect (Español México, SKU `PIMFLEXTV-IOS`), sin publicación.
+El certificado Apple Distribution **4FQY49J2JC** y el perfil
+**PIMFLEX TV App Store 2026** (**92LSL5KN37**) vencen el **8 de noviembre de 2027**.
 
-Apple emitió el certificado Apple Distribution **4FQY49J2JC** y generó el
-perfil **PIMFLEX TV App Store 2026**, ID **92LSL5KN37**, del App ID explícito
-`U47SH3LZM6.com.pimflextv.ios`. Ambos vencen el **8 de noviembre de 2027**.
-Se usó el CSR existente y se verificó la presencia de un único certificado.
+El propietario adjuntó los dos archivos oficiales. Se comprobó que:
+- El certificado, el CSR y la clave privada existente comparten la misma clave pública.
+- La firma CMS del perfil es válida y su cadena se verifica contra Apple Root CA,
+  con huella SHA-256 contrastada con la lista oficial de Apple.
+- El perfil UUID `ED0CBB48-09A0-4031-A16F-DB7C242C3181` corresponde al App ID
+  explícito `U47SH3LZM6.com.pimflextv.ios`, al equipo correcto y al certificado
+  seleccionado; es App Store Connect, no desarrollo/Ad Hoc/Enterprise.
+- Se creó un PKCS#12 cifrado y se verificó su recuperación. La clave no cambió.
 
-Las descargas de los dos archivos fallaron en el navegador en la nube.
-Aún se necesitan los archivos oficiales `.cer` y `.mobileprovision`.
-No se ha comparado la clave pública del certificado ni validado el contenido
-del perfil: el registro visible del portal no sustituye esas comprobaciones.
-No crear nuevos certificados, perfiles o claves para resolver la descarga.
-El respaldo privado contiene la clave cifrada y el CSR, con metadatos de los
-registros emitidos, pero todavía no contiene los archivos descargables.
+La huella SHA-1 de la identidad es `8C2189D902AEA4E06493D80603886E98E1A35BD6`.
+El material real y su recuperación se conservan privadamente, fuera del repositorio.
+Todavía no hay IPA firmada ni compilación cargada a TestFlight.
 
-El CI de `29f2a56ebf0cf14275c4c2dbf695cd6284c4193c` aprobó la configuración
-del equipo y la compilación sin firma. Eso no certifica una distribución firmada.
+## Compilación protegida en GitHub Actions
+
+Se preparó `.github/workflows/sign-pimflextv-ios.yml`. No usa `pull_request_target`
+ni expone credenciales a los trabajos ordinarios de previsualización.
+Se activa únicamente al cambiar `pimflextv-ios/SIGNING_REQUEST.json` en la rama
+`pimflextv-ios-20261029`; ese archivo aún no se ha creado, así que la exportación
+no se ha solicitado. El archivo debe contener un `build_number` entero disponible
+entre 1 y 9999. El código se recupera por el SHA exacto del evento.
+
+Antes de firmar, un trabajo macOS comprueba núcleo, validadores y Release sin
+firma. El trabajo de firma usa el entorno `pimflextv-apple-signing`, una identidad
+en llavero temporal y los secretos previstos:
+- `PIMFLEX_SIGNING_P12_B64`: PKCS#12 cifrado.
+- `PIMFLEX_SIGNING_P12_PASSWORD`: contraseña de recuperación existente.
+- `PIMFLEX_PROFILE_B64`: perfil App Store Connect validado.
+
+El entorno vacío se creó con ID **26657933808**. **Su protección y secretos
+todavía no están configurados**: la revisión automática bloqueó guardar al
+propietario `Pinedainsurancegroup` como revisor por requerir autorización
+específica. Antes de cargar secretos se deben guardar/verificar ese revisor,
+la restricción a la rama exacta y la desactivación de la omisión de reglas por
+administradores. La autorización debe cubrir también el acceso del compilador
+macOS a estos tres secretos para firmar PIMFLEX TV.
+
+El resultado se cifra con AES-256-CBC/PBKDF2 y se autentica con HMAC-SHA256
+usando derivaciones separadas de la contraseña privada existente. Sólo se suben
+el resultado cifrado y sus metadatos de autenticación, durante un día. Nunca
+subir IPA en claro, PKCS#12, contraseña, llavero o perfil como artefactos públicos.
+Al terminar se retiran el llavero temporal y los archivos privados del runner.
+La entrega se recupera y descifra privadamente con `scripts/signing_artifact.py`.
+No se sube a Apple ni se publica automáticamente.
 
 ## Preparación de exportación manual
 
@@ -65,7 +95,8 @@ protegidos; no se ha configurado ese acceso en esta tarea.
 
 Las pruebas de `scripts/tests/test_signing_profile.py` ejercitan el rechazo de
 perfiles de otro equipo/app, caducados, de desarrollo, Ad Hoc, Enterprise y de
-otra identidad. Se pueden ejecutar con:
+otra identidad. Tres pruebas adicionales comprueban cifrado/recuperación y
+rechazo de alteraciones o contraseñas incorrectas en los artefactos. Se pueden ejecutar con:
 
 ```bash
 cd pimflextv-ios
@@ -74,12 +105,14 @@ bash -n scripts/archive-signed.sh
 ```
 
 Los perfiles de prueba son sintéticos; no contienen certificados reales ni
-claves. La exportación Xcode con firma no se ha ejecutado: faltan los archivos descargados del certificado
-emitido y del perfil. Una IPA exportada para App Store Connect se instala mediante
+claves. La exportación Xcode con firma no se ha ejecutado: falta aprobar y configurar
+la custodia y el acceso del runner macOS a los secretos. Una IPA exportada para App Store Connect se instala mediante
 TestFlight después de su carga/procesamiento; no es una instalación directa por
 descarga. La carga, el procesamiento y la prueba física siguen pendientes.
 
 Fuentes oficiales:
+- https://support.apple.com/en-us/126047
+- https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
 - https://developer.apple.com/help/account/provisioning-profiles/create-an-app-store-provisioning-profile/
 - https://help.apple.com/xcode/mac/current/en.lproj/devcac6ab5b3.html
 - https://help.apple.com/xcode/mac/current/en.lproj/dev23ea8b877.html
