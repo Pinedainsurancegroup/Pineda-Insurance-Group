@@ -2,6 +2,6 @@
   "build_number": 3,
   "purpose": "PIMFLEX TV iPhone and iPad private signed export",
   "owner_authorized": true,
-  "attempt": 4,
-  "reason": "Validate Xcode major-version detection and temporary Apple-compatible PKCS12 envelope"
+  "attempt": 5,
+  "reason": "Preserve the exact case of Apple's provisioning profile UUID"
 }

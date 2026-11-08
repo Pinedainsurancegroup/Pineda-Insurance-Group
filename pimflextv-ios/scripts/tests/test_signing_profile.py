@@ -23,7 +23,16 @@ class SigningProfileTests(unittest.TestCase):
                 'get-task-allow': False, 'beta-reports-active': True}}
 
     def test_valid_app_store_profile(self):
-        self.assertEqual(module.validate(self.profile, self.identity, self.now), self.profile['UUID'].upper())
+        for profile_uuid in [self.profile['UUID'], self.profile['UUID'].upper()]:
+            with self.subTest(profile_uuid=profile_uuid):
+                self.profile['UUID'] = profile_uuid
+                self.assertEqual(module.validate(self.profile, self.identity, self.now), profile_uuid)
+
+    def test_noncanonical_uuid_rejected(self):
+        for profile_uuid in ['../profile', self.profile['UUID'].replace('-', ''), '{' + self.profile['UUID'] + '}']:
+            with self.subTest(profile_uuid=profile_uuid):
+                self.profile['UUID'] = profile_uuid
+                with self.assertRaises(ValueError): module.validate(self.profile, self.identity, self.now)
 
     def test_wrong_team_and_bundle_rejected(self):
         for field, value in [('application-identifier', 'U47SH3LZM6.com.other.app'),

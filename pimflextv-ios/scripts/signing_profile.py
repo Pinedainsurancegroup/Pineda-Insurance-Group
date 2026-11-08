@@ -42,7 +42,11 @@ def validate(profile, identity, now=None):
                     for cert in profile.get("DeveloperCertificates", []) if isinstance(cert, bytes)}
     if identity.upper() not in fingerprints:
         raise ValueError("The signing identity is not included in the provisioning profile.")
-    profile_uuid = str(uuid.UUID(profile.get("UUID", ""))).upper()
+    profile_uuid = profile.get("UUID", "")
+    canonical_uuid = str(uuid.UUID(profile_uuid))
+    if profile_uuid.lower() != canonical_uuid:
+        raise ValueError("The provisioning profile UUID must use its hyphenated format.")
+    # Xcode matches this identifier as supplied by Apple; preserve its case.
     return profile_uuid
 
 
