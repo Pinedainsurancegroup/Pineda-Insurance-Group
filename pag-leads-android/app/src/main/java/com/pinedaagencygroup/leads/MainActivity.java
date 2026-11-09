@@ -54,8 +54,14 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
-        // Recruitment must not remain readable in Android's recent-apps preview.
+        // Permit owner-requested screenshots in the isolated Staging app only.
+        // Production and other packages continue to block screen capture.
+        if (StagingPolicy.allowsScreenshots(getPackageName())) {
+            getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+        } else {
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+        }
+        // Keep the recent-apps preview blocked where Android supports it.
         if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false);
         authGate = new PAGAuthGate(this, new PAGAuthGate.Listener() {
             @Override public void onOwnerVerified() {
