@@ -30,10 +30,10 @@
 | MKV/AVI y motores Android | No incorporados | Motor iOS o transcodificación y compatibilidad |
 | Stalker, WHMCS, notificaciones, código TV | Pendiente | Servicios y configuración propios |
 | Respaldo Android `.pimbackup` | No importado | Compatibilidad de formato y cifrado |
-| Distribución | Código, proyecto Xcode, icono y CI | Firma Apple, pruebas reales, ficha/privacidad y TestFlight |
+| Distribución | IPA universal firmada; carga Apple COMPLETE y build VALID; grupo interno del titular creado | Aprobación de declaración de cifrado, habilitar TestFlight, pruebas físicas y ficha/privacidad |
 
 La pantalla de acceso muestra la URL del servidor porque todavía no se ha establecido una configuración de proveedor verificable para ocultarla. Algunos controles de la referencia se adaptan a navegación y controles nativos de iOS. Los datos de muestra usados para pruebas están aislados detrás de `#if DEBUG` y no demuestran funcionamiento de un servicio real.
 
 ## Criterio de finalización
 
-No etiquetar esta candidata como clon completo o app instalable hasta cerrar la comparación visual, probar la cuenta y los streams reales, resolver las funciones solicitadas pendientes y generar una distribución Apple firmada. CI sólo certifica lo que sus pasos y artefactos muestran para el SHA exacto.
+No etiquetar esta candidata como clon completo o app instalable hasta cerrar la comparación visual, probar la cuenta y los streams reales, resolver las funciones solicitadas pendientes y habilitar la distribución TestFlight de la IPA Apple ya firmada y procesada. CI sólo certifica lo que sus pasos y artefactos muestran para el SHA exacto.

@@ -1,16 +1,18 @@
 # Continuidad de APP PIMFLEXTV en Codex
 
-## Continuación para instalar en iPad — 2026-11-09 (UTC)
+## Continuación para instalar en iPad — 2026-11-09
 
-Se mantiene la IPA privada universal 0.3.0/build 3 ya firmada y validada. No se recompiló ni se modificó el ejecutable. El propietario autorizó expresamente crear una clave API de equipo con rol Desarrollador, custodiarla privadamente y usarla para cargar PIMFLEX TV a TestFlight. No volver a pedir autorización para ese uso ya aprobado.
+El propietario autorizó expresamente revocar la clave de carga que no pudo recuperarse y crear una sustituta con el mismo rol Desarrollador. La anterior quedó **Anulada** y **PIMFLEX TV TestFlight Upload 2** quedó **Activa**. Esta vez se recuperaron y verificaron sus bytes P-256 inmediatamente; se comprobó la recuperación de un respaldo PKCS#8 cifrado y se conservaron privadamente `PIMFLEX_Apple_Upload_Private_20261109.zip` y `PIMFLEX_Apple_Upload_Recovery_20261109.txt` por separado. No volver a crear claves, identidades, perfiles ni pagos. No se añadió la clave API a GitHub ni a CI.
 
-Se creó **PIMFLEX TV TestFlight Upload**. El portal muestra **Activa (1)** y acceso **Desarrollador**. La descarga única emitió un evento completado y devolvió una ruta, pero el archivo no existe en esa ruta ni en su correspondiente carpeta compartida. No se recuperaron bytes de la clave, no hay respaldo utilizable y no se generó ningún JWT. No afirmar que la clave quedó respaldada. La captura posterior sí se guardó y sincronizó: el problema observado corresponde al archivo descargado, no a toda la carpeta compartida.
+Se cargó la **misma IPA universal 0.3.0 / build 3** ya firmada, sin recompilar ni modificar el ejecutable. Se volvió a comprobar su SHA-256 y su plist antes de enviarla. La API oficial creó la carga y el archivo con HTTP 201; la transferencia terminó HTTP 200 y la confirmación del archivo quedó **COMPLETE**. En esta ejecución el servidor rechazó el checksum SHA_256 y aceptó MD5; el SHA-256 de la IPA se mantiene como comprobación de la entrega original. No repetir la transferencia.
 
-La API oficial es accesible desde el entorno: una petición sin credenciales a la ficha existente respondió HTTP 401 `NOT_AUTHORIZED`, como corresponde. No se envió ninguna credencial. Apple documenta carga REST mediante `buildUploads` y `buildUploadFiles` (WWDC25/324), disponible desde Linux; leer el esquema actual antes de implementar las peticiones. No es necesario recompilar ni cambiar la identidad de firma para cargar la IPA existente.
+Apple terminó el procesamiento con **BuildUpload COMPLETE**, sin errores ni advertencias, y **Build processingState VALID**. ID de carga/build `3dc91609-ea08-426f-bcb1-6053df676dbd`; archivo `308579a3-4f67-4077-b364-d67dc2acd690`. Mínimo iOS 16.0, audiencia APP_STORE_ELIGIBLE, expiración beta 2027-02-07. La vista TestFlight muestra **Versión 0.3.0 / Compilación 3**. No confundir VALID con una app probada físicamente o ya habilitada para instalar.
 
-**Bloqueo actual:** la clave privada de carga no pudo recuperarse después de su descarga única. La clave sigue activa en Apple; no fue revocada ni sustituida. Antes de reemplazarla, obtener confirmación específica para revocar esa clave, acción irreversible. Después emitir una sustituta con el mismo rol, recuperar y verificar sus bytes y su respaldo privado inmediatamente, y sólo entonces cargar la IPA existente. No repetir pagos ni crear otros certificados o perfiles. No introducir claves, JWT o IPA en GitHub.
+Se creó el grupo interno **PIMFLEX TV - Juan**, ID `64f4c997-2789-4c3d-939f-2d877939ab0b`, con distribución automática habilitada y únicamente el titular existente como tester. Todavía tiene cero compilaciones elegibles/añadidas. No se añadió a otras personas ni se habilitó una beta pública.
 
-TestFlight no tiene una compilación cargada por esta sesión. Siguen pendientes carga, procesamiento y prueba física iPad/iPhone. La autorización para código público y firma no incluye publicar en App Store ni fusionar PR #6, que sigue en borrador.
+**Bloqueo actual: MISSING_EXPORT_COMPLIANCE.** Se revisaron Package.swift y los imports/usos del código: no hay dependencias externas; CryptoKit sólo calcula SHA-256 para identificadores, Security usa Keychain y las conexiones HTTPS usan URLSession de Apple. Se preparó en el portal la opción «Ninguno de los algoritmos mencionados anteriormente», que excluye algoritmos propios o estándar implementados fuera del sistema Apple. **Guardar fue rechazado por revisión automática** porque la declaración tiene efecto legal/técnico y exige confirmación del titular. No se guardó, no se modificó Info.plist y no se intentó eludir el bloqueo mediante la API. Obtener aprobación específica del propietario para guardar esta declaración; después verificar cumplimiento, asignar build 3 al grupo y confirmar disponibilidad/invitación antes de pedir prueba física.
+
+La autorización para carga/custodia y su sustitución ya está concedida; no volver a pedirla. La autorización para código público no incluye publicar en App Store ni fusionar PR #6, que permanece en borrador. Mantener privados claves, recuperación, JWT, URLs de transferencia y la IPA. El siguiente paso no requiere repetir compilaciones ni el registro Apple.
 
 ## Estado actual de firma — 2026-11-08
 
@@ -23,9 +25,10 @@ SHA-256 de la IPA: `ab37d76ba2103ac7065d9a9c214215453a2f81c13cde4cff51116f777957
 La firma, los entitlements, el perfil y las familias iPhone/iPad se comprobaron
 en el runner; tras recuperar el artefacto se verificaron HMAC, SHA-256 y la
 coincidencia exacta del perfil embebido con el original validado.
-La IPA y el informe se conservaron privadamente. **Todavía no se ha cargado a
-App Store Connect ni procesado en TestFlight**; falta carga con credenciales
-Apple utilizables y prueba física. La clave de carga creada no pudo recuperarse; véase el bloqueo al comienzo.
+La IPA y el informe se conservaron privadamente. El 2026-11-09 esta IPA se
+cargó a Apple y terminó con estado VALID. Sigue pendiente guardar la información
+de exportación con aprobación del titular y habilitar/probar la instalación física;
+véase el estado al comienzo.
 
 ## Autorizaciones y custodia vigentes
 
@@ -43,7 +46,7 @@ configurado y verificado: revisor propietario `Pinedainsurancegroup`, rama exact
 `pimflextv-ios-20261029`, sin omisión por administradores. Secretos:
 `PIMFLEX_SIGNING_P12_B64`, `PIMFLEX_SIGNING_P12_PASSWORD`,
 `PIMFLEX_PROFILE_B64`. Esta autorización ya está concedida; no pedirla otra vez.
-No incluye publicación en App Store, merge, otras claves ni cambios de credenciales.
+La autorización original de firma no incluye publicación en App Store, merge ni otras credenciales; la autorización posterior de la clave de carga figura al comienzo.
 
 Identidad única Apple Distribution **4FQY49J2JC**, SHA-1
 `8C2189D902AEA4E06493D80603886E98E1A35BD6`; perfil
@@ -72,19 +75,18 @@ anteriores (iPhone, iPad mini y iPad Pro) pasaron en 42532088588; la compilació
 sin firma y iPad mini de d1be897 también pasaron. No afirmar pruebas físicas ni
 de proveedor real, ni pruebas de interfaz en iOS 26: siguen pendientes.
 
-Siguiente paso: cargar la IPA privada a la ficha existente mediante
-la API de carga oficial o Transporter/Xcode con autenticación Apple autorizada y disponible, esperar procesamiento y
-habilitar una prueba interna en TestFlight. No hay credenciales de carga
-configuradas en CI. No pedir contraseñas, códigos ni claves por chat, ni tratar
-la IPA App Store Connect como instalación directa. No repetir pagos ni aceptar
-acuerdos por el propietario. Conservar PR #6 en borrador y las exclusiones de
-otros proyectos descritas abajo.
+Siguiente paso: tras la aprobación específica del propietario, guardar la
+información de cifrado preparada, verificar que desaparece MISSING_EXPORT_COMPLIANCE
+y añadir la compilación válida al grupo interno ya creado. Confirmar que el titular
+puede recibir/abrir su prueba en TestFlight. No hay credenciales de carga configuradas
+en CI. No pedir contraseñas, códigos ni claves por chat. No repetir la carga, pagos,
+firma o procesamiento ya completados. Mantener PR #6 en borrador.
 
 ## Ampliación iPad — 2026-11-08 (California)
 
 El propietario solicita Android, iPhone e iPad, con toda la programación en Codex. Se amplía el producto universal existente; no se crea otro identificador ni se altera la producción Android. Candidata 0.3.0 / build 3: categorías laterales según ancho de ventana, controles compactos al reducirlo y carátulas 2:3. Se agregan cuatro pruebas específicas iPad y CI con iPhone, iPad mini y iPad Pro grande. Las cuatro pantallas se ajustan a la altura disponible en horizontal. El núcleo y las credenciales permanecen intactos. Ver `IPAD_VALIDATION.md`.
 
-Cierre técnico: código `2eeeea894d3cdbfad5112914a85ec7949d3101d7`, CI https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42467076147, resultado `success`: 26 pruebas de núcleo, 6 UI iPhone, 10 UI iPad mini y 10 UI iPad Pro, sin fallos. Debug simulador y Release universal sin firma correctos. Las cuatro pruebas exclusivas iPad se omiten en iPhone. Capturas finales exportadas; revisión visual del catálogo y cuatro pantallas. El registro posterior sólo cambia Markdown. Continuar desde HEAD remoto, preservando estas mejoras; pendiente firma y prueba física/proveedor.
+Cierre técnico: código `2eeeea894d3cdbfad5112914a85ec7949d3101d7`, CI https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42467076147, resultado `success`: 26 pruebas de núcleo, 6 UI iPhone, 10 UI iPad mini y 10 UI iPad Pro, sin fallos. Debug simulador y Release universal sin firma correctos. Las cuatro pruebas exclusivas iPad se omiten en iPhone. Capturas finales exportadas; revisión visual del catálogo y cuatro pantallas. El registro posterior sólo cambia Markdown. Continuar desde HEAD remoto, preservando estas mejoras; la firma y carga posteriores figuran al comienzo; pendiente prueba física/proveedor.
 
 La membresía Apple Developer se confirmó activa posteriormente mediante correos oficiales y el portal; véase el estado de firma al comienzo.
 

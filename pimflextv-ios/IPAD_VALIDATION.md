@@ -36,6 +36,13 @@ Los 62 archivos del núcleo, reproductor individual y recursos se compararon con
 
 Una actualización posterior de este registro modifica sólo Markdown; el SHA ejecutable probado sigue siendo el indicado arriba.
 
-## Pendiente para instalar y distribuir
+## Distribución Apple — 2026-11-09
 
-Confirmar activación del equipo Apple, generar firma válida, probar cuenta/streams y reproducción en dispositivos físicos iPhone/iPad, completar los pendientes funcionales de `PARITY.md` y preparar TestFlight/App Store. Este cambio no completa esos pasos ni genera un IPA firmado. El pago reportado por el propietario no fue comprobado en esta tarea.
+La identidad Apple y la firma ya se completaron. La misma IPA universal 0.3.0/build 3
+se cargó a la ficha existente y Apple confirmó COMPLETE/VALID. No se recompiló en
+esta etapa. El grupo interno del titular está creado. Sigue pendiente la aprobación
+específica para guardar la declaración de cifrado (MISSING_EXPORT_COMPLIANCE),
+habilitar el build al grupo y probar cuenta, streams y reproducción en dispositivos
+físicos iPhone/iPad. Consultar `CODEX_HANDOFF.md` para retomar sin repetir estos pasos.
+Los pendientes funcionales de `PARITY.md` y la ficha/privacidad para distribución
+pública continúan abiertos. No hay publicación en App Store.

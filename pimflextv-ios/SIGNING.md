@@ -33,20 +33,29 @@ SHA-256 de la IPA: `ab37d76ba2103ac7065d9a9c214215453a2f81c13cde4cff51116f777957
 La firma, los entitlements, el perfil y las familias iPhone/iPad se comprobaron
 en el runner; tras recuperar el artefacto se verificaron HMAC, SHA-256 y la
 coincidencia exacta del perfil embebido con el original validado.
-La IPA y el informe se conservaron privadamente. **Todavía no se ha cargado a
-App Store Connect ni procesado en TestFlight**; falta carga con credenciales
-Apple utilizables y prueba física.
+La IPA y el informe se conservaron privadamente. Esta misma IPA se cargó a Apple
+el 2026-11-09 mediante la API oficial: carga COMPLETE y compilación VALID,
+sin errores/advertencias. La beta todavía figura MISSING_EXPORT_COMPLIANCE y
+requiere aprobación del titular para guardar la declaración preparada antes de
+habilitar la instalación y prueba física.
 
-## Clave de carga a TestFlight — 2026-11-09 (UTC)
+## Clave de carga a TestFlight — 2026-11-09
 
 El propietario autorizó creación, custodia privada y uso de una clave API de equipo
-con rol Desarrollador para cargar PIMFLEX TV. Se creó **PIMFLEX TV TestFlight Upload**;
-el portal muestra una clave activa. El archivo de su descarga única no quedó
-disponible en la ruta devuelta ni en la carpeta sincronizada. No hay bytes de clave
-recuperados, JWT ni respaldo utilizable. No se configuró esta clave en CI.
-La clave permanece activa; su revocación irreversible y sustitución requieren
-confirmación específica. Consultar `CODEX_HANDOFF.md` antes de retomar. No volver
-a crear la identidad de firma, pagar la membresía o recompilar para resolverlo.
+con rol Desarrollador para cargar PIMFLEX TV, y posteriormente la revocación y
+sustitución de la primera clave cuya descarga no pudo recuperarse. La anterior
+quedó anulada y **PIMFLEX TV TestFlight Upload 2** activa. La sustituta se recuperó,
+validó como P-256 y respaldó como PKCS#8 cifrado, con recuperación separada y
+verificación de descifrado. No contiene ni requiere otra identidad de firma.
+No se configuró esta clave API en CI ni se incluyó material privado en GitHub.
+
+La API creó `buildUploads` y `buildUploadFiles`, recibió la IPA y confirmó su
+checksum MD5; el SHA-256 coincide con la exportación firmada original. Carga y
+build: `3dc91609-ea08-426f-bcb1-6053df676dbd`. Apple confirmó COMPLETE/VALID.
+Se creó el grupo interno del titular. **Todavía no está habilitada la instalación**:
+la revisión automática bloqueó guardar la declaración de cifrado y solicita
+confirmación específica del titular. Consultar `CODEX_HANDOFF.md` antes de retomar.
+No regenerar claves ni repetir firma, pago, carga o procesamiento ya completados.
 
 ## Compilación protegida en GitHub Actions
 
@@ -141,7 +150,7 @@ Los perfiles de prueba son sintéticos; no contienen certificados reales ni
 claves. La exportación firmada real terminó correctamente en la ejecución 42533688228,
 con 26 pruebas del núcleo y 10 pruebas de firma correctas en el preflight. Una IPA exportada para App Store Connect se instala mediante
 TestFlight después de su carga/procesamiento; no es una instalación directa por
-descarga. La carga, el procesamiento y la prueba física siguen pendientes.
+descarga. La carga y el procesamiento terminaron; siguen pendientes la declaración de cifrado aprobada por el titular, habilitar la prueba interna y la prueba física.
 
 Fuentes oficiales:
 - https://cryptography.io/en/latest/hazmat/primitives/asymmetric/serialization/
