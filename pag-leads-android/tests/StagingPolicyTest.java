@@ -8,6 +8,11 @@ public final class StagingPolicyTest {
         assert !StagingPolicy.accepts("other-project", "301600139735", "1:301600139735:android:abc123");
         assert !StagingPolicy.accepts("pag-leads-staging", "301600139735", null);
         assert !StagingPolicy.accepts("pag-leads-staging", "301600139735", "1:301600139735:android:INVALID");
-        System.out.println("StagingPolicy: authorized project/number, production rejection and malformed app IDs passed");
+        assert StagingPolicy.allowsScreenshots("com.pinedaagencygroup.leads.staging");
+        assert !StagingPolicy.allowsScreenshots("com.pinedaagencygroup.leads");
+        assert !StagingPolicy.allowsScreenshots("com.pinedaagencygroup.leads.qa");
+        assert !StagingPolicy.allowsScreenshots("com.pinedaagencygroup.leads.staging.fake");
+        assert !StagingPolicy.allowsScreenshots(null);
+        System.out.println("StagingPolicy: identity guards and Staging-only screenshot policy passed");
     }
 }
