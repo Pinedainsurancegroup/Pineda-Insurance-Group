@@ -1,5 +1,13 @@
 # Continuidad de APP PIMFLEXTV en Codex
 
+## Continuación para instalar en iPad — 2026-11-08 (California)
+
+Se recuperaron de la entrega privada la IPA 0.3.0/build 3 y su informe, sin recompilar ni modificar el ejecutable. Su SHA-256 coincide con la exportación validada; el plist confirma `com.pimflextv.ios`, familias `[1,2]` y SDK `iphoneos26.2`.
+
+La sesión de App Store Connect conserva acceso a la ficha existente. TestFlight mostró expresamente **«No hay compilaciones»** y **«Envía una compilación para empezar las pruebas»**. En Usuarios y acceso → Integraciones, la API aún requiere **Solicitar acceso**. Se abrió el diálogo de solicitud; la casilla de aceptación y el botón Enviar quedaron pendientes del propietario. No se aceptaron condiciones, no se creó ninguna clave API y no se cargó la IPA.
+
+Continuar desde esa aceptación y el método de autenticación de carga autorizado. La solicitud incluye condiciones de uso interno/pruebas de Apple y requiere intervención del propietario. Tras habilitarse el acceso, configurar una credencial de carga con permisos apropiados y autorización concreta, cargar esta IPA a la ficha existente, esperar procesamiento y preparar la prueba interna iPad/iPhone. No repetir registro, pago, identidad de firma ni compilaciones ya validadas. No exponer la IPA ni material privado en GitHub.
+
 ## Estado actual de firma — 2026-11-08
 
 La IPA **0.3.0 / build 3** universal se exportó y validó en macOS con
