@@ -1,4 +1,29 @@
-# Candidata universal iPhone / iPad 0.3.0 (build 3)
+# Validación universal iPhone / iPad
+
+## Corrección M3U 0.3.1 / build 4 — 2026-11-09
+
+El propietario confirmó la instalación física de 0.3.0/build 3 en iPad. Su captura mostró una URL M3U HTTP del host exacto `my-vionex.com` y el consentimiento HTTP apagado. La versión anterior sólo admitía `moonspelltools.cc`. La corrección añade el segundo host exacto a la política y a ATS, mantiene el opt-in por cuenta y evita redirecciones entre orígenes o subdominios. No cambia las credenciales del usuario.
+
+Código validado: `b7022c7224962f5fe9dd92bced949b35721d450f`.
+[CI de compilación e interfaz 42718460305](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42718460305): `success`.
+
+| Comprobación | Resultado |
+| --- | --- |
+| Núcleo Swift Package | 28 pruebas, 0 fallos |
+| Validadores de firma Python | 10 pruebas, 0 fallos |
+| Debug simulador y Release universal sin firma | Correctos |
+| iPhone 16 Pro | 7 pruebas UI correctas; 4 exclusivas iPad omitidas |
+| iPad mini (A17 Pro) | 11 pruebas UI, 0 fallos |
+| iPad Pro 13-inch (M4) | 11 pruebas UI, 0 fallos |
+| Regresión M3U HTTP sin/con consentimiento | Correcta en los tres simuladores |
+
+Las pruebas UI usan Xcode 16.4/iOS 18.5 y cuentas ficticias DEBUG. Verifican el aviso antes de consentir y el acceso al dashboard de muestra tras activar el interruptor. No autentican una cuenta real. Las nuevas pruebas del núcleo cubren la conservación de la consulta M3U, normalización del portal, rechazo de hosts parecidos/subdominios y redirecciones entre ambos proveedores, cambio de puerto y downgrade HTTPS.
+
+La [exportación firmada 42718451601](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42718451601) pasó para el mismo SHA con Xcode 26.3/iOS SDK 26.2. Se verificaron HMAC antes de descifrar, SHA-256 de artefacto e IPA, firma reportada por el runner y perfil embebido exacto. IPA SHA-256: `52bd39eccf29c2cbeb4e47310ec1641a3b1476d34f6022ead7d62194f0e63051`.
+
+Distribución de build 4: Apple confirmó carga COMPLETE, procesamiento VALID e IN_BETA_TESTING, sin errores ni advertencias. La API oficial verifica el build exacto en el grupo interno automático del titular; contiene dos builds y un tester. Disponible para actualizar en TestFlight. La instalación del build 3 está confirmada por el propietario; acceso y reproducción con el proveedor real siguen pendientes. No hay pruebas UI en iOS 26 ni prueba automatizada real de Split View/Stage Manager.
+
+## Adaptación 0.3.0 / build 3 (histórico)
 
 Base de código: `6d690679e7accf4514118579328b300c1b2aacb6`, rama `pimflextv-ios-20261029`, PR #6. La adaptación usa SwiftUI dentro del proyecto existente y no modifica Android, la autenticación productiva ni el motor de reproducción.
 

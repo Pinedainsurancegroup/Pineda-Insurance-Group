@@ -13,7 +13,7 @@
 | iPhone e iPad | Producto universal; catálogo con categorías laterales desde 900 pt, selector compacto y carátulas 2:3 | Validación física y ventanas del sistema |
 | Vertical | Adaptación adicional de iPhone/iPad | No tiene equivalente exacto: Android declara `sensorLandscape` |
 | Login Xtream | Cuenta activa, normalización de portal y credenciales Keychain | Autenticación real del proveedor |
-| HTTP histórico | Opt-in explícito; hosts exactos `moonspelltools.cc` y `my-vionex.com` en 0.3.1/build 4; ATS por dominio | Validación en iPhone y endpoint HTTPS preferido |
+| HTTP histórico | Opt-in explícito; hosts exactos `moonspelltools.cc` y `my-vionex.com` en 0.3.1/build 4; ATS por dominio; regresión UI en iPhone/mini/Pro | Cuenta y streams reales; endpoint HTTPS preferido cuando el proveedor lo ofrezca |
 | Usuarios guardados | Vault Keychain único, activar, salir, eliminar y migrar sesión anterior | Migración persistente y errores Keychain en dispositivo |
 | M3U | URL, categorías, enlaces relativos, redirección del mismo origen | Listas reales; archivo local pendiente |
 | TV, Cine y Series | Catálogo, categorías, grilla, búsqueda y episodios | Datos y streams reales |
@@ -30,7 +30,7 @@
 | MKV/AVI y motores Android | No incorporados | Motor iOS o transcodificación y compatibilidad |
 | Stalker, WHMCS, notificaciones, código TV | Pendiente | Servicios y configuración propios |
 | Respaldo Android `.pimbackup` | No importado | Compatibilidad de formato y cifrado |
-| Distribución | IPA universal firmada; Apple COMPLETE/VALID; declaración autorizada guardada; TestFlight En pruebas y titular Invitado | Instalación y reproducción físicas; ficha/privacidad para distribución pública |
+| Distribución | IPA universal 0.3.1/build 4 firmada; Apple COMPLETE/VALID e IN_BETA_TESTING, grupo del titular verificado por API; build 3 instalado en iPad según el propietario | Instalación build 4, acceso y reproducción físicos; ficha/privacidad para distribución pública |
 
 La pantalla de acceso muestra la URL del servidor porque todavía no se ha establecido una configuración de proveedor verificable para ocultarla. Algunos controles de la referencia se adaptan a navegación y controles nativos de iOS. Los datos de muestra usados para pruebas están aislados detrás de `#if DEBUG` y no demuestran funcionamiento de un servicio real.
 

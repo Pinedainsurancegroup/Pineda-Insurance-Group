@@ -8,6 +8,23 @@ No generar otra clave al retomar ni incluir material privado en este repositorio
 
 ## Estado verificable
 
+La actualización **0.3.1 / build 4** se exportó desde el commit
+`b7022c7224962f5fe9dd92bced949b35721d450f` con la misma identidad y perfil.
+[Ejecución 42718451601](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42718451601):
+`success`, Xcode 26.3/iOS SDK 26.2, 28 pruebas del núcleo, 10 de firma,
+Release universal y exportación/firma/perfil/entitlements correctos.
+SHA-256 de IPA: `52bd39eccf29c2cbeb4e47310ec1641a3b1476d34f6022ead7d62194f0e63051`.
+Se verificaron el HMAC y los hashes antes de recuperar la IPA privada; el perfil
+embebido coincide exactamente con el original. Apple confirmó la carga COMPLETE,
+el build VALID e IN_BETA_TESTING, sin errores/advertencias. La API oficial confirma
+el build exacto en el grupo interno automático del titular (dos builds, un tester).
+Build/carga `d8f8f26b-8c51-4e63-8f27-8e13014bc96b`; archivo
+`e5052cc3-dad8-4756-b76c-19c85a1461a5`. Disponible para actualizar en TestFlight.
+`ITSAppUsesNonExemptEncryption=false` incorpora la declaración previamente
+autorizada para esta misma app, sin introducir criptografía nueva.
+
+### Identidad vigente e historial de build 3
+
 La ficha interna **PIMFLEX TV**, Apple ID **6832365413**, está creada en App
 Store Connect (Español México, SKU `PIMFLEXTV-IOS`), sin publicación.
 El certificado Apple Distribution **4FQY49J2JC** y el perfil
@@ -63,7 +80,7 @@ No regenerar claves ni repetir firma, pago, carga o procesamiento ya completados
 Se preparó `.github/workflows/sign-pimflextv-ios.yml`. No usa `pull_request_target`
 ni expone credenciales a los trabajos ordinarios de previsualización.
 Se activa únicamente al cambiar `pimflextv-ios/SIGNING_REQUEST.json` en la rama
-`pimflextv-ios-20261029`. La solicitud existente pide build **3**. El archivo
+`pimflextv-ios-20261029`. La solicitud existente pide build **4**. El archivo
 debe contener un `build_number` entero disponible entre 1 y 9999. El código se recupera por el SHA exacto del evento.
 
 Antes de firmar, un trabajo macOS comprueba núcleo, validadores y Release sin
