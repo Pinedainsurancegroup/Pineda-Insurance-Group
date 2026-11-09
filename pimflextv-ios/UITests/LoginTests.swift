@@ -5,6 +5,28 @@ final class LoginTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         super.tearDown()
     }
+    func testM3UProviderHTTPRequiresConsentBeforeFixtureLogin() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
+        app.launch()
+        app.segmentedControls["sourceMode"].buttons["Lista M3U"].tap()
+        let server = app.textFields["serverField"]
+        XCTAssertTrue(server.waitForExistence(timeout: 10))
+        server.tap()
+        server.typeText("http://my-vionex.com:8080/get.php?username=fixture&password=fixture-only&type=m3u_plus\n")
+        let error = app.staticTexts["loginError"]
+        XCTAssertTrue(error.waitForExistence(timeout: 5))
+        XCTAssertTrue(error.label.contains("Activa"))
+        let consent = app.switches["httpOptIn"]
+        XCTAssertEqual(consent.value as? String, "0")
+        capture("login-m3u-http-consent-required", app)
+        consent.tap()
+        XCTAssertEqual(consent.value as? String, "1")
+        let connect = app.buttons["connectButton"]
+        if !connect.isHittable { app.swipeUp() }
+        connect.tap()
+        XCTAssertTrue(app.buttons["dashboard-live"].waitForExistence(timeout: 10))
+    }
     func testLoginRejectsHTTPBeforeNetworkingAndPreservesPassword() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]

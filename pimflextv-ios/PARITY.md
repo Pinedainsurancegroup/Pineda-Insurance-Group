@@ -13,7 +13,7 @@
 | iPhone e iPad | Producto universal; catálogo con categorías laterales desde 900 pt, selector compacto y carátulas 2:3 | Validación física y ventanas del sistema |
 | Vertical | Adaptación adicional de iPhone/iPad | No tiene equivalente exacto: Android declara `sensorLandscape` |
 | Login Xtream | Cuenta activa, normalización de portal y credenciales Keychain | Autenticación real del proveedor |
-| HTTP histórico | Opt-in explícito; dominio exacto `moonspelltools.cc`; ATS limitado | Validación en iPhone y endpoint HTTPS preferido |
+| HTTP histórico | Opt-in explícito; hosts exactos `moonspelltools.cc` y `my-vionex.com` en 0.3.1/build 4; ATS por dominio | Validación en iPhone y endpoint HTTPS preferido |
 | Usuarios guardados | Vault Keychain único, activar, salir, eliminar y migrar sesión anterior | Migración persistente y errores Keychain en dispositivo |
 | M3U | URL, categorías, enlaces relativos, redirección del mismo origen | Listas reales; archivo local pendiente |
 | TV, Cine y Series | Catálogo, categorías, grilla, búsqueda y episodios | Datos y streams reales |

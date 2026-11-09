@@ -3,6 +3,34 @@ import XCTest
 @testable import PimflexCore
 
 final class HTTPPolicyTests: XCTestCase {
+    func testVionexPlaylistPreservesQueryOnlyAfterExplicitConsent() throws {
+        let playlist = "http://my-vionex.com:8080/get.php?username=fixture&password=fixture-only&type=m3u_plus"
+        XCTAssertThrowsError(try Endpoint.server(playlist, playlist: true)) { error in
+            XCTAssertEqual(error as? PimflexError, .insecureURL)
+        }
+        XCTAssertEqual(try Endpoint.server(playlist, playlist: true, allowingInsecureHTTP: true).absoluteString, playlist)
+        XCTAssertEqual(try Endpoint.server(playlist, allowingInsecureHTTP: true).absoluteString, "http://my-vionex.com:8080")
+        for address in ["http://www.my-vionex.com:8080", "http://cdn.my-vionex.com:8080", "http://my-vionex.com.example.org:8080", "http://my-vionex.com.:8080"] {
+            XCTAssertThrowsError(try Endpoint.server(address, allowingInsecureHTTP: true)) { error in
+                XCTAssertEqual(error as? PimflexError, .unsupportedHTTPHost)
+            }
+        }
+    }
+
+    func testVionexConsentCannotForwardCredentialsToAnotherApprovedHost() throws {
+        let original = URL(string: "http://my-vionex.com:8080/get.php?username=fixture&password=fixture-only")!
+        XCTAssertTrue(SafeRedirects.permits(from: original, to: URL(string: "http://my-vionex.com:8080/playlist")!, allowingInsecureHTTP: true))
+        for address in ["http://moonspelltools.cc:2082/playlist", "http://my-vionex.com:80/playlist", "http://cdn.my-vionex.com:8080/playlist", "https://my-vionex.com:8080/playlist"] {
+            XCTAssertFalse(SafeRedirects.permits(from: original, to: URL(string: address)!, allowingInsecureHTTP: true))
+        }
+        XCTAssertFalse(SafeRedirects.permits(from: URL(string: "https://my-vionex.com:8080/list")!, to: original, allowingInsecureHTTP: true))
+        let text = "#EXTM3U\n#EXTINF:-1 tvg-logo=\"http://my-vionex.com:8080/logo.png\",Fixture\nhttp://my-vionex.com:8080/channel.m3u8\n"
+        let items = try M3UParser.parse(text, baseURL: original, allowingInsecureHTTP: true)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items[0].artwork?.host, "my-vionex.com")
+        let account = Account(mode: .m3u, server: original, allowingInsecureHTTP: true)
+        XCTAssertEqual(try Endpoint.playback(account, item: items[0]).host, "my-vionex.com")
+    }
     func testProviderHTTPRequiresExplicitExactHostOptIn() throws {
         let portal = "http://moonspelltools.cc:2082/login.php"
         XCTAssertThrowsError(try Endpoint.server(portal))

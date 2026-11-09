@@ -88,7 +88,7 @@ struct LoginView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Toggle("Mi servidor requiere HTTP", isOn: $allowingInsecureHTTP)
                                     .font(.callout).accessibilityIdentifier("httpOptIn")
-                                Text("HTTP envía tus datos sin cifrar. Esta opción sólo admite el servidor PIMFLEX configurado; usa HTTPS cuando esté disponible.")
+                                Text("HTTP envía tus datos sin cifrar. Activa esta opción sólo si tu proveedor te dio una dirección HTTP; usa HTTPS cuando esté disponible.")
                                     .font(.caption).foregroundStyle(.white.opacity(0.8))
                             }
                         }

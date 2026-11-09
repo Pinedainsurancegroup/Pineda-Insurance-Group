@@ -1,5 +1,13 @@
 # Continuidad de APP PIMFLEXTV en Codex
 
+## Corrección de acceso HTTP en iPad — candidata 0.3.1 / build 4
+
+El propietario confirmó que 0.3.0/build 3 se instaló correctamente en su iPad. La captura posterior muestra una lista M3U de `my-vionex.com:8080` por HTTP y el interruptor HTTP apagado. La versión instalada sólo admitía `moonspelltools.cc`; la validación local bloqueó la URL antes de autenticar. No se ha comprobado todavía acceso o reproducción real.
+
+Se prepara 0.3.1/build 4 para admitir también el host exacto `my-vionex.com`, servidor HTTP proporcionado anteriormente por el propietario. El usuario debe activar «Mi servidor requiere HTTP» en su dispositivo. Se mantienen el consentimiento por cuenta, las reglas de origen en redirecciones y las excepciones ATS por dominio sin subdominios. La app distingue ahora entre consentimiento pendiente y un host HTTP no admitido. La lista M3U conserva su consulta; no se incorpora ninguna cuenta real al código o las pruebas.
+
+Se añade una regresión UI del flujo M3U sin/con consentimiento usando datos ficticios, más regresiones de URL, reproducción y redirecciones entre ambos hosts. La declaración ITSAppUsesNonExemptEncryption=false incorpora al plist la declaración ya autorizada para esta misma app; no se introduce criptografía nueva. Las comprobaciones Python de firma y el plist pasan localmente. Swift/Xcode se validan en CI Mac antes de entregar. No afirmar que la actualización está disponible hasta verificar firma, carga y TestFlight del build 4.
+
 ## Continuación para instalar en iPad — 2026-11-09
 
 El propietario autorizó expresamente revocar la clave de carga que no pudo recuperarse y crear una sustituta con el mismo rol Desarrollador. La anterior quedó **Anulada** y **PIMFLEX TV TestFlight Upload 2** quedó **Activa**. Esta vez se recuperaron y verificaron sus bytes P-256 inmediatamente; se comprobó la recuperación de un respaldo PKCS#8 cifrado y se conservaron privadamente `PIMFLEX_Apple_Upload_Private_20261109.zip` y `PIMFLEX_Apple_Upload_Recovery_20261109.txt` por separado. No volver a crear claves, identidades, perfiles ni pagos. No se añadió la clave API a GitHub ni a CI.
@@ -12,7 +20,7 @@ Se creó el grupo interno **PIMFLEX TV - Juan**, ID `64f4c997-2789-4c3d-939f-2d8
 
 **TestFlight habilitado.** El propietario autorizó expresamente guardar la declaración de cifrado preparada. Se guardó «Ninguno de los algoritmos mencionados anteriormente»; desapareció MISSING_EXPORT_COMPLIANCE y la compilación pasó a «Lista para enviar». El grupo interno automático incorporó el build y quedó **En pruebas**, con el titular **Invitado**. La opción de añadirlo manualmente aparecía deshabilitada; al abrir el grupo se verificó que ya contenía la compilación. No fue necesario forzar ninguna asignación ni repetir invitaciones.
 
-La declaración se apoya en la revisión de Package.swift y los imports/usos: no hay dependencias externas; CryptoKit sólo calcula SHA-256 para identificadores, Security usa Keychain y HTTPS usa URLSession de Apple. La revisión automática anterior quedó resuelta con la aprobación del propietario; no volver a solicitarla. No se modificó Info.plist ni se cambió el ejecutable. El siguiente paso es instalar TestFlight en el dispositivo del titular, abrir su invitación y probar acceso/streams. No hay todavía instalaciones o sesiones físicas verificadas.
+La declaración se apoya en la revisión de Package.swift y los imports/usos: no hay dependencias externas; CryptoKit sólo calcula SHA-256 para identificadores, Security usa Keychain y HTTPS usa URLSession de Apple. La revisión automática anterior quedó resuelta con la aprobación del propietario; no volver a solicitarla. No se modificó Info.plist ni se cambió el ejecutable. El siguiente paso es instalar TestFlight en el dispositivo del titular, abrir su invitación y probar acceso/streams. El propietario confirmó la instalación física en iPad; autenticación y sesiones de reproducción siguen pendientes.
 
 La autorización para carga/custodia y su sustitución ya está concedida; no volver a pedirla. La autorización para código público no incluye publicar en App Store ni fusionar PR #6, que permanece en borrador. Mantener privados claves, recuperación, JWT, URLs de transferencia y la IPA. El siguiente paso no requiere repetir compilaciones ni el registro Apple.
 

@@ -1,7 +1,7 @@
 {
-  "build_number": 3,
+  "build_number": 4,
   "purpose": "PIMFLEX TV iPhone and iPad private signed export",
   "owner_authorized": true,
-  "attempt": 6,
-  "reason": "Use Xcode 26 and verify iOS 26 SDK required for current App Store Connect uploads"
+  "attempt": 1,
+  "reason": "iPad login fix: support the owner's exact my-vionex.com HTTP host after explicit in-app consent"
 }

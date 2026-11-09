@@ -62,11 +62,12 @@ public struct Account: Codable, Equatable, Sendable {
 }
 
 public enum PimflexError: Error, LocalizedError, Equatable {
-    case invalidServer, insecureURL, invalidCredentials, inactiveAccount, invalidResponse, emptyPlaylist, unsupportedFormat, network, storage
+    case invalidServer, insecureURL, unsupportedHTTPHost, invalidCredentials, inactiveAccount, invalidResponse, emptyPlaylist, unsupportedFormat, network, storage
     public var errorDescription: String? {
         switch self {
         case .invalidServer: return "Revisa la dirección de tu servidor."
-        case .insecureURL: return "Usa una dirección HTTPS. El acceso HTTP al servidor original requiere tu autorización en la pantalla de acceso."
+        case .insecureURL: return "Activa «Mi servidor requiere HTTP» para usar esta dirección HTTP, o utiliza una dirección HTTPS."
+        case .unsupportedHTTPHost: return "Esta app no admite HTTP para esa dirección. Usa HTTPS o revisa la dirección de tu servidor."
         case .invalidCredentials: return "El servidor no aceptó el usuario o la contraseña."
         case .inactiveAccount: return "Tu cuenta no está activa. Contacta a tu proveedor."
         case .invalidResponse: return "El servidor devolvió una respuesta que no pudimos leer."
@@ -79,14 +80,17 @@ public enum PimflexError: Error, LocalizedError, Equatable {
 }
 
 public enum Endpoint {
-    public static let approvedInsecureHTTPHost = "moonspelltools.cc"
+    public static let approvedInsecureHTTPHosts: Set<String> = ["moonspelltools.cc", "my-vionex.com"]
 
     public static func server(_ raw: String, playlist: Bool = false, allowingInsecureHTTP: Bool = false) throws -> URL {
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard var c = URLComponents(string: value), c.host?.isEmpty == false,
+        guard var c = URLComponents(string: value), let host = c.host, !host.isEmpty,
               c.user == nil, c.password == nil, c.fragment == nil else { throw PimflexError.invalidServer }
         let scheme = c.scheme?.lowercased()
-        let approvedHTTP = allowingInsecureHTTP && scheme == "http" && c.host?.lowercased() == approvedInsecureHTTPHost
+        guard scheme == "https" || scheme == "http" else { throw PimflexError.invalidServer }
+        let approvedHost = approvedInsecureHTTPHosts.contains(host.lowercased())
+        if scheme == "http" && !approvedHost { throw PimflexError.unsupportedHTTPHost }
+        let approvedHTTP = allowingInsecureHTTP && scheme == "http" && approvedHost
         guard scheme == "https" || approvedHTTP else { throw PimflexError.insecureURL }
         guard c.port.map({ (1...65535).contains($0) }) ?? true else { throw PimflexError.invalidServer }
         c.scheme = scheme
