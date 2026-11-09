@@ -1,12 +1,16 @@
 # Continuidad de APP PIMFLEXTV en Codex
 
-## Continuación para instalar en iPad — 2026-11-08 (California)
+## Continuación para instalar en iPad — 2026-11-09 (UTC)
 
-Se recuperaron de la entrega privada la IPA 0.3.0/build 3 y su informe, sin recompilar ni modificar el ejecutable. Su SHA-256 coincide con la exportación validada; el plist confirma `com.pimflextv.ios`, familias `[1,2]` y SDK `iphoneos26.2`.
+Se mantiene la IPA privada universal 0.3.0/build 3 ya firmada y validada. No se recompiló ni se modificó el ejecutable. El propietario autorizó expresamente crear una clave API de equipo con rol Desarrollador, custodiarla privadamente y usarla para cargar PIMFLEX TV a TestFlight. No volver a pedir autorización para ese uso ya aprobado.
 
-La sesión de App Store Connect conserva acceso a la ficha existente. TestFlight mostró expresamente **«No hay compilaciones»** y **«Envía una compilación para empezar las pruebas»**. Juan completó personalmente la aceptación y respondió «listo». Se verificó en el portal **«Se ha aprobado tu solicitud para acceder a la API de App Store Connect»**, con **Activa (0)**. No se creó ninguna clave API ni se cargó la IPA.
+Se creó **PIMFLEX TV TestFlight Upload**. El portal muestra **Activa (1)** y acceso **Desarrollador**. La descarga única emitió un evento completado y devolvió una ruta, pero el archivo no existe en esa ruta ni en su correspondiente carpeta compartida. No se recuperaron bytes de la clave, no hay respaldo utilizable y no se generó ningún JWT. No afirmar que la clave quedó respaldada. La captura posterior sí se guardó y sincronizó: el problema observado corresponde al archivo descargado, no a toda la carpeta compartida.
 
-La creación de la clave de carga quedó bloqueada por revisión automática: es una credencial permanente y la aceptación de condiciones no constituye autorización específica para crearla. Antes de generar una clave, obtener autorización concreta para su creación, custodia privada y uso con rol Desarrollador para cargar PIMFLEX TV a TestFlight. Las claves de equipo se aplican a todas las apps de la cuenta y permanecen activas hasta revocarse. La autorización previa de la identidad y secretos de firma no es autorización de esta nueva credencial. Después, cargar la IPA existente, esperar procesamiento y preparar la prueba interna iPad/iPhone. No repetir registro, pago, identidad de firma ni compilaciones ya validadas. No exponer la IPA ni material privado en GitHub.
+La API oficial es accesible desde el entorno: una petición sin credenciales a la ficha existente respondió HTTP 401 `NOT_AUTHORIZED`, como corresponde. No se envió ninguna credencial. Apple documenta carga REST mediante `buildUploads` y `buildUploadFiles` (WWDC25/324), disponible desde Linux; leer el esquema actual antes de implementar las peticiones. No es necesario recompilar ni cambiar la identidad de firma para cargar la IPA existente.
+
+**Bloqueo actual:** la clave privada de carga no pudo recuperarse después de su descarga única. La clave sigue activa en Apple; no fue revocada ni sustituida. Antes de reemplazarla, obtener confirmación específica para revocar esa clave, acción irreversible. Después emitir una sustituta con el mismo rol, recuperar y verificar sus bytes y su respaldo privado inmediatamente, y sólo entonces cargar la IPA existente. No repetir pagos ni crear otros certificados o perfiles. No introducir claves, JWT o IPA en GitHub.
+
+TestFlight no tiene una compilación cargada por esta sesión. Siguen pendientes carga, procesamiento y prueba física iPad/iPhone. La autorización para código público y firma no incluye publicar en App Store ni fusionar PR #6, que sigue en borrador.
 
 ## Estado actual de firma — 2026-11-08
 
@@ -21,7 +25,7 @@ en el runner; tras recuperar el artefacto se verificaron HMAC, SHA-256 y la
 coincidencia exacta del perfil embebido con el original validado.
 La IPA y el informe se conservaron privadamente. **Todavía no se ha cargado a
 App Store Connect ni procesado en TestFlight**; falta carga con credenciales
-Apple autorizadas y prueba física. No se crearon credenciales de carga.
+Apple utilizables y prueba física. La clave de carga creada no pudo recuperarse; véase el bloqueo al comienzo.
 
 ## Autorizaciones y custodia vigentes
 
@@ -69,7 +73,7 @@ sin firma y iPad mini de d1be897 también pasaron. No afirmar pruebas físicas n
 de proveedor real, ni pruebas de interfaz en iOS 26: siguen pendientes.
 
 Siguiente paso: cargar la IPA privada a la ficha existente mediante
-Transporter/Xcode con autenticación Apple autorizada, esperar procesamiento y
+la API de carga oficial o Transporter/Xcode con autenticación Apple autorizada y disponible, esperar procesamiento y
 habilitar una prueba interna en TestFlight. No hay credenciales de carga
 configuradas en CI. No pedir contraseñas, códigos ni claves por chat, ni tratar
 la IPA App Store Connect como instalación directa. No repetir pagos ni aceptar

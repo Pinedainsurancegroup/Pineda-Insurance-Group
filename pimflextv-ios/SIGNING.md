@@ -35,7 +35,18 @@ en el runner; tras recuperar el artefacto se verificaron HMAC, SHA-256 y la
 coincidencia exacta del perfil embebido con el original validado.
 La IPA y el informe se conservaron privadamente. **Todavía no se ha cargado a
 App Store Connect ni procesado en TestFlight**; falta carga con credenciales
-Apple autorizadas y prueba física. No se crearon credenciales de carga.
+Apple utilizables y prueba física.
+
+## Clave de carga a TestFlight — 2026-11-09 (UTC)
+
+El propietario autorizó creación, custodia privada y uso de una clave API de equipo
+con rol Desarrollador para cargar PIMFLEX TV. Se creó **PIMFLEX TV TestFlight Upload**;
+el portal muestra una clave activa. El archivo de su descarga única no quedó
+disponible en la ruta devuelta ni en la carpeta sincronizada. No hay bytes de clave
+recuperados, JWT ni respaldo utilizable. No se configuró esta clave en CI.
+La clave permanece activa; su revocación irreversible y sustitución requieren
+confirmación específica. Consultar `CODEX_HANDOFF.md` antes de retomar. No volver
+a crear la identidad de firma, pagar la membresía o recompilar para resolverlo.
 
 ## Compilación protegida en GitHub Actions
 
