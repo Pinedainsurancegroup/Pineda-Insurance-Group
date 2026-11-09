@@ -9,5 +9,10 @@ final class StagingPolicy {
         return PROJECT.equals(project) && NUMBER.equals(sender) && applicationId != null &&
                 applicationId.matches("1:" + NUMBER + ":android:[a-fA-F0-9]+");
     }
+    // Screenshot capture is permitted only in the isolated PAG Leads Staging app.
+    // The stable and generic QA package names retain Android FLAG_SECURE.
+    static boolean allowsScreenshots(String installedPackageName) {
+        return PACKAGE.equals(installedPackageName);
+    }
     private StagingPolicy() {}
 }
