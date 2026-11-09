@@ -40,9 +40,9 @@ Una actualización posterior de este registro modifica sólo Markdown; el SHA ej
 
 La identidad Apple y la firma ya se completaron. La misma IPA universal 0.3.0/build 3
 se cargó a la ficha existente y Apple confirmó COMPLETE/VALID. No se recompiló en
-esta etapa. El grupo interno del titular está creado. Sigue pendiente la aprobación
-específica para guardar la declaración de cifrado (MISSING_EXPORT_COMPLIANCE),
-habilitar el build al grupo y probar cuenta, streams y reproducción en dispositivos
-físicos iPhone/iPad. Consultar `CODEX_HANDOFF.md` para retomar sin repetir estos pasos.
+esta etapa. El titular aprobó guardar la declaración de cifrado y ese paso se completó.
+El grupo interno contiene un tester Invitado y una compilación **En pruebas**.
+La instalación mediante TestFlight está habilitada para el titular. Sigue pendiente
+probar cuenta, streams y reproducción en dispositivos físicos iPhone/iPad. Consultar `CODEX_HANDOFF.md` para retomar sin repetir estos pasos.
 Los pendientes funcionales de `PARITY.md` y la ficha/privacidad para distribución
 pública continúan abiertos. No hay publicación en App Store.

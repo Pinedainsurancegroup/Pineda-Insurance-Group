@@ -8,9 +8,11 @@ Se cargó la **misma IPA universal 0.3.0 / build 3** ya firmada, sin recompilar 
 
 Apple terminó el procesamiento con **BuildUpload COMPLETE**, sin errores ni advertencias, y **Build processingState VALID**. ID de carga/build `3dc91609-ea08-426f-bcb1-6053df676dbd`; archivo `308579a3-4f67-4077-b364-d67dc2acd690`. Mínimo iOS 16.0, audiencia APP_STORE_ELIGIBLE, expiración beta 2027-02-07. La vista TestFlight muestra **Versión 0.3.0 / Compilación 3**. No confundir VALID con una app probada físicamente o ya habilitada para instalar.
 
-Se creó el grupo interno **PIMFLEX TV - Juan**, ID `64f4c997-2789-4c3d-939f-2d877939ab0b`, con distribución automática habilitada y únicamente el titular existente como tester. Todavía tiene cero compilaciones elegibles/añadidas. No se añadió a otras personas ni se habilitó una beta pública.
+Se creó el grupo interno **PIMFLEX TV - Juan**, ID `64f4c997-2789-4c3d-939f-2d877939ab0b`, con distribución automática habilitada y únicamente el titular existente como tester. Después de guardar la declaración autorizada, el grupo incorporó automáticamente la compilación 0.3.0 (3); el portal muestra **1 tester · 1 compilación**, build **En pruebas** y titular **Invitado (9 nov. 2026)**. No se añadió a otras personas ni se habilitó una beta pública.
 
-**Bloqueo actual: MISSING_EXPORT_COMPLIANCE.** Se revisaron Package.swift y los imports/usos del código: no hay dependencias externas; CryptoKit sólo calcula SHA-256 para identificadores, Security usa Keychain y las conexiones HTTPS usan URLSession de Apple. Se preparó en el portal la opción «Ninguno de los algoritmos mencionados anteriormente», que excluye algoritmos propios o estándar implementados fuera del sistema Apple. **Guardar fue rechazado por revisión automática** porque la declaración tiene efecto legal/técnico y exige confirmación del titular. No se guardó, no se modificó Info.plist y no se intentó eludir el bloqueo mediante la API. Obtener aprobación específica del propietario para guardar esta declaración; después verificar cumplimiento, asignar build 3 al grupo y confirmar disponibilidad/invitación antes de pedir prueba física.
+**TestFlight habilitado.** El propietario autorizó expresamente guardar la declaración de cifrado preparada. Se guardó «Ninguno de los algoritmos mencionados anteriormente»; desapareció MISSING_EXPORT_COMPLIANCE y la compilación pasó a «Lista para enviar». El grupo interno automático incorporó el build y quedó **En pruebas**, con el titular **Invitado**. La opción de añadirlo manualmente aparecía deshabilitada; al abrir el grupo se verificó que ya contenía la compilación. No fue necesario forzar ninguna asignación ni repetir invitaciones.
+
+La declaración se apoya en la revisión de Package.swift y los imports/usos: no hay dependencias externas; CryptoKit sólo calcula SHA-256 para identificadores, Security usa Keychain y HTTPS usa URLSession de Apple. La revisión automática anterior quedó resuelta con la aprobación del propietario; no volver a solicitarla. No se modificó Info.plist ni se cambió el ejecutable. El siguiente paso es instalar TestFlight en el dispositivo del titular, abrir su invitación y probar acceso/streams. No hay todavía instalaciones o sesiones físicas verificadas.
 
 La autorización para carga/custodia y su sustitución ya está concedida; no volver a pedirla. La autorización para código público no incluye publicar en App Store ni fusionar PR #6, que permanece en borrador. Mantener privados claves, recuperación, JWT, URLs de transferencia y la IPA. El siguiente paso no requiere repetir compilaciones ni el registro Apple.
 
@@ -26,8 +28,8 @@ La firma, los entitlements, el perfil y las familias iPhone/iPad se comprobaron
 en el runner; tras recuperar el artefacto se verificaron HMAC, SHA-256 y la
 coincidencia exacta del perfil embebido con el original validado.
 La IPA y el informe se conservaron privadamente. El 2026-11-09 esta IPA se
-cargó a Apple y terminó con estado VALID. Sigue pendiente guardar la información
-de exportación con aprobación del titular y habilitar/probar la instalación física;
+cargó a Apple y terminó con estado VALID. La información
+de exportación autorizada ya se guardó y la prueba interna está habilitada; falta comprobar la instalación y uso físico;
 véase el estado al comienzo.
 
 ## Autorizaciones y custodia vigentes
@@ -75,12 +77,11 @@ anteriores (iPhone, iPad mini y iPad Pro) pasaron en 42532088588; la compilació
 sin firma y iPad mini de d1be897 también pasaron. No afirmar pruebas físicas ni
 de proveedor real, ni pruebas de interfaz en iOS 26: siguen pendientes.
 
-Siguiente paso: tras la aprobación específica del propietario, guardar la
-información de cifrado preparada, verificar que desaparece MISSING_EXPORT_COMPLIANCE
-y añadir la compilación válida al grupo interno ya creado. Confirmar que el titular
-puede recibir/abrir su prueba en TestFlight. No hay credenciales de carga configuradas
-en CI. No pedir contraseñas, códigos ni claves por chat. No repetir la carga, pagos,
-firma o procesamiento ya completados. Mantener PR #6 en borrador.
+Siguiente paso: el titular instala TestFlight en su iPhone/iPad, abre la invitación
+a su cuenta de desarrollador y prueba login, catálogo y reproducción. El portal
+ya confirma En pruebas e Invitado. No pedir otra aprobación para la declaración,
+clave o carga completadas. No hay credenciales de carga en CI. No solicitar claves,
+contraseñas o códigos por chat. Mantener PR #6 en borrador; no publicar en App Store.
 
 ## Ampliación iPad — 2026-11-08 (California)
 

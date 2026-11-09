@@ -35,9 +35,9 @@ en el runner; tras recuperar el artefacto se verificaron HMAC, SHA-256 y la
 coincidencia exacta del perfil embebido con el original validado.
 La IPA y el informe se conservaron privadamente. Esta misma IPA se cargó a Apple
 el 2026-11-09 mediante la API oficial: carga COMPLETE y compilación VALID,
-sin errores/advertencias. La beta todavía figura MISSING_EXPORT_COMPLIANCE y
-requiere aprobación del titular para guardar la declaración preparada antes de
-habilitar la instalación y prueba física.
+sin errores/advertencias. El titular autorizó guardar la declaración de cifrado y se completó ese paso.
+El grupo interno ya contiene el build 0.3.0 (3), con estado En pruebas y titular
+Invitado. La instalación y reproducción en dispositivos físicos siguen pendientes.
 
 ## Clave de carga a TestFlight — 2026-11-09
 
@@ -52,9 +52,10 @@ No se configuró esta clave API en CI ni se incluyó material privado en GitHub.
 La API creó `buildUploads` y `buildUploadFiles`, recibió la IPA y confirmó su
 checksum MD5; el SHA-256 coincide con la exportación firmada original. Carga y
 build: `3dc91609-ea08-426f-bcb1-6053df676dbd`. Apple confirmó COMPLETE/VALID.
-Se creó el grupo interno del titular. **Todavía no está habilitada la instalación**:
-la revisión automática bloqueó guardar la declaración de cifrado y solicita
-confirmación específica del titular. Consultar `CODEX_HANDOFF.md` antes de retomar.
+Se creó el grupo interno del titular. Tras su aprobación explícita, se guardó la
+declaración de cifrado y la compilación se habilitó automáticamente al grupo:
+**En pruebas**, un tester **Invitado**. La revisión automática anterior quedó
+resuelta. Consultar `CODEX_HANDOFF.md` antes de retomar.
 No regenerar claves ni repetir firma, pago, carga o procesamiento ya completados.
 
 ## Compilación protegida en GitHub Actions
@@ -150,7 +151,7 @@ Los perfiles de prueba son sintéticos; no contienen certificados reales ni
 claves. La exportación firmada real terminó correctamente en la ejecución 42533688228,
 con 26 pruebas del núcleo y 10 pruebas de firma correctas en el preflight. Una IPA exportada para App Store Connect se instala mediante
 TestFlight después de su carga/procesamiento; no es una instalación directa por
-descarga. La carga y el procesamiento terminaron; siguen pendientes la declaración de cifrado aprobada por el titular, habilitar la prueba interna y la prueba física.
+descarga. La carga y el procesamiento terminaron; la declaración autorizada y la prueba interna ya están habilitadas; sigue pendiente la prueba física.
 
 Fuentes oficiales:
 - https://cryptography.io/en/latest/hazmat/primitives/asymmetric/serialization/
