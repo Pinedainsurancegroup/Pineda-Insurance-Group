@@ -187,7 +187,8 @@ final class PlaybackModel: ObservableObject {
         if preview { seconds = target; return }
         #endif
         ended = false
-        player.seek(to: CMTime(seconds: target, preferredTimescale: 600))
+        player.seek(to: CMTime(seconds: target, preferredTimescale: 600),
+                    toleranceBefore: .zero, toleranceAfter: .zero)
     }
     #if DEBUG
     func showPreview() {
