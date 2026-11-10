@@ -19,12 +19,13 @@ final class CompatiblePlaybackTests: XCTestCase {
         revealControls(app)
         let pause = app.buttons["compatiblePlayPause"]
         pause.tap()
-        let paused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "Reproducir"), object: pause)
+        let paused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "En pausa ·"), object: surface)
         XCTAssertEqual(XCTWaiter.wait(for: [paused], timeout: 5), .completed)
-        revealControls(app)
-        let position = app.staticTexts["playbackPosition"]
-        let before = seconds(position.label)
-        let advancing = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in self.seconds(position.label) > before + 1 }, object: nil)
+        guard let before = seconds(surface) else { return }
+        let advancing = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            guard let current = self.seconds(surface) else { return true }
+            return current > before + 1
+        }, object: nil)
         advancing.isInverted = true
         XCTAssertEqual(XCTWaiter.wait(for: [advancing], timeout: 1.5), .completed)
 
@@ -34,20 +35,20 @@ final class CompatiblePlaybackTests: XCTestCase {
         revealControls(app)
         app.buttons["Adelantar 10 segundos"].tap()
         let seeked = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            self.revealControls(app)
-            return self.seconds(position.label) >= before + 8
+            guard let current = self.seconds(surface) else { return false }
+            return current >= before + 8
         }, object: nil)
-        // Revealing controls and taking accessibility snapshots can exceed five
-        // seconds on the large iPad CI runner. Keep the target assertion intact.
+        // Read the persistent video surface: slow accessibility snapshots can
+        // outlast the four-second overlay without invalidating the media clock.
         XCTAssertEqual(XCTWaiter.wait(for: [seeked], timeout: 20), .completed)
         capture("mkv-paused-and-seeked", app)
+        guard let selected = seconds(surface) else { return }
         revealControls(app)
-        let selected = seconds(position.label)
         pause.tap()
         waitUntilPlaying(surface)
         let progressed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            self.revealControls(app)
-            return self.seconds(position.label) >= selected + 1
+            guard let current = self.seconds(surface) else { return false }
+            return current >= selected + 1
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [progressed], timeout: 20), .completed, "The actual decoder clock must advance past the selected position after resuming")
         revealControls(app)
@@ -57,10 +58,10 @@ final class CompatiblePlaybackTests: XCTestCase {
         let reopenedAt = Date()
         movie.tap()
         waitUntilPlaying(surface)
-        revealControls(app)
-        let reopenedSeconds = seconds(position.label)
+        guard let reopenedSeconds = seconds(surface) else { return }
         let elapsedSinceReopen = Int(Date().timeIntervalSince(reopenedAt).rounded(.up))
         XCTAssertLessThanOrEqual(reopenedSeconds, elapsedSinceReopen + 2, "A fresh player starts at zero; allow the real time spent waiting for CI accessibility snapshots")
+        revealControls(app)
         app.buttons["playerClose"].tap()
     }
 
@@ -73,12 +74,32 @@ final class CompatiblePlaybackTests: XCTestCase {
     }
 
     private func waitUntilPlaying(_ surface: XCUIElement) {
-        let playing = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "Reproduciendo"), object: surface)
+        let playing = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "Reproduciendo ·"), object: surface)
         XCTAssertEqual(XCTWaiter.wait(for: [playing], timeout: 20), .completed)
     }
-    private func seconds(_ clock: String) -> Int {
-        let parts = clock.split(separator: ":").compactMap { Int($0) }
-        return parts.count == 2 ? parts[0] * 60 + parts[1] : 0
+    private func seconds(_ surface: XCUIElement, file: StaticString = #filePath, line: UInt = #line) -> Int? {
+        // A missing/malformed value must fail even during the inverted pause
+        // expectation; treating it as zero could falsely pass pause/reopen checks.
+        guard let value = surface.value as? String else {
+            XCTFail("Video surface has no playback value", file: file, line: line)
+            return nil
+        }
+        let fields = value.components(separatedBy: " · ")
+        guard fields.count == 2, ["Reproduciendo", "En pausa", "Cargando"].contains(fields[0]) else {
+            XCTFail("Malformed playback status: \(value)", file: file, line: line)
+            return nil
+        }
+        let parts = fields[1].split(separator: ":", omittingEmptySubsequences: false)
+        let numbers = parts.compactMap { Int($0) }
+        guard (2...3).contains(parts.count), numbers.count == parts.count,
+              parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isNumber) }),
+              numbers.allSatisfy({ $0 >= 0 && $0 <= Int(Int32.max) }),
+              parts.dropFirst().allSatisfy({ $0.count == 2 }),
+              numbers.dropFirst().allSatisfy({ $0 < 60 }) else {
+            XCTFail("Malformed playback clock: \(value)", file: file, line: line)
+            return nil
+        }
+        return numbers.reduce(0) { $0 * 60 + $1 }
     }
     private func capture(_ name: String, _ app: XCUIApplication) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

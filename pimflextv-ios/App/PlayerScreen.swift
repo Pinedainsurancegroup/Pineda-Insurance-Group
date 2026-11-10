@@ -2,6 +2,11 @@ import SwiftUI
 import AVKit
 import PimflexCore
 
+func playbackClock(_ value: Double) -> String {
+    let total = Int(max(0, min(value.isFinite ? value : 0, Double(Int32.max))))
+    return total >= 3600 ? String(format: "%d:%02d:%02d", total / 3600, total / 60 % 60, total % 60) : String(format: "%d:%02d", total / 60, total % 60)
+}
+
 struct PlayerTrackChoice: Identifiable, Equatable {
     let id: Int
     let name: String
@@ -240,6 +245,7 @@ struct NativePlayer: UIViewControllerRepresentable {
         controller.view.isAccessibilityElement = true
         controller.view.accessibilityLabel = "Video"
         controller.view.accessibilityIdentifier = "nativeVideoSurface"
+        controller.view.accessibilityTraits.insert(.updatesFrequently)
         // PiP intentionally disabled until lifecycle/device tests cover background dismissal.
         controller.allowsPictureInPicturePlayback = false
         return controller
@@ -247,7 +253,8 @@ struct NativePlayer: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: AVPlayerViewController, context: Context) {
         controller.player = player
         controller.videoGravity = fill ? .resizeAspectFill : .resizeAspect
-        controller.view.accessibilityValue = playing && seconds >= 1 ? "Reproduciendo" : "En pausa"
+        let state = playing && seconds >= 1 ? "Reproduciendo" : "En pausa"
+        controller.view.accessibilityValue = "\(state) · \(playbackClock(seconds))"
     }
     static func dismantleUIViewController(_ controller: AVPlayerViewController, coordinator: ()) { controller.player = nil }
 }
@@ -360,7 +367,7 @@ struct PlayerScreen: View {
                         }).accessibilityLabel("Posición del video").accessibilityIdentifier("playerTimeline")
                     }
                     HStack(spacing: 16) {
-                        Text(clock(seconds)).monospacedDigit().font(.caption)
+                        Text(playbackClock(seconds)).monospacedDigit().font(.caption)
                             .accessibilityIdentifier("playbackPosition")
                         Spacer(minLength: 0)
                         if canSeek {
@@ -379,7 +386,7 @@ struct PlayerScreen: View {
                         }
                         Spacer(minLength: 0)
                         if item.kind == .live { Text("EN DIRECTO").font(.caption) }
-                        else { Text(clock(duration)).monospacedDigit().font(.caption) }
+                        else { Text(playbackClock(duration)).monospacedDigit().font(.caption) }
                     }.font(.title3)
                     if !usesCompatible {
                         HStack {
@@ -456,10 +463,6 @@ struct PlayerScreen: View {
         Button(action: action) {
             HStack { Text(name); Spacer(); if selected { Image(systemName: "checkmark") } }
         }.accessibilityIdentifier(id).accessibilityValue(selected ? "Seleccionado" : "No seleccionado")
-    }
-    private func clock(_ value: Double) -> String {
-        let total = Int(max(0, min(value.isFinite ? value : 0, Double(Int32.max))))
-        return total >= 3600 ? String(format: "%d:%02d:%02d", total / 3600, total / 60 % 60, total % 60) : String(format: "%d:%02d", total / 60, total % 60)
     }
     private func seek(_ value: Double) {
         if usesCompatible { compatible.seek(to: value) } else { playback.seek(to: value) }

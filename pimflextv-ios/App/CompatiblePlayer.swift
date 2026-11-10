@@ -210,11 +210,13 @@ struct CompatibleVideoSurface: UIViewRepresentable {
         view.isAccessibilityElement = true
         view.accessibilityLabel = "Video"
         view.accessibilityIdentifier = "compatibleVideoSurface"
+        view.accessibilityTraits.insert(.updatesFrequently)
         playback.attach(view)
         return view
     }
     func updateUIView(_ view: UIView, context: Context) {
-        view.accessibilityValue = playback.playing && playback.hasVideo && playback.seconds >= 1 ? "Reproduciendo" : playback.waiting ? "Cargando" : "En pausa"
+        let state = playback.playing && playback.hasVideo && playback.seconds >= 1 ? "Reproduciendo" : playback.waiting ? "Cargando" : "En pausa"
+        view.accessibilityValue = "\(state) · \(playbackClock(playback.seconds))"
     }
     static func dismantleUIView(_ view: UIView, coordinator: CompatiblePlaybackModel) {
         if let current = coordinator.player.drawable as? UIView, current === view {

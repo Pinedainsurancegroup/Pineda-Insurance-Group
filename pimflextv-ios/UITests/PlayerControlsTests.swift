@@ -5,11 +5,9 @@ import XCTest
 final class PlayerControlsTests: XCTestCase {
     func testNativeLocalMediaPlaysPausesSeeksAndResumes() {
         let app = openPreviewPlayer(arguments: ["--test-native-playback"])
-        let position = app.staticTexts["playbackPosition"]
-        let started = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            self.revealControls(app)
-            return self.seconds(position.label) >= 1
-        }, object: nil)
+        let surface = app.otherElements["nativeVideoSurface"]
+        XCTAssertTrue(surface.waitForExistence(timeout: 10))
+        let started = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "Reproduciendo ·"), object: surface)
         XCTAssertEqual(XCTWaiter.wait(for: [started], timeout: 20), .completed)
         XCTAssertFalse(app.descendants(matching: .any)["playerFixture"].exists, "This case must use the bundled MP4, not synthetic playback state")
         XCTAssertFalse(app.descendants(matching: .any)["playbackWaiting"].exists)
@@ -20,12 +18,12 @@ final class PlayerControlsTests: XCTestCase {
         revealControls(app)
         let pause = app.buttons["playerPlayPause"]
         pause.tap()
-        let paused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "Reproducir"), object: pause)
+        let paused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "En pausa ·"), object: surface)
         XCTAssertEqual(XCTWaiter.wait(for: [paused], timeout: 5), .completed)
-        revealControls(app)
-        let before = seconds(position.label)
+        guard let before = seconds(surface) else { return }
         let advancing = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            self.seconds(position.label) > before + 1
+            guard let current = self.seconds(surface) else { return true }
+            return current > before + 1
         }, object: nil)
         advancing.isInverted = true
         XCTAssertEqual(XCTWaiter.wait(for: [advancing], timeout: 1.5), .completed)
@@ -34,18 +32,20 @@ final class PlayerControlsTests: XCTestCase {
         revealControls(app)
         app.buttons["playerSeekForward"].tap()
         let seeked = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            self.revealControls(app)
-            return self.seconds(position.label) >= before + 8
+            guard let current = self.seconds(surface) else { return false }
+            return current >= before + 8
         }, object: nil)
-        // Include the cost of reveal taps/accessibility snapshots on CI; this
-        // does not alter the four-second inactivity assertions below.
+        // Allow slow accessibility snapshots while observing the permanent
+        // surface; the four-second inactivity assertions below are unchanged.
         XCTAssertEqual(XCTWaiter.wait(for: [seeked], timeout: 20), .completed)
+        guard let selected = seconds(surface) else { return }
         revealControls(app)
-        let selected = seconds(position.label)
         pause.tap()
+        let playingAgain = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "Reproduciendo ·"), object: surface)
+        XCTAssertEqual(XCTWaiter.wait(for: [playingAgain], timeout: 20), .completed)
         let resumed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            self.revealControls(app)
-            return self.seconds(position.label) >= selected + 1
+            guard let current = self.seconds(surface) else { return false }
+            return current >= selected + 1
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [resumed], timeout: 20), .completed)
 
@@ -57,6 +57,7 @@ final class PlayerControlsTests: XCTestCase {
         XCTAssertFalse(app.buttons["playerQuality-1"].exists)
         XCTAssertFalse(app.buttons["playerSubtitle-0"].exists)
         app.buttons["playerOptionsDone"].tap()
+        revealControls(app)
         app.buttons["playerClose"].tap()
         XCTAssertTrue(app.buttons["movie-movie:1"].waitForExistence(timeout: 5))
     }
@@ -156,14 +157,35 @@ final class PlayerControlsTests: XCTestCase {
     }
 
     private func revealControls(_ app: XCUIApplication) {
-        // Start a fresh inactivity window before interacting or reading clocks.
+        // Start a fresh inactivity window only before interacting with controls.
         // Dedicated inactivity tests intentionally do not call this helper.
         // The app window remains stable while SwiftUI updates player elements.
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 
-    private func seconds(_ clock: String) -> Int {
-        clock.split(separator: ":").compactMap { Int($0) }.reduce(0) { $0 * 60 + $1 }
+    private func seconds(_ surface: XCUIElement, file: StaticString = #filePath, line: UInt = #line) -> Int? {
+        // A missing/malformed value must fail even during the inverted pause
+        // expectation; treating it as zero could falsely pass pause/reopen checks.
+        guard let value = surface.value as? String else {
+            XCTFail("Video surface has no playback value", file: file, line: line)
+            return nil
+        }
+        let fields = value.components(separatedBy: " · ")
+        guard fields.count == 2, ["Reproduciendo", "En pausa", "Cargando"].contains(fields[0]) else {
+            XCTFail("Malformed playback status: \(value)", file: file, line: line)
+            return nil
+        }
+        let parts = fields[1].split(separator: ":", omittingEmptySubsequences: false)
+        let numbers = parts.compactMap { Int($0) }
+        guard (2...3).contains(parts.count), numbers.count == parts.count,
+              parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isNumber) }),
+              numbers.allSatisfy({ $0 >= 0 && $0 <= Int(Int32.max) }),
+              parts.dropFirst().allSatisfy({ $0.count == 2 }),
+              numbers.dropFirst().allSatisfy({ $0 < 60 }) else {
+            XCTFail("Malformed playback clock: \(value)", file: file, line: line)
+            return nil
+        }
+        return numbers.reduce(0) { $0 * 60 + $1 }
     }
 
     private func assertSelected(_ row: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
