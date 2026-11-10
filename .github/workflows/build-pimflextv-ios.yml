@@ -24,20 +24,20 @@ jobs:
       - name: Generate Xcode project
         run: |
           brew install xcodegen
-          xcodegen generate
+          bash scripts/prepare-ios.sh
       - name: Build universal simulator app
         run: |
           set -o pipefail
-          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO build | tee build.log
+          xcodebuild -workspace PimflexTV.xcworkspace -scheme PimflexTV -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO build | tee build.log
       - name: Build unsigned universal iPhone and iPad app
         run: |
           set -o pipefail
-          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath DeviceBuild CODE_SIGNING_ALLOWED=NO build | tee device-build.log
+          xcodebuild -workspace PimflexTV.xcworkspace -scheme PimflexTV -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath DeviceBuild CODE_SIGNING_ALLOWED=NO build | tee device-build.log
       - name: Package simulator app and generated source project
         run: |
           ditto -c -k --keepParent DerivedData/Build/Products/Debug-iphonesimulator/PimflexTV.app PIMFLEXTV-iOS-Simulator.zip
           mkdir -p SourcePackage
-          cp -R App Sources Tests UITests Resources scripts PimflexTV.xcodeproj Package.swift project.yml *.md SourcePackage/
+          cp -R App Sources Tests UITests Resources scripts PimflexTV.xcodeproj Package.swift project.yml Podfile Vendor *.md SourcePackage/
           ditto -c -k --keepParent SourcePackage PIMFLEXTV-iOS-Source.zip
       - name: Upload simulator and source artifacts
         uses: actions/upload-artifact@v4
@@ -70,12 +70,12 @@ jobs:
       - name: Generate Xcode project
         run: |
           brew install xcodegen
-          xcodegen generate
+          bash scripts/prepare-ios.sh
       - name: Reference and adaptive layout UI tests
         run: |
           set -o pipefail
           device_id=$(xcrun simctl list devices available -j | python3 scripts/select-simulator.py '${{ matrix.device }}')
-          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Debug -destination "platform=iOS Simulator,id=$device_id" -parallel-testing-enabled NO -derivedDataPath DerivedData -resultBundlePath UITests.xcresult CODE_SIGNING_ALLOWED=NO test | tee ui-tests.log
+          xcodebuild -workspace PimflexTV.xcworkspace -scheme PimflexTV -configuration Debug -destination "platform=iOS Simulator,id=$device_id" -parallel-testing-enabled NO -derivedDataPath DerivedData -resultBundlePath UITests.xcresult CODE_SIGNING_ALLOWED=NO test | tee ui-tests.log
       - name: Export UI screenshots
         if: always()
         run: |

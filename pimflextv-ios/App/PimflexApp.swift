@@ -328,6 +328,7 @@ struct SettingsView: View {
             Section("Acerca de") {
                 LabeledContent("Aplicación", value: "PIMFLEX TV")
                 LabeledContent("Versión", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.2.0")
+                NavigationLink("Licencias") { LicensesView() }
             }
             Section { Button("Cerrar sesión", role: .destructive) { confirmSignOut = true } }
         }.scrollContentBackground(.hidden).background { ReferenceBackground() }

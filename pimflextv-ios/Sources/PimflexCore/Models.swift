@@ -73,7 +73,7 @@ public enum PimflexError: Error, LocalizedError, Equatable {
         case .invalidResponse: return "El servidor devolvió una respuesta que no pudimos leer."
         case .playlistTooLarge: return "Esta lista es demasiado grande. Usa el acceso por usuario y contraseña o pide una lista más pequeña a tu proveedor."
         case .emptyPlaylist: return "La lista no contiene transmisiones compatibles con esta conexión."
-        case .unsupportedFormat: return "Este formato requiere otro motor de video. Pide a tu proveedor una versión HLS o MP4 compatible con iPhone."
+        case .unsupportedFormat: return "No se pudo abrir este formato de video. Prueba otro título o transmisión."
         case .network: return "No se pudo conectar. Revisa tu conexión y la dirección del servidor."
         case .storage: return "No se pudo guardar la cuenta de forma segura en este dispositivo."
         }
@@ -159,13 +159,12 @@ public enum Endpoint {
     public static func playback(_ account: Account, item: MediaItem) throws -> URL {
         if let direct = item.directURL {
             let validated = try server(direct.absoluteString, playlist: true, allowingInsecureHTTP: account.insecureHTTPEnabled)
-            if ["mkv", "avi", "flv", "wmv"].contains(validated.pathExtension.lowercased()) { throw PimflexError.unsupportedFormat }
             return validated
         }
         guard account.mode == .xtream else { throw PimflexError.invalidServer }
         guard !item.providerID.isEmpty, item.providerID.allSatisfy({ $0.isASCII && $0.isNumber }) else { throw PimflexError.invalidResponse }
         let ext = item.kind == .live ? "m3u8" : item.fileExtension.lowercased()
-        guard ["m3u8", "mp4", "m4v", "mov", "mp3", "m4a", "aac"].contains(ext) else { throw PimflexError.unsupportedFormat }
+        guard Set(["m3u8", "mp4", "m4v", "mov", "mp3", "m4a", "aac"]).union(PlaybackEngine.compatibleExtensions).contains(ext) else { throw PimflexError.unsupportedFormat }
         let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")
         let path = [item.kind.rawValue, account.username, account.password, item.providerID + "." + ext]
             .map { $0.addingPercentEncoding(withAllowedCharacters: allowed)! }.joined(separator: "/")

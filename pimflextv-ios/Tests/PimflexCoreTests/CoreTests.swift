@@ -31,7 +31,7 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(path.hasSuffix("/42.m3u8"))
         XCTAssertNil(url.query); XCTAssertNil(url.fragment)
         XCTAssertThrowsError(try Endpoint.playback(account, item: MediaItem(providerID: "../42", name: "Bad", kind: .movie)))
-        XCTAssertThrowsError(try Endpoint.playback(account, item: MediaItem(providerID: "42", name: "MKV", kind: .movie, fileExtension: "mkv")))
+        XCTAssertTrue(try Endpoint.playback(account, item: MediaItem(providerID: "42", name: "MKV", kind: .movie, fileExtension: "mkv")).path.hasSuffix("42.mkv"))
     }
     func testAuthenticationMustBeActive() throws {
         XCTAssertEqual(try CatalogParser.authenticate(data(#"{"user_info":{"auth":1,"status":"Active","exp_date":"1800000000"}}"#)), "1800000000")

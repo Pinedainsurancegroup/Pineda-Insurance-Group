@@ -1,7 +1,7 @@
 {
-  "build_number": 5,
+  "build_number": 6,
   "purpose": "PIMFLEX TV iPhone and iPad private signed export",
   "owner_authorized": true,
   "attempt": 1,
-  "reason": "Import recognized provider M3U account links without downloading the complete oversized catalog before login"
+  "reason": "Add pinned MobileVLCKit 3.7.5 playback for MKV and other provider containers, preserving native HLS/MP4 playback"
 }

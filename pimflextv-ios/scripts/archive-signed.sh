@@ -51,12 +51,16 @@ fi
 
 # Generate the Xcode project in a temporary copy; do not copy signing material.
 mkdir "$WORK_DIR/Source"
-for item in App Sources Resources Tests UITests Package.swift project.yml; do
+for item in App Sources Resources Tests UITests Package.swift project.yml Podfile Vendor; do
   cp -R "$SOURCE_DIR/$item" "$WORK_DIR/Source/"
 done
 cd "$WORK_DIR/Source"
+PIMFLEX_GEM_BIN="$(ruby -r rubygems -e 'puts Gem.user_dir')/bin"
+export PATH="$PIMFLEX_GEM_BIN:$PATH"
+export COCOAPODS_DISABLE_STATS=true
 xcodegen generate
-BUILD_OPTIONS=(-project PimflexTV.xcodeproj -scheme PimflexTV -configuration Release
+pod _1.16.2_ install
+BUILD_OPTIONS=(-workspace PimflexTV.xcworkspace -scheme PimflexTV -configuration Release
   -destination 'generic/platform=iOS' -archivePath "$WORK_DIR/PimflexTV.xcarchive"
   -derivedDataPath "$WORK_DIR/DerivedData"
   CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=U47SH3LZM6 CODE_SIGN_IDENTITY="$IDENTITY"

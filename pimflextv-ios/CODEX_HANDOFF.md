@@ -1,5 +1,17 @@
 # Continuidad de APP PIMFLEXTV en Codex
 
+## Compatibilidad de reproducción — candidata 0.3.3 / build 6
+
+El propietario confirmó que ya inicia sesión. Su nueva captura en iPhone muestra el error local `unsupportedFormat` antes de abrir un video. Endpoint.playback rechazaba MKV/AVI/FLV/WMV. Se conserva el reproductor nativo para HLS/MP4 y se incorpora MobileVLCKit 3.7.5 oficial, fijado por podspec local y SHA-256 del archivo del proveedor, para contenedores adicionales. No se cambia la producción Android.
+
+El reproductor compatible integra pausa, búsqueda, avance/retroceso, reanudación y cierre/limpieza. Sólo recibe URLs previamente validadas. Se suprimen logs del backend que podrían incluir una URL con credenciales. Hay una prueba local MKV H.264/AAC generada por FFmpeg, sin contenido del proveedor, y una prueba UI que debe verificar video real, pausa, búsqueda y reapertura. El acceso a la prueba es DEBUG; Release excluye el archivo de muestra. Los límites de red, HTTP/ATS y Keychain se mantienen.
+
+CocoaPods 1.16.2 usa el podspec oficial 3.7.5 del registro, conservado localmente con URL/sha256 exactos. Se compila el workspace, incluidas las exportaciones firmadas. La biblioteca y libVLC permanecen sin modificar; se incorporan licencia y enlaces de código fuente en Ajustes. No se incluyen binarios del proveedor en Git.
+
+La nueva biblioteca puede aportar criptografía estándar de transporte/medios. No debe describirse la versión actual como dependiente sólo de criptografía Apple sin revisar sus componentes. La app es un reproductor dedicado a entretenimiento; BIS describe esa finalidad como excluida de los controles de confidencialidad de categoría 5 (https://media.bis.gov/learn-support/encryption-controls/cryptography-for-data-confidentiality). Apple permite ITSAppUsesNonExemptEncryption=false para usos exentos, incluidas dependencias (https://developer.apple.com/documentation/Security/complying-with-encryption-export-regulations). No se publica ni distribuye en App Store Francia; revisar requisitos antes de cualquier distribución pública. No se afirma una nueva declaración de cifrado aceptada en el portal.
+
+Pruebas Python de firma: 10 correctas localmente; Swift, enlace de VLCKit, interfaz/decodificación y firma de build 6 pendientes de CI Mac. No afirmar compatibilidad o disponibilidad antes de esas verificaciones.
+
 ## Corrección del enlace M3U grande — 0.3.2 / build 5
 
 La nueva captura del propietario muestra HTTP activado y el error genérico de respuesta. La comprobación privada del enlace confirmó HTTP 200, cabecera M3U y una lista que supera incluso 128 MiB, con cientos de miles de entradas; la lectura se detuvo sin guardar el catálogo ni sus credenciales. La cuenta se autenticó como Active por la API del mismo proveedor. El límite previo de 32 MiB explica el rechazo observado; aumentar ese límite y cargar el catálogo completo no es necesario para iniciar sesión.

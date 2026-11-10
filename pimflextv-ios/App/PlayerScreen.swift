@@ -112,36 +112,65 @@ struct PlayerScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var playback = PlaybackModel()
+    @StateObject private var compatible = CompatiblePlaybackModel()
+    @State private var usesCompatible = false
     @State private var playbackAccount: Account?
     let item: MediaItem
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
-            NativePlayer(player: playback.player).ignoresSafeArea()
-            if playback.waiting { ProgressView("Abriendo transmisión…").frame(maxWidth: .infinity, maxHeight: .infinity) }
-            if let error = playback.error {
+            if usesCompatible {
+                CompatibleVideoSurface(playback: compatible).ignoresSafeArea()
+                VStack { Spacer(); CompatiblePlaybackControls(playback: compatible) }
+            } else { NativePlayer(player: playback.player).ignoresSafeArea() }
+            if usesCompatible ? compatible.waiting : playback.waiting {
+                ProgressView("Abriendo transmisión…").tint(.white).frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            if let error = usesCompatible ? compatible.error : playback.error {
                 VStack(spacing: 20) {
                     Image(systemName: "exclamationmark.triangle").font(.largeTitle)
                     Text(error).multilineTextAlignment(.center)
-                    Button("Reintentar") { start() }.buttonStyle(.borderedProminent)
-                }.padding(30).frame(maxWidth: .infinity, maxHeight: .infinity).background(.black.opacity(0.9))
+                    Button("Reintentar") { start(forceCompatible: usesCompatible) }.buttonStyle(.borderedProminent).tint(.cyan).foregroundStyle(.black)
+                    if !usesCompatible {
+                        Button("Probar modo compatible") { start(forceCompatible: true) }.buttonStyle(.bordered)
+                    }
+                }.foregroundStyle(.white).padding(30).frame(maxWidth: .infinity, maxHeight: .infinity).background(.black.opacity(0.9))
             }
-            Button { dismiss() } label: { Label("Cerrar", systemImage: "xmark").padding(12).background(.ultraThinMaterial, in: Capsule()) }.padding(16)
+            Button { dismiss() } label: { Label("Cerrar", systemImage: "xmark").padding(12).background(.ultraThinMaterial, in: Capsule()) }.foregroundStyle(.white).padding(16).accessibilityIdentifier("playerClose")
         }.task { start() }
-            .onDisappear { playback.stop() }
+            .onDisappear { playback.stop(); compatible.stop() }
             .onChange(of: scenePhase) { phase in
-                if phase == .background, model.account == playbackAccount { model.savePosition(playback.player.currentTime().seconds, item: item) }
+                if phase == .background, model.account == playbackAccount {
+                    if usesCompatible { compatible.savePosition() }
+                    else { model.savePosition(playback.player.currentTime().seconds, item: item) }
+                }
             }
     }
-    private func start() {
+    private func start(forceCompatible: Bool = false) {
         guard let account = model.account else { return }
         playbackAccount = account
         do {
-            let url = try Endpoint.playback(account, item: item)
-            playback.start(url: url, resume: model.positions[item.id] ?? 0) {
+            let url: URL
+            #if DEBUG
+            if model.usesTestFixtures, ProcessInfo.processInfo.arguments.contains("--test-mkv-playback") {
+                guard let fixture = Bundle.main.url(forResource: "PlaybackFixture", withExtension: "mkv") else { throw PimflexError.invalidResponse }
+                url = fixture
+            } else { url = try Endpoint.playback(account, item: item) }
+            #else
+            url = try Endpoint.playback(account, item: item)
+            #endif
+            playback.stop(); compatible.stop()
+            usesCompatible = forceCompatible || PlaybackEngine.forMediaURL(url) == .compatible
+            let save: (Double) -> Void = {
                 guard model.account == account else { return }
                 model.savePosition($0, item: item)
             }
-        } catch { playback.waiting = false; playback.error = model.message(error) }
+            if usesCompatible { compatible.start(url: url, resume: model.positions[item.id] ?? 0, save: save) }
+            else { playback.start(url: url, resume: model.positions[item.id] ?? 0, save: save) }
+        } catch {
+            playback.waiting = false; compatible.waiting = false
+            if usesCompatible { compatible.error = model.message(error) }
+            else { playback.error = model.message(error) }
+        }
     }
 }

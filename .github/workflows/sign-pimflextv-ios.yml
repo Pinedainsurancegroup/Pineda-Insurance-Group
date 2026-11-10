@@ -58,8 +58,8 @@ jobs:
       - name: Unsigned universal Release validation
         run: |
           brew install xcodegen
-          xcodegen generate
-          xcodebuild -project PimflexTV.xcodeproj -scheme PimflexTV -configuration Release \
+          bash scripts/prepare-ios.sh
+          xcodebuild -workspace PimflexTV.xcworkspace -scheme PimflexTV -configuration Release \
             -destination 'generic/platform=iOS' -derivedDataPath DeviceBuild CODE_SIGNING_ALLOWED=NO build
   signed-export:
     needs: preflight
@@ -95,6 +95,7 @@ jobs:
           printf 'PIMFLEX_EXPORT_DIR=%s/pimflex-signed\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
           printf 'PIMFLEX_PROFILE_PATH=%s/pimflex-private-signing/PIMFLEXTV.mobileprovision\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
           brew install xcodegen openssl@3
+          bash scripts/prepare-ios.sh
           printf 'PIMFLEX_OPENSSL_3=%s/bin/openssl\n' "$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
       - name: Import private signing identity into temporary keychain
         env:
