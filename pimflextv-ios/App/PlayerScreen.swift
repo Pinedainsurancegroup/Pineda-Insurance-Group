@@ -125,7 +125,7 @@ final class PlaybackModel: ObservableObject {
             self.subtitleChoices = subtitles?.options.enumerated().map { PlayerTrackChoice(id: $0.offset, name: $0.element.displayName) } ?? []
             // These are upper bandwidth preferences, not a guarantee that AVPlayer
             // selects one exact rendition. Only advertise rates in this asset.
-            let rates = Set(variants.map(\.peakBitRate).filter { $0.isFinite && $0 > 0 }).sorted()
+            let rates = Set(variants.compactMap(\.peakBitRate).filter { $0.isFinite && $0 > 0 }).sorted()
             self.qualityChoices = rates.count > 1 ? rates.enumerated().map {
                 PlayerQualityChoice(id: $0.offset + 1, name: String(format: "Hasta %.2f Mb/s", $0.element / 1_000_000), bitRate: $0.element)
             } : []
