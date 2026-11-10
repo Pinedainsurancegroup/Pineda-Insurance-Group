@@ -41,9 +41,12 @@ final class CompatiblePlaybackTests: XCTestCase {
         app.buttons["playerClose"].tap()
         XCTAssertTrue(movie.waitForExistence(timeout: 5))
         XCTAssertFalse(surface.exists)
+        let reopenedAt = Date()
         movie.tap()
         waitUntilPlaying(surface)
-        XCTAssertLessThan(seconds(position.label), 8, "Reopening creates a fresh player instead of leaving a hidden session running")
+        let reopenedSeconds = seconds(position.label)
+        let elapsedSinceReopen = Int(Date().timeIntervalSince(reopenedAt).rounded(.up))
+        XCTAssertLessThanOrEqual(reopenedSeconds, elapsedSinceReopen + 2, "A fresh player starts at zero; allow the real time spent waiting for CI accessibility snapshots")
         app.buttons["playerClose"].tap()
     }
 
