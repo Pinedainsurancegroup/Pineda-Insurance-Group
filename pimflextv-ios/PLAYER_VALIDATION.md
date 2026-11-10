@@ -24,8 +24,38 @@ El 2026-11-10 el propietario autorizó expresamente publicar el MP4 de prueba de
 - Las dos pruebas de decodificación local usan `--keep-playback-controls-visible`: XCTest llegó a tardar más de cuatro segundos entre localizar un botón e inyectar el toque. Esa opción sólo existe en DEBUG y exige simultáneamente `usesTestFixtures` y un argumento de archivo local MKV/MP4; sólo omite programar la ocultación. Conserva el motor, reloj, pistas, pausa, búsqueda y avance reales. Las pruebas específicas de ocultación/reinicio del plazo y opciones no usan esa opción. Por tanto, los tests de decodificación no certifican por sí solos la ocultación automática; ésta se comprueba por separado. Release y DEBUG normal conservan los cuatro segundos.
 - Las opciones sintéticas están detrás de DEBUG y `--ui-testing`; no validan cambios audibles de idioma, subtítulos visibles ni adaptación real HLS. La muestra local MKV y su remux MP4 H.264/AAC prueban decodificación y controles sin proveedor. Ambas muestras se excluyen de Release.
 - En VLC, las pistas se actualizan al abrir opciones, al terminar la carga con opciones abiertas y tras seleccionar; no se consultan en cada actualización del reloj. La prueba MKV comprueba también que se ofrece y puede seleccionar su pista AAC real, sin inventar subtítulos ni calidad. Una única pista no demuestra cambio audible entre idiomas.
-- En el entorno local Linux no existen Swift/Xcode/XcodeGen. Las verificaciones locales de estructura y los tests Python no constituyen una compilación iOS. Registrar el resultado Mac por SHA de esta candidata; los resultados históricos de 0.3.3 no la validan.
+- En el entorno local Linux no existen Swift/Xcode/XcodeGen. Las verificaciones locales de estructura y los tests Python no constituyen una compilación iOS. La validación Mac de esta candidata se identifica por SHA a continuación; los resultados históricos de 0.3.3 no la validan.
 - Revisar manualmente las capturas iPhone portrait/landscape, iPad mini/Pro, ventanas estrechas y texto accesible. Probar pistas múltiples reales, subtítulos forzados, errores/redirecciones multimedia, AirPlay, calidad HLS, fondo/retorno y reanudación con el proveedor autorizado en dispositivo.
+
+## Validación Mac de la candidata
+
+Código `4a22b4668896191d893657291ff46930659e9534`, [CI 42918344913](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42918344913), resultado **success**, cero fallos. Xcode 16.4, simuladores iOS/iPadOS 18.5:
+
+| Comprobación | Resultado |
+| --- | --- |
+| Núcleo Swift | 37 aprobadas |
+| Python de exportación | 10 aprobadas; scripts de firma sin cambios |
+| UI iPhone 16 Pro | 14 aprobadas; 4 exclusivas de iPad omitidas |
+| UI iPad mini (A17 Pro) | 18 aprobadas |
+| UI iPad Pro 13-inch (M4) | 18 aprobadas |
+| Debug universal, simulador | Compilación aprobada |
+| Release universal, iPhone/iPad | Compilación sin firma aprobada |
+
+Las muestras de reproducción se copiaron en Debug y no en Release. Los tres destinos aprobaron MKV/AAC y MP4 locales, además de las pruebas separadas de ocultación, recuperación, reinicio del plazo y opciones. El archivo de recursos existente conserva sus 60 archivos sin cambios; tampoco se modificaron núcleo, cuentas, transporte ni configuración de firma.
+
+El [artefacto de fuentes/proyecto generado y app de simulador](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42918344913/artifacts/13809983125) corresponde a ese SHA; no contiene una IPA instalable. El cierre posterior sólo actualiza Markdown con esta evidencia, sin cambiar los insumos de compilación ni lanzar otra ejecución.
+
+## Inspección visual realizada
+
+Se inspeccionaron capturas de simulador iPhone de esta candidata: dashboard vertical/horizontal, acceso vertical/horizontal, favoritos, series/episodios, pantalla múltiple y reproducción local. El dashboard conserva los bitmaps originales y las proporciones de las tarjetas; los controles visibles del reproductor no muestran recortes en las capturas revisadas. La imagen horizontal del acceso muestra una parte del formulario desplazable: por sí sola no demuestra que se pueda llegar al final.
+
+Las capturas iPhone de dashboard y MP4 de `b729a7e4aa752e104af72aa4714a428f2d6a2aba` se revisaron directamente; el resto se revisó en `ea2c813`, con la misma disposición visual. El cambio posterior `4a22b4668896191d893657291ff46930659e9534` sólo reinicia la visibilidad antes del cierre final de una prueba, después de verificar ocultación y recuperación, y aclara su comentario. No modifica la app ni las aserciones de temporización.
+
+Se recuperaron las capturas finales del iPad mini de `4a22b46`: dashboard vertical/horizontal, MP4 y MKV pausado/buscado conservan tarjetas proporcionadas y controles de reproducción completos. También se revisaron catálogos, categorías, cuatro pantallas y contenido restringido a 390 pt, sin solapamientos concretos de sus controles. Ese contenedor de prueba no acredita Split View o Stage Manager reales.
+
+Se detectó un pequeño recorte del logo en el borde izquierdo del dashboard vertical de iPad mini: el diseño heredado coloca un logo de aproximadamente 110,26 pt en una barra de 104,16 pt. La geometría y el recurso son idénticos a la base; queda pendiente ese ajuste visual y no se afirma ausencia total de recortes. El artefacto final iPad Pro supera el límite de transferencia de 32 MiB y no se inspeccionó visualmente en este entorno. Las pruebas automáticas de iPad y una inspección de imágenes son evidencias distintas.
+
+No se ejecutaron las apps Android originales ni medios del proveedor. Esta inspección no acredita paridad visual completa, subtítulos visibles, cambio audible entre idiomas, AirPlay, calidad adaptativa ni funcionamiento físico.
 
 ## Preparación para TestFlight
 

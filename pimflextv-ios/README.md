@@ -4,9 +4,11 @@ Aplicación nativa SwiftUI para iOS / iPadOS 16 o posterior. Conserva AVFoundati
 
 ## Candidata de controles — 0.4.0 / build 7
 
-Continúa desde `56e66e8ac785b45d84f2ba3df955858d91a5c64f`, preservando el acceso y los motores de 0.3.3/build 6. El propietario confirma que la versión actual inicia sesión y reproduce contenido. La candidata se prepara en una rama separada; todavía necesita validar sus cambios y exportarse con la identidad Apple existente antes de entregarse en TestFlight. No reemplaza la beta instalada ni modifica certificados, perfiles, credenciales o `SIGNING_REQUEST.json`.
+Continúa desde `56e66e8ac785b45d84f2ba3df955858d91a5c64f`, preservando el acceso y los motores de 0.3.3/build 6. El propietario confirma que la versión actual inicia sesión y reproduce contenido. La candidata tiene validación Mac en una rama separada; falta exportarla con la identidad Apple existente para TestFlight y validar estos cambios en dispositivos reales. No reemplaza la beta instalada ni modifica certificados, perfiles, credenciales o `SIGNING_REQUEST.json`.
 
 Se incorporan controles propios de reproducción con ocultación tras cuatro segundos de inactividad, selección de pistas disponibles, opciones de subtítulos y calidad HLS cuando el medio publica variantes. La calidad de AVPlayer se presenta como límite preferido, con modo Automático; no garantiza forzar una variante exacta. El menú compacto recupera accesos a cuenta, usuarios, favoritos, actualización y cierre de sesión. Véase `PLAYER_VALIDATION.md` para cobertura, excepciones de interacción/accesibilidad y límites.
+
+Código validado `4a22b4668896191d893657291ff46930659e9534`, [CI 42918344913](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42918344913): **success**. Aprobadas 37 pruebas núcleo, 10 Python, 14 UI iPhone (4 exclusivas iPad omitidas), 18 mini y 18 Pro; Debug simulador y Release universal sin firma. UI usa Xcode 16.4/iOS 18.5, datos ficticios y videos locales. El proceso protegido de firma actual sólo acepta la rama estable; queda pendiente exportar y cargar el SHA exacto de la candidata sin sustituirla. El build 7 es provisional hasta comprobar disponibilidad antes de exportar.
 
 La comparación se apoya en la evidencia 4.0.2 conservada en `REFERENCE_402.md` y en la captura de simulador aportada. El adjunto Android 4.0.1 supera el límite de transferencia de 32 MiB del entorno y no se pudo inspeccionar. No se ha ejecutado ninguna de las dos apps Android en esta revisión ni se certifica equivalencia visual del nuevo reproductor.
 
@@ -50,7 +52,7 @@ bash scripts/prepare-ios.sh
 open PimflexTV.xcworkspace
 ```
 
-El script usa CocoaPods 1.16.2 y el podspec oficial de MobileVLCKit 3.7.5 conservado en `Vendor`, con URL y SHA-256 exactos del archivo de VideoLAN y sin dependencias transitivas. La biblioteca permanece sin modificar. Ajustes incluye licencia y enlaces al código fuente; no se guardan sus binarios en Git. La prueba MKV se incluye sólo en Debug y se excluye de Release.
+El script usa CocoaPods 1.16.2 y el podspec oficial de MobileVLCKit 3.7.5 conservado en `Vendor`, con URL y SHA-256 exactos del archivo de VideoLAN y sin dependencias transitivas. La biblioteca permanece sin modificar. Ajustes incluye licencia y enlaces al código fuente; no se guardan sus binarios en Git. Las muestras MKV y MP4 se incluyen sólo en Debug y se excluyen de Release.
 
 El workflow `.github/workflows/build-pimflextv-ios.yml` ejecuta las pruebas del núcleo, compila para simulador y para iPhone sin firma, ejecuta pruebas UI y exporta capturas mediante `xcresulttool`. Las pruebas UI usan datos explícitamente ficticios compilados sólo en Debug; no abren transmisiones de un proveedor.
 
