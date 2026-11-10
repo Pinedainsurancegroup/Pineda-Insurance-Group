@@ -107,6 +107,9 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
         guard active, seekable, position.isFinite else { return }
         let value = min(max(0, position), max(0, duration - 0.5))
         player.time = VLCTime(int: Int32(min(value * 1000, Double(Int32.max))))
+        // libVLC applies a paused seek when a decoded frame is requested. Step
+        // once to update the picture and clock while preserving the pause state.
+        if !player.isPlaying { player.gotoNextFrame() }
         seconds = value
     }
     func savePosition() { if active, !ended { save?(seconds) } }
