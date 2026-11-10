@@ -313,7 +313,7 @@ struct PlayerScreen: View {
                 }.foregroundStyle(.white).padding(30).frame(maxWidth: .infinity, maxHeight: .infinity).background(.black.opacity(0.9))
             }
             if controlsVisible || error != nil {
-                controls.accessibilityIdentifier("playerControls")
+                controls
             }
         }.task { start() }
             .sheet(isPresented: $optionsVisible, onDismiss: showControls) { options }

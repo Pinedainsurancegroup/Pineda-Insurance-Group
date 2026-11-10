@@ -114,7 +114,8 @@ final class LoginTests: XCTestCase {
         menu.tap()
         app.buttons["Mi Información"].tap()
         XCTAssertTrue(app.buttons["Actualizar información"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Vista previa"].exists)
+        // LabeledContent may expose the label and value as one accessibility element.
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Vista previa")).firstMatch.exists)
     }
     private func fixtureApp() -> XCUIApplication {
         let app = XCUIApplication()
