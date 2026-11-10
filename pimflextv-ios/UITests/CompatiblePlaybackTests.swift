@@ -26,6 +26,9 @@ final class CompatiblePlaybackTests: XCTestCase {
         advancing.isInverted = true
         XCTAssertEqual(XCTWaiter.wait(for: [advancing], timeout: 1.5), .completed)
 
+        // The sample lasts five minutes so slow CI accessibility snapshots cannot
+        // consume the available seek range before the pause/seek assertions.
+        XCTAssertLessThan(before, 280, "The local fixture must leave room for a ten-second seek and playback progress")
         app.buttons["Adelantar 10 segundos"].tap()
         let seeked = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in self.seconds(position.label) >= before + 8 }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [seeked], timeout: 5), .completed)
