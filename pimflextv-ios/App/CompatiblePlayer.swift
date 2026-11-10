@@ -97,7 +97,6 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
         seekable = player.isSeekable
         hasVideo = player.hasVideoOut && player.videoSize.width > 0
         playing = player.isPlaying
-        refreshTracks()
         if playing, seekWhenPlaying, let pending = pendingSeek {
             seekWhenPlaying = false
             player.time = VLCTime(int: Int32(min(pending.target * 1000, Double(Int32.max))))
@@ -129,7 +128,7 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
         }
     }
 
-    private func refreshTracks() {
+    func refreshTracks() {
         guard let player = instance else { return }
         let audioNames = player.audioTrackNames as? [String] ?? []
         let audioIDs = player.audioTrackIndexes as? [NSNumber] ?? []

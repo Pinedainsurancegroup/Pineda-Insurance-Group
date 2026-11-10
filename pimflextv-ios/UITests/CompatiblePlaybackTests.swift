@@ -3,7 +3,7 @@ import XCTest
 final class CompatiblePlaybackTests: XCTestCase {
     func testMKVActuallyDecodesPausesSeeksAndReopensWithoutNetwork() {
         let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing", "--preview-account", "--test-mkv-playback"]
+        app.launchArguments = ["--ui-testing", "--preview-account", "--test-mkv-playback", "--keep-playback-controls-visible"]
         app.launch()
         XCTAssertTrue(app.buttons["dashboard-movie"].waitForExistence(timeout: 10))
         app.buttons["dashboard-movie"].tap()
@@ -51,6 +51,18 @@ final class CompatiblePlaybackTests: XCTestCase {
             return current >= selected + 1
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [progressed], timeout: 20), .completed, "The actual decoder clock must advance past the selected position after resuming")
+        // Exercise real VLC track metadata and selection with the sample's AAC
+        // track. Multiple audible languages still require a suitable real asset.
+        app.buttons["playerOptions"].tap()
+        let done = app.buttons["playerOptionsDone"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        let audio = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "playerAudio-")).firstMatch
+        XCTAssertTrue(audio.waitForExistence(timeout: 5))
+        audio.tap()
+        XCTAssertEqual(audio.value as? String, "Seleccionado")
+        XCTAssertFalse(app.buttons["playerSubtitle-0"].exists)
+        XCTAssertFalse(app.buttons["playerQuality-1"].exists)
+        done.tap()
         revealControls(app)
         app.buttons["playerClose"].tap()
         XCTAssertTrue(movie.waitForExistence(timeout: 5))

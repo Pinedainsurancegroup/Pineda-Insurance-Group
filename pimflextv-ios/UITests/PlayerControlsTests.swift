@@ -4,7 +4,7 @@ import XCTest
 /// paths. CompatiblePlaybackTests additionally verifies the bundled MKV decoder.
 final class PlayerControlsTests: XCTestCase {
     func testNativeLocalMediaPlaysPausesSeeksAndResumes() {
-        let app = openPreviewPlayer(arguments: ["--test-native-playback"])
+        let app = openPreviewPlayer(arguments: ["--test-native-playback", "--keep-playback-controls-visible"])
         let surface = app.otherElements["nativeVideoSurface"]
         XCTAssertTrue(surface.waitForExistence(timeout: 10))
         let started = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "Reproduciendo ·"), object: surface)

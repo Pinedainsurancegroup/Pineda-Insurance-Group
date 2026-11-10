@@ -328,7 +328,10 @@ struct PlayerScreen: View {
             .onDisappear { hideTask?.cancel(); hideTask = nil; playback.stop(); compatible.stop() }
             .onChange(of: optionsVisible) { _ in scheduleHide() }
             .onChange(of: voiceOverEnabled) { _ in showControls() }
-            .onChange(of: waiting) { _ in showControls() }
+            .onChange(of: waiting) { waiting in
+                if !waiting, optionsVisible, usesCompatible { compatible.refreshTracks() }
+                showControls()
+            }
             .onChange(of: error) { _ in showControls() }
             .onChange(of: scenePhase) { phase in
                 if phase == .background, model.account == playbackAccount {
@@ -347,7 +350,10 @@ struct PlayerScreen: View {
                 Spacer(minLength: 8)
                 Text(item.name).font(.headline).lineLimit(1)
                 Spacer(minLength: 8)
-                Button { optionsVisible = true; showControls() } label: {
+                Button {
+                    if usesCompatible { compatible.refreshTracks() }
+                    optionsVisible = true; showControls()
+                } label: {
                     Image(systemName: "slider.horizontal.3").frame(width: 48, height: 48)
                 }.accessibilityLabel("Audio, subtítulos y calidad").accessibilityIdentifier("playerOptions")
             }.padding(12).background(.black.opacity(0.6))
@@ -470,6 +476,13 @@ struct PlayerScreen: View {
     private func showControls() { controlsVisible = true; scheduleHide() }
     private func scheduleHide() {
         hideTask?.cancel(); hideTask = nil
+        #if DEBUG
+        // Decoder integration tests need stable targets when XCTest input
+        // delivery exceeds four seconds. Inactivity tests omit this flag.
+        let arguments = ProcessInfo.processInfo.arguments
+        if model.usesTestFixtures, arguments.contains("--keep-playback-controls-visible"),
+           arguments.contains("--test-mkv-playback") || arguments.contains("--test-native-playback") { return }
+        #endif
         guard scenePhase == .active, !optionsVisible, !routePickerActive, !scrubbing, !voiceOverEnabled, !waiting, error == nil else { return }
         hideTask = Task { @MainActor in
             do { try await Task.sleep(nanoseconds: 4_000_000_000) } catch { return }

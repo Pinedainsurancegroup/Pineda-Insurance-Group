@@ -1,6 +1,6 @@
 # PIMFLEX TV para iPhone y iPad — 0.4.0 candidata
 
-Aplicación nativa SwiftUI para iOS / iPadOS 16 o posterior. Conserva AVFoundation para HLS/MP4 e incorpora MobileVLCKit 3.7.5 para contenedores adicionales. Continúa la candidata de iPhone del PR #6 y usa la versión Android 4.0.2 aportada por el propietario como referencia. El desarrollo permanece en `pimflextv-ios-20261029`, sin integrar a producción.
+Aplicación nativa SwiftUI para iOS / iPadOS 16 o posterior. Conserva AVFoundation para HLS/MP4 e incorpora MobileVLCKit 3.7.5 para contenedores adicionales. Continúa la app del PR #6 y usa la versión Android 4.0.2 aportada por el propietario como referencia. La candidata 0.4.0 está en `pimflextv-ios-controls-20261110`, [PR borrador #11](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/pull/11), separada de `pimflextv-ios-20261029` y sin integrar a producción.
 
 ## Candidata de controles — 0.4.0 / build 7
 
@@ -58,7 +58,7 @@ Los artefactos de CI incluyen fuente/proyecto generado, aplicación de simulador
 
 ## Continuidad en Codex
 
-Entorno privado: **PIMFLEX TV iOS**. Repositorio: `Pinedainsurancegroup/Pineda-Insurance-Group`. Rama: `pimflextv-ios-20261029`. PR en borrador: **#6**.
+Entorno privado: **PIMFLEX TV iOS**. Repositorio: `Pinedainsurancegroup/Pineda-Insurance-Group`. Base estable: `pimflextv-ios-20261029`, PR borrador **#6**. Candidata: `pimflextv-ios-controls-20261110`, PR borrador **#11**.
 
 El **2026-11-06**, el propietario respondió explícitamente «Si te autorizo» y autorizó publicar las imágenes y fuentes originales junto con el código iOS en el repositorio público `Pinedainsurancegroup/Pineda-Insurance-Group`, actualizar el PR #6 y ejecutar Mac CI. Con esta confirmación queda resuelto el bloqueo previo de publicación por falta de autorización para esos recursos. El PR permanece en borrador; la autorización no incluye merge ni publicación en App Store. No incorporar APK/AAB, DEX, secretos, claves de firma, sesiones, credenciales ni respuestas de proveedores al repositorio.
 
