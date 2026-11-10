@@ -1,6 +1,6 @@
-# PIMFLEX TV para iPhone y iPad — 0.3.0
+# PIMFLEX TV para iPhone y iPad — 0.3.3
 
-Aplicación nativa SwiftUI / AVFoundation para iOS / iPadOS 16 o posterior. Continúa la candidata de iPhone del PR #6 y usa la versión Android 4.0.2 aportada por el propietario como referencia. El desarrollo permanece en `pimflextv-ios-20261029`, sin integrar a producción.
+Aplicación nativa SwiftUI para iOS / iPadOS 16 o posterior. Conserva AVFoundation para HLS/MP4 e incorpora MobileVLCKit 3.7.5 para contenedores adicionales. Continúa la candidata de iPhone del PR #6 y usa la versión Android 4.0.2 aportada por el propietario como referencia. El desarrollo permanece en `pimflextv-ios-20261029`, sin integrar a producción.
 
 ## Adaptación para iPad
 
@@ -15,7 +15,7 @@ Las pruebas UI incluyen iPhone, iPad mini y iPad Pro de 13 pulgadas. La prueba d
 - Catálogos por categoría, tarjetas de películas/series, búsqueda en los tres catálogos, favoritos, episodios y guía corta EPG.
 - Lista de usuarios guardada en un único vault Keychain, con selección activa, eliminación individual y migración de la sesión anterior. Cerrar sesión conserva la lista; eliminar un usuario retira sus credenciales guardadas.
 - Pantalla múltiple con dos o cuatro canales seleccionados, un único audio activo, errores/reintentos por pantalla y liberación de transmisiones al salir o ir al fondo.
-- Reproductor AVPlayer, reanudación de VOD, tratamiento de interrupciones y protección frente a respuestas antiguas de otra sesión.
+- Reproductor AVPlayer para HLS/MP4 y modo compatible para MKV/AVI/FLV/WMV/WebM/TS/M2TS/MPEG/MPG. Permite pausa y búsqueda cuando el medio lo admite; los errores nativos ofrecen probar el modo compatible. No garantiza todos los códecs o servidores.
 - Normalización de direcciones terminadas en `login.php`, `player_api.php` y `get.php`, preservando los datos de listas M3U y las rutas codificadas.
 - Mayor tolerancia a las formas reales de respuestas Xtream y redirecciones de listas dentro del mismo origen.
 - Icono iOS de 1024 px compuesto con el logo negro original de 800×312, sin rediseñar ni interpolar el logo.
@@ -24,23 +24,25 @@ La presencia de código no equivale a validación en un iPhone físico. Consulta
 
 ## Conexión del proveedor
 
-HTTPS sigue siendo el valor predeterminado. Se añadió una opción explícita para el servidor histórico facilitado por el propietario: únicamente `http://moonspelltools.cc`, sin subdominios. El usuario debe activar esa opción antes de enviar datos por HTTP. El texto del login informa que esa conexión transmite los datos sin cifrar.
+HTTPS sigue siendo el valor predeterminado. La opción explícita del proveedor admite los hosts exactos `moonspelltools.cc` y `my-vionex.com`, sin subdominios. El usuario debe activar esa opción antes de enviar datos por HTTP. El texto del login informa que esa conexión transmite los datos sin cifrar.
 
-La excepción ATS se limita al mismo dominio. No se habilita una excepción global de transporte ni se desactiva la validación de certificados TLS. El control estricto de redirecciones revisado pertenece a las peticiones API y a la descarga M3U por `APIClient`: rechaza cambios de origen y degradaciones de HTTPS a HTTP. Las cargas nativas multimedia de AVPlayer y las imágenes de `AsyncImage` necesitan comprobación propia; no quedan validadas por ese control. Un endpoint HTTPS del proveedor sigue siendo preferible. El puerto y la ruta los introduce el usuario; no hay cuentas, contraseñas ni canales precargados.
+Las excepciones ATS se limitan a esos dominios. No se habilita una excepción global de transporte ni se desactiva la validación de certificados TLS. El control estricto de redirecciones revisado pertenece a las peticiones API y a la descarga M3U por `APIClient`: rechaza cambios de origen y degradaciones de HTTPS a HTTP. Las cargas multimedia de AVPlayer/MobileVLCKit y las imágenes de `AsyncImage` necesitan comprobación propia; no quedan validadas por ese control. Un endpoint HTTPS del proveedor sigue siendo preferible. El puerto y la ruta los introduce el usuario; no hay cuentas, contraseñas ni canales precargados.
 
-No se ha autenticado una cuenta real ni comprobado un stream del proveedor en esta revisión. Las comprobaciones anónimas desde el entorno de desarrollo no demostraron disponibilidad del servicio; eso no prueba que falle en el dispositivo del propietario.
+El propietario confirmó el inicio de sesión en el dispositivo y aportó una captura del rechazo local de formato. La prueba de decodificación usa un MKV propio, sin contenido ni credenciales del proveedor. La reproducción de la nueva versión con ese proveedor en un dispositivo físico requiere su comprobación.
 
 ## Compilar y comprobar
 
-Se necesita macOS con Xcode y XcodeGen para construir la aplicación. En un Mac:
+Se necesita macOS con Xcode, XcodeGen y Ruby/CocoaPods para construir la aplicación. En un Mac:
 
 ```sh
 cd pimflextv-ios
 swift test
 brew install xcodegen
-xcodegen generate
-open PimflexTV.xcodeproj
+bash scripts/prepare-ios.sh
+open PimflexTV.xcworkspace
 ```
+
+El script usa CocoaPods 1.16.2 y el podspec oficial de MobileVLCKit 3.7.5 conservado en `Vendor`, con URL y SHA-256 exactos del archivo de VideoLAN y sin dependencias transitivas. La biblioteca permanece sin modificar. Ajustes incluye licencia y enlaces al código fuente; no se guardan sus binarios en Git. La prueba MKV se incluye sólo en Debug y se excluye de Release.
 
 El workflow `.github/workflows/build-pimflextv-ios.yml` ejecuta las pruebas del núcleo, compila para simulador y para iPhone sin firma, ejecuta pruebas UI y exporta capturas mediante `xcresulttool`. Las pruebas UI usan datos explícitamente ficticios compilados sólo en Debug; no abren transmisiones de un proveedor.
 
@@ -52,13 +54,13 @@ Entorno privado: **PIMFLEX TV iOS**. Repositorio: `Pinedainsurancegroup/Pineda-I
 
 El **2026-11-06**, el propietario respondió explícitamente «Si te autorizo» y autorizó publicar las imágenes y fuentes originales junto con el código iOS en el repositorio público `Pinedainsurancegroup/Pineda-Insurance-Group`, actualizar el PR #6 y ejecutar Mac CI. Con esta confirmación queda resuelto el bloqueo previo de publicación por falta de autorización para esos recursos. El PR permanece en borrador; la autorización no incluye merge ni publicación en App Store. No incorporar APK/AAB, DEX, secretos, claves de firma, sesiones, credenciales ni respuestas de proveedores al repositorio.
 
-La candidata universal `2eeeea894d3cdbfad5112914a85ec7949d3101d7` pasó el [CI Mac 42467076147](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42467076147) el 2026-11-08: 26 pruebas del núcleo, 6 UI en iPhone 16 Pro y 10 UI en cada iPad mini / iPad Pro 13-inch, sin fallos. Se compilaron Debug para simulador y Release universal sin firma. Las cuatro pruebas exclusivas iPad se omiten en iPhone. Ver `IPAD_VALIDATION.md` para límites y evidencia. Esto valida la candidata de desarrollo, no la firma ni streams del proveedor.
+La validación `1487328dd5f69c9f04ce5148e854532d10e8598d` pasó [CI 42747510260](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42747510260): 37 pruebas núcleo, 10 Python de firma, Debug/Release universales, 8 UI en iPhone (4 exclusivas iPad omitidas), 12 mini y 12 Pro. Incluye decodificación MKV local, pausa, búsqueda y reapertura; no usa streams del proveedor. La IPA firmada conserva el código `326c714262ca9aa4c896fd11fd202e3ac37bacd3`: sólo cambian la muestra DEBUG y su prueba UI entre ambos SHA, con insumos Release idénticos. Ver `IPAD_VALIDATION.md` para evidencia y límites.
 
 Leer `CODEX_HANDOFF.md` y `REFERENCE_402.md` antes de continuar. El entorno de onboarding tuvo un fallo de conectividad al recuperar la rama; una copia verificada del código puede usarse como punto de partida sin resetear trabajo posterior. La configuración o el nombre del entorno no demuestran por sí solos que el código esté recuperado o probado allí.
 
 ## Distribución
 
-Antes de TestFlight se requieren cuenta/equipo Apple Developer, firma y registro App Store Connect; comprobar login, formatos, reproducción y funciones pendientes con el proveedor y un iPhone real; completar metadatos, soporte, privacidad y las declaraciones que correspondan al producto final. La compilación sin firma y el simulador no sustituyen esos pasos. No se ha enviado la app a revisión ni publicado en App Store.
+La versión **0.3.3 (6)** universal está firmada, procesada como COMPLETE/VALID y habilitada IN_BETA_TESTING en el grupo interno del titular. Se actualiza desde TestFlight sobre la app existente. Falta comprobar el mismo video del proveedor en el dispositivo y completar metadatos, soporte, privacidad y declaraciones del producto final para distribución pública. No hay envío a revisión ni publicación en App Store.
 
 Referencias oficiales:
 - https://developer.apple.com/documentation/xcode/preparing-your-app-for-distribution

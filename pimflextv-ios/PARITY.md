@@ -12,25 +12,25 @@
 | Apariencia de acceso e inicio | Recursos originales del login y dashboard `_cl`, fuentes y etiquetas ES; sidebar y tres tarjetas en horizontal | Comparación en dispositivo, estados del proveedor y tamaños físicos |
 | iPhone e iPad | Producto universal; catálogo con categorías laterales desde 900 pt, selector compacto y carátulas 2:3 | Validación física y ventanas del sistema |
 | Vertical | Adaptación adicional de iPhone/iPad | No tiene equivalente exacto: Android declara `sensorLandscape` |
-| Login Xtream | Autenticación y catálogos reales comprobados por API en diagnóstico; normalización de portal y Keychain | Login de la IPA en dispositivo físico |
-| HTTP histórico | Opt-in explícito; hosts exactos `moonspelltools.cc` y `my-vionex.com` en 0.3.2/build 5; ATS por dominio; regresión UI en iPhone/mini/Pro | Cuenta y streams reales; endpoint HTTPS preferido cuando el proveedor lo ofrezca |
+| Login Xtream | Autenticación y catálogos comprobados por API; login físico confirmado por el propietario después de la corrección M3U | Revalidar al cambiar proveedor o cuenta |
+| HTTP histórico | Opt-in explícito; hosts exactos `moonspelltools.cc` y `my-vionex.com` en 0.3.3/build 6; ATS por dominio; regresión UI en iPhone/mini/Pro | Cuenta y streams reales; endpoint HTTPS preferido cuando el proveedor lo ofrezca |
 | Usuarios guardados | Vault Keychain único, activar, salir, eliminar y migrar sesión anterior | Migración persistente y errores Keychain en dispositivo |
-| M3U | Importa cuenta de get.php de proveedores conocidos; listas genéricas con categorías/enlaces relativos y límite 32 MiB, error de tamaño específico | Prueba física del enlace importado; archivo local pendiente |
+| M3U | Importa cuenta de get.php de proveedores conocidos; acceso físico confirmado; listas genéricas con categorías/enlaces relativos y límite 32 MiB, error de tamaño específico | Variantes genéricas y archivo local pendiente |
 | TV, Cine y Series | Catálogo, categorías, grilla, búsqueda y episodios | Datos y streams reales |
 | Búsqueda maestra | TV/Cine/Series en una vista | Volumen y velocidad con catálogo real |
 | Favoritos y reanudar | Separados por cuenta | Ciclos de vida reales |
 | EPG | Guía corta Xtream | XMLTV completo y datos reales |
 | Pantalla múltiple | Dos/cuatro canales, un audio, selección y limpieza | Codecs, carga de dispositivo y límite de conexiones del proveedor |
-| Audio/subtítulos/AirPlay | Controles de AVPlayer cuando el medio los ofrece | Dispositivo y pistas reales; no equivale a Chromecast |
+| Audio/subtítulos/AirPlay | Controles de AVPlayer cuando el medio los ofrece; modo compatible con controles básicos propios | Selector de pistas en modo compatible, dispositivo y pistas reales; no equivale a Chromecast |
 | Catch up | Entrada visible marcada no disponible | Archivo, ventana de retención, zona horaria y ruta del proveedor |
 | Grabación/descargas | Pendiente | Implementación y límites iOS |
 | Control parental | Pendiente | PIN, bloqueo efectivo y pruebas |
 | VPN | Pendiente | Servicio y configuración/entitlements del propietario |
 | PiP | Desactivado en candidata | Ciclo de vida y pruebas físicas |
-| MKV/AVI y motores Android | No incorporados | Motor iOS o transcodificación y compatibilidad |
+| MKV/AVI y otros contenedores | MobileVLCKit 3.7.5; MKV H.264/AAC decodificado en CI iPhone/mini/Pro con pausa, búsqueda, progreso real y reapertura | Formatos/códecs y medios reales del proveedor en dispositivo |
 | Stalker, WHMCS, notificaciones, código TV | Pendiente | Servicios y configuración propios |
 | Respaldo Android `.pimbackup` | No importado | Compatibilidad de formato y cifrado |
-| Distribución | 0.3.2/build 5 firmada; Apple COMPLETE/VALID e IN_BETA_TESTING; build exacto en grupo del titular verificado por API | Instalación, acceso y reproducción de build 5 en dispositivo; ficha/privacidad pública |
+| Distribución | 0.3.3/build 6 firmada; Apple COMPLETE/VALID e IN_BETA_TESTING; build exacto en grupo del titular verificado por API | Actualización y reproducción de build 6 en dispositivo; ficha/privacidad pública |
 
 La pantalla de acceso muestra la URL del servidor porque todavía no se ha establecido una configuración de proveedor verificable para ocultarla. Algunos controles de la referencia se adaptan a navegación y controles nativos de iOS. Los datos de muestra usados para pruebas están aislados detrás de `#if DEBUG` y no demuestran funcionamiento de un servicio real.
 

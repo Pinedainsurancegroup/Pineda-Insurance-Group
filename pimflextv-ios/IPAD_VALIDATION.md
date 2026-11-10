@@ -1,5 +1,27 @@
 # Validación universal iPhone / iPad
 
+## Reproductor compatible — 0.3.3 / build 6
+
+El propietario confirmó el login físico y reportó un rechazo local de formato. La app añade MobileVLCKit 3.7.5 fijado por podspec/archivo oficiales; HLS/MP4 conservan AVPlayer. IPA del código `326c714262ca9aa4c896fd11fd202e3ac37bacd3`; validación `1487328dd5f69c9f04ce5148e854532d10e8598d`. El diff sólo incluye la muestra DEBUG y su prueba; Release conserva exactamente sus insumos.
+
+[CI 42747510260](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42747510260): **success**. UI usa Xcode 16.4/iOS 18.5 y cuentas de muestra.
+
+| Comprobación | Resultado |
+| --- | --- |
+| Núcleo Swift | 37 pruebas, 0 fallos |
+| Firma Python | 10 pruebas, 0 fallos |
+| Debug simulador y Release universal | Correctos |
+| iPhone | 8 UI correctas, 4 exclusivas iPad omitidas |
+| iPad mini | 12 UI correctas, 0 fallos |
+| iPad Pro | 12 UI correctas, 0 fallos |
+| MKV H.264/AAC local | Decodificación, carga despejada, pausa, búsqueda, progreso real, cierre y nueva sesión correctos en los tres |
+
+La muestra propia de cinco minutos evita agotar el medio durante snapshots lentos; la comprobación de reapertura mide el reloj contra el tiempo real de automatización. No contiene contenido ni credenciales del proveedor y se excluye de Release.
+
+[Firma 42743958787](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42743958787): **success**, Xcode 26.3/SDK 26.2, misma identidad/perfil y familias 1/2. IPA SHA-256 `b9be339aefc1dde3f9b947adf7c8fabf22ab059481880b8459091a3aa683edaa`. HMAC/hash, perfil exacto, SDK/licencia presentes, muestra ausente y ATS sin excepciones globales comprobados. Apple confirmó COMPLETE/VALID e IN_BETA_TESTING, sin errores ni advertencias. La API oficial verifica el build exacto `9b533fa7-c06f-4bf2-95d4-85c88e38d72c` en el grupo interno automático «PIMFLEX TV - Juan», con cuatro builds y un único tester titular. Archivo de carga `98f5e8d7-fa37-4173-a152-0ffc5b8d3ecf`. La versión **0.3.3 (6)** está habilitada en TestFlight para iPhone e iPad. No repetir carga, pago, firma ni creación de credenciales.
+
+Pendiente probar ese video del proveedor en el dispositivo. No hay automatización sobre iOS 26 físico ni Split View/Stage Manager real. Las capturas de la prueba MKV de iPhone se inspeccionaron.
+
 ## Acceso con enlace M3U grande — 0.3.2 / build 5
 
 La captura posterior del propietario muestra HTTP activado y el error genérico de respuesta. Su lista supera 128 MiB; la lectura de diagnóstico se detuvo sin conservar el catálogo ni sus credenciales. Se importa la cuenta de enlaces estándar get.php de los proveedores conocidos y se autentica por su API, evitando descargar el catálogo completo al iniciar sesión. Las listas genéricas conservan su modo y límite de tamaño con un aviso específico. No se modifica el reproductor.

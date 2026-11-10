@@ -8,7 +8,15 @@ No generar otra clave al retomar ni incluir material privado en este repositorio
 
 ## Estado verificable
 
-La actualización actual es **0.3.2 / build 5**, commit
+La actualización **0.3.3 / build 6**, código `326c714262ca9aa4c896fd11fd202e3ac37bacd3`, se exportó con la identidad y perfil existentes. [Firma 42743958787](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42743958787): success, Xcode 26.3/SDK 26.2, 37 pruebas núcleo y 10 de firma correctas en preflight, Release universal y firma/perfil/entitlements/familias verificados. IPA SHA-256 `b9be339aefc1dde3f9b947adf7c8fabf22ab059481880b8459091a3aa683edaa`. HMAC/hash, perfil exacto, framework/licencia incluidos y muestra MKV ausente comprobados. Se usa el workspace y el SDK oficial fijado se prepara antes de importar la identidad privada.
+
+[CI 42747510260](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42747510260) final **success** en `1487328dd5f69c9f04ce5148e854532d10e8598d`; el diff respecto de la IPA sólo modifica la muestra DEBUG y la prueba UI, con insumos de Release idénticos. No regenerar la IPA por ese cambio de pruebas. Apple confirmó COMPLETE/VALID e IN_BETA_TESTING, sin errores ni advertencias. La API oficial verifica el build exacto `9b533fa7-c06f-4bf2-95d4-85c88e38d72c` en el grupo interno automático «PIMFLEX TV - Juan», con cuatro builds y un único tester titular. Archivo de carga `98f5e8d7-fa37-4173-a152-0ffc5b8d3ecf`. La versión **0.3.3 (6)** está habilitada en TestFlight para iPhone e iPad. No repetir carga, pago, firma ni creación de credenciales.
+
+`ITSAppUsesNonExemptEncryption=false` está en la IPA aceptada; ésta incorpora ahora un SDK multimedia de terceros. No describir la versión actual como si sólo usara bibliotecas de cifrado de Apple. La distribución pública, sus metadatos/declaraciones finales y la reproducción física siguen pendientes.
+
+### Historial 0.3.2 / build 5
+
+La actualización **0.3.2 / build 5** se exportó desde el commit
 `20564dea4dd396205e50a597edc34ca98e6194ea`.
 [Exportación 42735483216](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42735483216):
 success (33 pruebas del núcleo, 10 de firma, Release universal y firma/exportación
@@ -92,7 +100,7 @@ No regenerar claves ni repetir firma, pago, carga o procesamiento ya completados
 Se preparó `.github/workflows/sign-pimflextv-ios.yml`. No usa `pull_request_target`
 ni expone credenciales a los trabajos ordinarios de previsualización.
 Se activa únicamente al cambiar `pimflextv-ios/SIGNING_REQUEST.json` en la rama
-`pimflextv-ios-20261029`. La solicitud existente pide build **5**. El archivo
+`pimflextv-ios-20261029`. La solicitud existente pide build **6**. El archivo
 debe contener un `build_number` entero disponible entre 1 y 9999. El código se recupera por el SHA exacto del evento.
 
 Antes de firmar, un trabajo macOS comprueba núcleo, validadores y Release sin
