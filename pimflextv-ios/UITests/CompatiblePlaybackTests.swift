@@ -13,6 +13,7 @@ final class CompatiblePlaybackTests: XCTestCase {
         let surface = app.otherElements["compatibleVideoSurface"]
         XCTAssertTrue(surface.waitForExistence(timeout: 10))
         waitUntilPlaying(surface)
+        XCTAssertFalse(app.descendants(matching: .any)["playbackWaiting"].exists, "Decoded playback must clear the loading indicator")
         capture("mkv-decoded-video", app)
 
         let pause = app.buttons["compatiblePlayPause"]
@@ -29,8 +30,11 @@ final class CompatiblePlaybackTests: XCTestCase {
         let seeked = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in self.seconds(position.label) >= before + 8 }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [seeked], timeout: 5), .completed)
         capture("mkv-paused-and-seeked", app)
+        let selected = seconds(position.label)
         pause.tap()
         waitUntilPlaying(surface)
+        let progressed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in self.seconds(position.label) >= selected + 1 }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [progressed], timeout: 5), .completed, "The actual decoder clock must advance past the selected position after resuming")
         app.buttons["playerClose"].tap()
         XCTAssertTrue(movie.waitForExistence(timeout: 5))
         XCTAssertFalse(surface.exists)

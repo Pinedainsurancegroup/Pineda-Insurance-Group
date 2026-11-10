@@ -124,7 +124,7 @@ struct PlayerScreen: View {
                 VStack { Spacer(); CompatiblePlaybackControls(playback: compatible) }
             } else { NativePlayer(player: playback.player).ignoresSafeArea() }
             if usesCompatible ? compatible.waiting : playback.waiting {
-                ProgressView("Abriendo transmisión…").tint(.white).frame(maxWidth: .infinity, maxHeight: .infinity)
+                ProgressView("Abriendo transmisión…").tint(.white).frame(maxWidth: .infinity, maxHeight: .infinity).accessibilityIdentifier("playbackWaiting")
             }
             if let error = usesCompatible ? compatible.error : playback.error {
                 VStack(spacing: 20) {

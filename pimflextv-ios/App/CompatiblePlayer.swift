@@ -21,8 +21,13 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
     @Published var hasVideo = false
     private var active = false
     private var needsPlay = false
+    private var userPaused = false
+    private var lastObservedSeconds = 0.0
+    private var lastProgressTime = Date.timeIntervalSinceReferenceDate
     private var ended = false
     private var pendingResume = 0.0
+    private var pendingSeek: (target: Double, origin: Double)?
+    private var seekWhenPlaying = false
     private var save: ((Double) -> Void)?
     private var pollTask: Task<Void, Never>?
     private var timeout: Task<Void, Never>?
@@ -34,6 +39,9 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
         self.save = save; pendingResume = resume.isFinite ? max(0, resume) : 0
         waiting = true; error = nil; active = true; ended = false; needsPlay = true
         seconds = 0; duration = 0; hasVideo = false
+        userPaused = false; lastObservedSeconds = 0
+        pendingSeek = nil; seekWhenPlaying = false
+        lastProgressTime = Date.timeIntervalSinceReferenceDate
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
             try AVAudioSession.sharedInstance().setActive(true)
@@ -68,11 +76,27 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
 
     private func refresh() {
         guard active, let player = instance else { return }
-        seconds = max(0, Double(player.time.intValue) / 1000)
+        let actualSeconds = max(0, Double(player.time.intValue) / 1000)
+        if let pending = pendingSeek {
+            // VLCKit's time getter is event-cached and may stay at the previous
+            // frame during a paused seek. Hold the selected position until the
+            // actual playback clock reaches it, rather than snapping the slider back.
+            let reached = pending.target >= pending.origin ? actualSeconds >= pending.target - 0.75 : actualSeconds <= pending.target + 0.75
+            if reached { pendingSeek = nil; seekWhenPlaying = false }
+        }
+        seconds = pendingSeek?.target ?? actualSeconds
+        let now = Date.timeIntervalSinceReferenceDate
+        if abs(actualSeconds - lastObservedSeconds) > 0.05 {
+            lastObservedSeconds = actualSeconds; lastProgressTime = now
+        }
         duration = max(0, Double(player.media?.length.intValue ?? 0) / 1000)
         seekable = player.isSeekable
         hasVideo = player.hasVideoOut && player.videoSize.width > 0
         playing = player.isPlaying
+        if playing, seekWhenPlaying, let pending = pendingSeek {
+            seekWhenPlaying = false
+            player.time = VLCTime(int: Int32(min(pending.target * 1000, Double(Int32.max))))
+        }
         switch player.state {
         case .playing:
             waiting = false; timeout?.cancel(); timeout = nil
@@ -82,9 +106,15 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
         case .paused:
             waiting = false; timeout?.cancel(); timeout = nil
         case .opening, .buffering:
-            waiting = true; armTimeout()
+            // VLCKit caches its last buffering event, including 100%, even while
+            // frames are playing. Use output/clock progress and explicit pause to
+            // avoid a permanent spinner or an erroneous 30-second timeout.
+            waiting = !userPaused && ((!hasVideo && seconds <= 0) || (playing && now - lastProgressTime > 3))
+            if waiting { armTimeout() }
+            else { timeout?.cancel(); timeout = nil }
         case .ended:
             if !ended { save?(0); ended = true }
+            pendingSeek = nil; seekWhenPlaying = false
             waiting = false; playing = false; timeout?.cancel(); timeout = nil
         case .error:
             waiting = false; playing = false
@@ -96,9 +126,11 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
 
     func togglePause() {
         guard active, error == nil else { return }
-        if player.isPlaying { player.pause() }
+        if player.isPlaying { userPaused = true; player.pause() }
         else {
+            userPaused = false; lastProgressTime = Date.timeIntervalSinceReferenceDate
             if ended { ended = false; player.stop() }
+            seekWhenPlaying = pendingSeek != nil
             player.play()
         }
         refresh()
@@ -106,6 +138,7 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
     func seek(to position: Double) {
         guard active, seekable, position.isFinite else { return }
         let value = min(max(0, position), max(0, duration - 0.5))
+        pendingSeek = (value, max(0, Double(player.time.intValue) / 1000))
         player.time = VLCTime(int: Int32(min(value * 1000, Double(Int32.max))))
         // libVLC applies a paused seek when a decoded frame is requested. Step
         // once to update the picture and clock while preserving the pause state.
@@ -127,6 +160,7 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
     func stop() {
         savePosition()
         active = false; needsPlay = false; save = nil
+        pendingSeek = nil; seekWhenPlaying = false
         pollTask?.cancel(); pollTask = nil
         timeout?.cancel(); timeout = nil
         instance?.stop(); instance?.media = nil
