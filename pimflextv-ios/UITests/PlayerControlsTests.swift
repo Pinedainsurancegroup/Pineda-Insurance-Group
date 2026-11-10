@@ -71,6 +71,9 @@ final class PlayerControlsTests: XCTestCase {
         app.buttons["playerRevealControls"].tap()
         XCTAssertTrue(close.waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["playerPlayPause"].isHittable)
+        // Restoration is already asserted. Start a fresh window for cleanup:
+        // slow accessibility snapshots can consume the four-second interval.
+        revealControls(app)
         close.tap()
         XCTAssertTrue(app.buttons["movie-movie:1"].waitForExistence(timeout: 5))
     }
@@ -158,7 +161,7 @@ final class PlayerControlsTests: XCTestCase {
 
     private func revealControls(_ app: XCUIApplication) {
         // Start a fresh inactivity window only before interacting with controls.
-        // Dedicated inactivity tests intentionally do not call this helper.
+        // Inactivity assertions never call this helper; cleanup may do so after.
         // The app window remains stable while SwiftUI updates player elements.
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
