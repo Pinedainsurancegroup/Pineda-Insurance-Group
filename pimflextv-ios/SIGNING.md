@@ -8,6 +8,18 @@ No generar otra clave al retomar ni incluir material privado en este repositorio
 
 ## Estado verificable
 
+La actualización actual es **0.3.2 / build 5**, commit
+`20564dea4dd396205e50a597edc34ca98e6194ea`.
+[Exportación 42735483216](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42735483216):
+success (33 pruebas del núcleo, 10 de firma, Release universal y firma/exportación
+correctos), Xcode 26.3/iOS SDK 26.2. IPA SHA-256:
+`3f141f8c06bb9e4fa2e919cc50838ff0bcbafd4b0d38ebbb978fdc0ea5de2be8`.
+HMAC, hashes y perfil embebido exacto verificados al recuperar el artefacto.
+Apple confirmó carga COMPLETE, build VALID e IN_BETA_TESTING, sin errores ni advertencias. La API oficial verifica el build exacto en «PIMFLEX TV - Juan», grupo interno automático con tres builds y un único tester titular. Build/carga `1a11c0b9-4b3f-47d1-abb8-f13ee66bad87`; archivo `aa302fb0-a06f-4485-b1cf-4271310e9ad1`. La actualización 0.3.2 (5) está habilitada en TestFlight. No se crean claves, invitaciones ni declaraciones nuevas y no hay publicación en App Store. Se reutilizan identidad, perfil y clave de carga
+existentes; no se crean credenciales ni se cambia la declaración de cifrado.
+
+### Historial 0.3.1 / build 4
+
 La actualización **0.3.1 / build 4** se exportó desde el commit
 `b7022c7224962f5fe9dd92bced949b35721d450f` con la misma identidad y perfil.
 [Ejecución 42718451601](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42718451601):
@@ -80,7 +92,7 @@ No regenerar claves ni repetir firma, pago, carga o procesamiento ya completados
 Se preparó `.github/workflows/sign-pimflextv-ios.yml`. No usa `pull_request_target`
 ni expone credenciales a los trabajos ordinarios de previsualización.
 Se activa únicamente al cambiar `pimflextv-ios/SIGNING_REQUEST.json` en la rama
-`pimflextv-ios-20261029`. La solicitud existente pide build **4**. El archivo
+`pimflextv-ios-20261029`. La solicitud existente pide build **5**. El archivo
 debe contener un `build_number` entero disponible entre 1 y 9999. El código se recupera por el SHA exacto del evento.
 
 Antes de firmar, un trabajo macOS comprueba núcleo, validadores y Release sin

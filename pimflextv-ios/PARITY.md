@@ -12,10 +12,10 @@
 | Apariencia de acceso e inicio | Recursos originales del login y dashboard `_cl`, fuentes y etiquetas ES; sidebar y tres tarjetas en horizontal | Comparación en dispositivo, estados del proveedor y tamaños físicos |
 | iPhone e iPad | Producto universal; catálogo con categorías laterales desde 900 pt, selector compacto y carátulas 2:3 | Validación física y ventanas del sistema |
 | Vertical | Adaptación adicional de iPhone/iPad | No tiene equivalente exacto: Android declara `sensorLandscape` |
-| Login Xtream | Cuenta activa, normalización de portal y credenciales Keychain | Autenticación real del proveedor |
-| HTTP histórico | Opt-in explícito; hosts exactos `moonspelltools.cc` y `my-vionex.com` en 0.3.1/build 4; ATS por dominio; regresión UI en iPhone/mini/Pro | Cuenta y streams reales; endpoint HTTPS preferido cuando el proveedor lo ofrezca |
+| Login Xtream | Autenticación y catálogos reales comprobados por API en diagnóstico; normalización de portal y Keychain | Login de la IPA en dispositivo físico |
+| HTTP histórico | Opt-in explícito; hosts exactos `moonspelltools.cc` y `my-vionex.com` en 0.3.2/build 5; ATS por dominio; regresión UI en iPhone/mini/Pro | Cuenta y streams reales; endpoint HTTPS preferido cuando el proveedor lo ofrezca |
 | Usuarios guardados | Vault Keychain único, activar, salir, eliminar y migrar sesión anterior | Migración persistente y errores Keychain en dispositivo |
-| M3U | URL, categorías, enlaces relativos, redirección del mismo origen | Listas reales; archivo local pendiente |
+| M3U | Importa cuenta de get.php de proveedores conocidos; listas genéricas con categorías/enlaces relativos y límite 32 MiB, error de tamaño específico | Prueba física del enlace importado; archivo local pendiente |
 | TV, Cine y Series | Catálogo, categorías, grilla, búsqueda y episodios | Datos y streams reales |
 | Búsqueda maestra | TV/Cine/Series en una vista | Volumen y velocidad con catálogo real |
 | Favoritos y reanudar | Separados por cuenta | Ciclos de vida reales |
@@ -30,10 +30,10 @@
 | MKV/AVI y motores Android | No incorporados | Motor iOS o transcodificación y compatibilidad |
 | Stalker, WHMCS, notificaciones, código TV | Pendiente | Servicios y configuración propios |
 | Respaldo Android `.pimbackup` | No importado | Compatibilidad de formato y cifrado |
-| Distribución | IPA universal 0.3.1/build 4 firmada; Apple COMPLETE/VALID e IN_BETA_TESTING, grupo del titular verificado por API; build 3 instalado en iPad según el propietario | Instalación build 4, acceso y reproducción físicos; ficha/privacidad para distribución pública |
+| Distribución | 0.3.2/build 5 firmada; Apple COMPLETE/VALID e IN_BETA_TESTING; build exacto en grupo del titular verificado por API | Instalación, acceso y reproducción de build 5 en dispositivo; ficha/privacidad pública |
 
 La pantalla de acceso muestra la URL del servidor porque todavía no se ha establecido una configuración de proveedor verificable para ocultarla. Algunos controles de la referencia se adaptan a navegación y controles nativos de iOS. Los datos de muestra usados para pruebas están aislados detrás de `#if DEBUG` y no demuestran funcionamiento de un servicio real.
 
 ## Criterio de finalización
 
-No etiquetar esta candidata como clon completo o app instalable hasta cerrar la comparación visual, probar la cuenta y los streams reales, resolver las funciones solicitadas pendientes y confirmar la instalación/reproducción real de la beta TestFlight ya habilitada. CI sólo certifica lo que sus pasos y artefactos muestran para el SHA exacto.
+No etiquetar esta candidata como clon completo ni proveedor plenamente validado hasta cerrar la comparación visual, probar cuenta y streams en la IPA, resolver las funciones pendientes y confirmar instalación/reproducción de la beta en dispositivos físicos. CI sólo certifica lo que sus pasos y artefactos muestran para el SHA exacto.
