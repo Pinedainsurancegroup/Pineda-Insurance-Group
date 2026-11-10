@@ -154,9 +154,10 @@ final class PlayerControlsTests: XCTestCase {
     }
 
     private func revealControls(_ app: XCUIApplication) {
-        if !app.buttons["playerClose"].exists {
-            app.buttons["playerRevealControls"].tap()
-        }
+        // Start a fresh inactivity window before interacting or reading clocks.
+        // Dedicated inactivity tests intentionally do not call this helper.
+        app.buttons["playerRevealControls"]
+            .coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 
     private func seconds(_ clock: String) -> Int {

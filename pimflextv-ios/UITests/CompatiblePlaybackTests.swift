@@ -63,9 +63,10 @@ final class CompatiblePlaybackTests: XCTestCase {
     }
 
     private func revealControls(_ app: XCUIApplication) {
-        if !app.buttons["playerClose"].exists {
-            app.buttons["playerRevealControls"].tap()
-        }
+        // Start a fresh inactivity window even if the chrome is still visible:
+        // it can expire between an accessibility query and the injected tap.
+        app.buttons["playerRevealControls"]
+            .coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 
     private func waitUntilPlaying(_ surface: XCUIElement) {
