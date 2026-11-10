@@ -26,6 +26,10 @@ final class LoginTests: XCTestCase {
         if !connect.isHittable { app.swipeUp() }
         connect.tap()
         XCTAssertTrue(app.buttons["dashboard-live"].waitForExistence(timeout: 10))
+        // A known get.php list imports its account; the UI must show the decoded
+        // username instead of the generic "Lista M3U" account label.
+        XCTAssertTrue(app.staticTexts["fixture"].exists)
+        capture("login-m3u-provider-account-imported", app)
     }
     func testLoginRejectsHTTPBeforeNetworkingAndPreservesPassword() {
         let app = XCUIApplication()

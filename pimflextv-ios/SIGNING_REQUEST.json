@@ -1,7 +1,7 @@
 {
-  "build_number": 4,
+  "build_number": 5,
   "purpose": "PIMFLEX TV iPhone and iPad private signed export",
   "owner_authorized": true,
   "attempt": 1,
-  "reason": "iPad login fix: support the owner's exact my-vionex.com HTTP host after explicit in-app consent"
+  "reason": "Import recognized provider M3U account links without downloading the complete oversized catalog before login"
 }

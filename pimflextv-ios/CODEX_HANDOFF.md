@@ -1,5 +1,13 @@
 # Continuidad de APP PIMFLEXTV en Codex
 
+## Corrección del enlace M3U grande — candidata 0.3.2 / build 5
+
+La nueva captura del propietario muestra HTTP activado y el error genérico de respuesta. La comprobación privada del enlace confirmó HTTP 200, cabecera M3U y una lista que supera incluso 128 MiB, con cientos de miles de entradas; la lectura se detuvo sin guardar el catálogo ni sus credenciales. La cuenta se autenticó como Active por la API del mismo proveedor. El límite previo de 32 MiB explica el rechazo observado; aumentar ese límite y cargar el catálogo completo no es necesario para iniciar sesión.
+
+Se importa el usuario/contraseña de enlaces estándar get.php de los dos proveedores exactos conocidos y se autentica la misma cuenta mediante su API. El propietario puede seguir pegando el enlace en «Lista M3U». La cuenta resultante usa el acceso por usuario/contraseña y se guarda en Keychain sin consulta de credenciales en la dirección del servidor. Se conservan el consentimiento HTTP, los hosts y ATS exactos, TLS y redirecciones. Enlaces genéricos, parámetros desconocidos, duplicados o formatos distintos conservan su modo M3U; si exceden el límite reciben un aviso específico. No se modifica el reproductor ni se cambian cuentas reales en el código.
+
+Cinco regresiones nuevas cubren autenticación API de un enlace importado sin descargar get.php, decodificación PHP y rutas de tenant, consentimiento/hosts, listas genéricas ambiguas y el error de tamaño. La regresión UI existente debe confirmar el usuario importado después de consentir. Python de firma: 10 pruebas locales correctas. Swift/UI/firma/carga de build 5 pendientes de CI y verificación Apple. No afirmar disponibilidad en TestFlight hasta completar esos pasos.
+
 ## Corrección de acceso HTTP en iPad — 0.3.1 / build 4
 
 El propietario confirmó que 0.3.0/build 3 se instaló correctamente en su iPad. La captura posterior muestra una lista M3U de `my-vionex.com:8080` por HTTP y el interruptor HTTP apagado. La versión instalada sólo admitía `moonspelltools.cc`; la validación local bloqueó la URL antes de autenticar. No se ha comprobado todavía acceso o reproducción real.

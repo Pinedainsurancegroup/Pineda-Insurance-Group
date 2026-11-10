@@ -62,7 +62,7 @@ public struct Account: Codable, Equatable, Sendable {
 }
 
 public enum PimflexError: Error, LocalizedError, Equatable {
-    case invalidServer, insecureURL, unsupportedHTTPHost, invalidCredentials, inactiveAccount, invalidResponse, emptyPlaylist, unsupportedFormat, network, storage
+    case invalidServer, insecureURL, unsupportedHTTPHost, invalidCredentials, inactiveAccount, invalidResponse, playlistTooLarge, emptyPlaylist, unsupportedFormat, network, storage
     public var errorDescription: String? {
         switch self {
         case .invalidServer: return "Revisa la dirección de tu servidor."
@@ -71,6 +71,7 @@ public enum PimflexError: Error, LocalizedError, Equatable {
         case .invalidCredentials: return "El servidor no aceptó el usuario o la contraseña."
         case .inactiveAccount: return "Tu cuenta no está activa. Contacta a tu proveedor."
         case .invalidResponse: return "El servidor devolvió una respuesta que no pudimos leer."
+        case .playlistTooLarge: return "Esta lista es demasiado grande. Usa el acceso por usuario y contraseña o pide una lista más pequeña a tu proveedor."
         case .emptyPlaylist: return "La lista no contiene transmisiones compatibles con esta conexión."
         case .unsupportedFormat: return "Este formato requiere otro motor de video. Pide a tu proveedor una versión HLS o MP4 compatible con iPhone."
         case .network: return "No se pudo conectar. Revisa tu conexión y la dirección del servidor."
@@ -81,6 +82,39 @@ public enum PimflexError: Error, LocalizedError, Equatable {
 
 public enum Endpoint {
     public static let approvedInsecureHTTPHosts: Set<String> = ["moonspelltools.cc", "my-vionex.com"]
+
+    public static func loginAccount(mode: SourceMode, server raw: String, username: String = "", password: String = "", allowingInsecureHTTP: Bool = false) throws -> Account {
+        let url = try server(raw, playlist: mode == .m3u, allowingInsecureHTTP: allowingInsecureHTTP)
+        if mode == .m3u, let credentials = providerPlaylistCredentials(url) {
+            // These known providers expose their complete catalog (including every
+            // episode) in get.php. Import the same account via their API instead of
+            // downloading that very large file just to sign in. Keep secrets in the
+            // existing Keychain account fields, never in the saved server address.
+            return Account(mode: .xtream, server: try server(url.absoluteString, allowingInsecureHTTP: allowingInsecureHTTP),
+                           username: credentials.username, password: credentials.password, allowingInsecureHTTP: allowingInsecureHTTP)
+        }
+        let name = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if mode == .xtream && (name.isEmpty || password.isEmpty) { throw PimflexError.invalidCredentials }
+        return Account(mode: mode, server: url, username: name, password: password, allowingInsecureHTTP: allowingInsecureHTTP)
+    }
+
+    private static func providerPlaylistCredentials(_ url: URL) -> (username: String, password: String)? {
+        guard let host = url.host?.lowercased(), approvedInsecureHTTPHosts.contains(host),
+              url.lastPathComponent.lowercased() == "get.php",
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        // Match PHP form decoding: a literal '+' means space, whereas '%2B'
+        // is a plus in the actual credential. Do not decode values twice.
+        components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%20")
+        let items = components.queryItems ?? []
+        let names: Set<String> = ["username", "password", "type", "output"]
+        guard items.allSatisfy({ names.contains($0.name) }),
+              Set(items.map(\.name)).count == items.count else { return nil }
+        func value(_ name: String) -> String? { items.first(where: { $0.name == name })?.value }
+        guard let username = value("username"), !username.isEmpty,
+              let password = value("password"), !password.isEmpty,
+              let type = value("type"), ["m3u", "m3u_plus"].contains(type.lowercased()) else { return nil }
+        return (username, password)
+    }
 
     public static func server(_ raw: String, playlist: Bool = false, allowingInsecureHTTP: Bool = false) throws -> URL {
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)

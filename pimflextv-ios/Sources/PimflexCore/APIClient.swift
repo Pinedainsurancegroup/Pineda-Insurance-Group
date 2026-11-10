@@ -40,7 +40,7 @@ public actor APIClient {
     public func data(from url: URL, allowingInsecureHTTP: Bool = false) async throws -> Data {
         try await resource(from: url, allowingInsecureHTTP: allowingInsecureHTTP).data
     }
-    private func resource(from url: URL, allowingInsecureHTTP: Bool = false) async throws -> (data: Data, url: URL) {
+    private func resource(from url: URL, allowingInsecureHTTP: Bool = false, sizeError: PimflexError = .invalidResponse) async throws -> (data: Data, url: URL) {
         let url = try Endpoint.server(url.absoluteString, playlist: true, allowingInsecureHTTP: allowingInsecureHTTP)
         do {
             var request = URLRequest(url: url); request.setValue("PIMFLEXTV-iOS/0.1", forHTTPHeaderField: "User-Agent")
@@ -52,9 +52,9 @@ public actor APIClient {
             if http.statusCode == 401 || http.statusCode == 403 { throw PimflexError.invalidCredentials }
             guard (200..<300).contains(http.statusCode) else { throw PimflexError.invalidResponse }
             let maximum = 32 * 1024 * 1024
-            guard response.expectedContentLength <= Int64(maximum) else { throw PimflexError.invalidResponse }
+            guard response.expectedContentLength <= Int64(maximum) else { throw sizeError }
             var data = Data()
-            for try await byte in bytes { if data.count >= maximum { throw PimflexError.invalidResponse }; data.append(byte) }
+            for try await byte in bytes { if data.count >= maximum { throw sizeError }; data.append(byte) }
             try Task.checkCancellation()
             return (data, finalURL)
         } catch is CancellationError { throw CancellationError() }
@@ -78,7 +78,7 @@ public actor APIClient {
         try EPGParser.parse(await data(from: Endpoint.api(account, action: "get_short_epg", extra: [URLQueryItem(name: "stream_id", value: streamID), URLQueryItem(name: "limit", value: "20")]), allowingInsecureHTTP: account.insecureHTTPEnabled))
     }
     public func playlist(_ account: Account) async throws -> [MediaItem] {
-        let result = try await resource(from: account.server, allowingInsecureHTTP: account.insecureHTTPEnabled)
+        let result = try await resource(from: account.server, allowingInsecureHTTP: account.insecureHTTPEnabled, sizeError: .playlistTooLarge)
         guard let text = String(data: result.data, encoding: .utf8) else { throw PimflexError.invalidResponse }
         return try M3UParser.parse(text, baseURL: result.url, allowingInsecureHTTP: account.insecureHTTPEnabled)
     }

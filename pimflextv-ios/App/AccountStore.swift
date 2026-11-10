@@ -49,16 +49,14 @@ final class AppModel: ObservableObject {
         connecting = true; error = nil
         defer { if generation == requestGeneration { connecting = false } }
         do {
-            let url = try Endpoint.server(server, playlist: mode == .m3u, allowingInsecureHTTP: allowingInsecureHTTP)
-            if mode == .xtream && (username.trimmingCharacters(in: .whitespaces).isEmpty || password.isEmpty) { throw PimflexError.invalidCredentials }
-            let candidate = Account(mode: mode, server: url, username: username.trimmingCharacters(in: .whitespacesAndNewlines), password: password, allowingInsecureHTTP: allowingInsecureHTTP)
+            let candidate = try Endpoint.loginAccount(mode: mode, server: server, username: username, password: password, allowingInsecureHTTP: allowingInsecureHTTP)
             var entries: [MediaItem] = []; var expires = ""
             #if DEBUG
             if usesTestFixtures { expires = String(Date().addingTimeInterval(86_400 * 30).timeIntervalSince1970) }
-            else if mode == .xtream { expires = try await api.authenticate(candidate) }
+            else if candidate.mode == .xtream { expires = try await api.authenticate(candidate) }
             else { entries = try await api.playlist(candidate) }
             #else
-            if mode == .xtream { expires = try await api.authenticate(candidate) }
+            if candidate.mode == .xtream { expires = try await api.authenticate(candidate) }
             else { entries = try await api.playlist(candidate) }
             #endif
             try Task.checkCancellation()
