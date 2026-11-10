@@ -1,6 +1,14 @@
-# PIMFLEX TV para iPhone y iPad — 0.3.3
+# PIMFLEX TV para iPhone y iPad — 0.4.0 candidata
 
 Aplicación nativa SwiftUI para iOS / iPadOS 16 o posterior. Conserva AVFoundation para HLS/MP4 e incorpora MobileVLCKit 3.7.5 para contenedores adicionales. Continúa la candidata de iPhone del PR #6 y usa la versión Android 4.0.2 aportada por el propietario como referencia. El desarrollo permanece en `pimflextv-ios-20261029`, sin integrar a producción.
+
+## Candidata de controles — 0.4.0 / build 7
+
+Continúa desde `56e66e8ac785b45d84f2ba3df955858d91a5c64f`, preservando el acceso y los motores de 0.3.3/build 6. El propietario confirma que la versión actual inicia sesión y reproduce contenido. La candidata se prepara en una rama separada; todavía necesita validar sus cambios y exportarse con la identidad Apple existente antes de entregarse en TestFlight. No reemplaza la beta instalada ni modifica certificados, perfiles, credenciales o `SIGNING_REQUEST.json`.
+
+Se incorporan controles propios de reproducción con ocultación tras cuatro segundos de inactividad, selección de pistas disponibles, opciones de subtítulos y calidad HLS cuando el medio publica variantes. La calidad de AVPlayer se presenta como límite preferido, con modo Automático; no garantiza forzar una variante exacta. El menú compacto recupera accesos a cuenta, usuarios, favoritos, actualización y cierre de sesión. Véase `PLAYER_VALIDATION.md` para cobertura, excepciones de interacción/accesibilidad y límites.
+
+La comparación se apoya en la evidencia 4.0.2 conservada en `REFERENCE_402.md` y en la captura de simulador aportada. El adjunto Android 4.0.1 supera el límite de transferencia de 32 MiB del entorno y no se pudo inspeccionar. No se ha ejecutado ninguna de las dos apps Android en esta revisión ni se certifica equivalencia visual del nuevo reproductor.
 
 ## Adaptación para iPad
 

@@ -16,10 +16,12 @@ final class CompatiblePlaybackTests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["playbackWaiting"].exists, "Decoded playback must clear the loading indicator")
         capture("mkv-decoded-video", app)
 
+        revealControls(app)
         let pause = app.buttons["compatiblePlayPause"]
         pause.tap()
         let paused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "Reproducir"), object: pause)
         XCTAssertEqual(XCTWaiter.wait(for: [paused], timeout: 5), .completed)
+        revealControls(app)
         let position = app.staticTexts["playbackPosition"]
         let before = seconds(position.label)
         let advancing = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in self.seconds(position.label) > before + 1 }, object: nil)
@@ -29,25 +31,41 @@ final class CompatiblePlaybackTests: XCTestCase {
         // The sample lasts five minutes so slow CI accessibility snapshots cannot
         // consume the available seek range before the pause/seek assertions.
         XCTAssertLessThan(before, 280, "The local fixture must leave room for a ten-second seek and playback progress")
+        revealControls(app)
         app.buttons["Adelantar 10 segundos"].tap()
-        let seeked = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in self.seconds(position.label) >= before + 8 }, object: nil)
+        let seeked = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            self.revealControls(app)
+            return self.seconds(position.label) >= before + 8
+        }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [seeked], timeout: 5), .completed)
         capture("mkv-paused-and-seeked", app)
+        revealControls(app)
         let selected = seconds(position.label)
         pause.tap()
         waitUntilPlaying(surface)
-        let progressed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in self.seconds(position.label) >= selected + 1 }, object: nil)
+        let progressed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            self.revealControls(app)
+            return self.seconds(position.label) >= selected + 1
+        }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [progressed], timeout: 5), .completed, "The actual decoder clock must advance past the selected position after resuming")
+        revealControls(app)
         app.buttons["playerClose"].tap()
         XCTAssertTrue(movie.waitForExistence(timeout: 5))
         XCTAssertFalse(surface.exists)
         let reopenedAt = Date()
         movie.tap()
         waitUntilPlaying(surface)
+        revealControls(app)
         let reopenedSeconds = seconds(position.label)
         let elapsedSinceReopen = Int(Date().timeIntervalSince(reopenedAt).rounded(.up))
         XCTAssertLessThanOrEqual(reopenedSeconds, elapsedSinceReopen + 2, "A fresh player starts at zero; allow the real time spent waiting for CI accessibility snapshots")
         app.buttons["playerClose"].tap()
+    }
+
+    private func revealControls(_ app: XCUIApplication) {
+        if !app.buttons["playerClose"].exists {
+            app.buttons["playerRevealControls"].tap()
+        }
     }
 
     private func waitUntilPlaying(_ surface: XCUIElement) {

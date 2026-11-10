@@ -1,7 +1,7 @@
 name: PIMFLEX TV iPhone and iPad Preview
 on:
   pull_request:
-    branches: [pimflextv-production-hardening]
+    branches: [pimflextv-production-hardening, pimflextv-ios-20261029]
     paths: ['pimflextv-ios/**', '!pimflextv-ios/**/*.md', '.github/workflows/build-pimflextv-ios.yml']
   workflow_dispatch:
 permissions:

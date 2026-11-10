@@ -19,6 +19,10 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
     @Published var duration = 0.0
     @Published var seekable = false
     @Published var hasVideo = false
+    @Published var audioChoices: [PlayerTrackChoice] = []
+    @Published var subtitleChoices: [PlayerTrackChoice] = []
+    @Published var selectedAudio = -1
+    @Published var selectedSubtitle = -1
     private var active = false
     private var needsPlay = false
     private var userPaused = false
@@ -93,6 +97,7 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
         seekable = player.isSeekable
         hasVideo = player.hasVideoOut && player.videoSize.width > 0
         playing = player.isPlaying
+        refreshTracks()
         if playing, seekWhenPlaying, let pending = pendingSeek {
             seekWhenPlaying = false
             player.time = VLCTime(int: Int32(min(pending.target * 1000, Double(Int32.max))))
@@ -122,6 +127,32 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
             timeout?.cancel(); timeout = nil
         default: break
         }
+    }
+
+    private func refreshTracks() {
+        guard let player = instance else { return }
+        let audioNames = player.audioTrackNames as? [String] ?? []
+        let audioIDs = player.audioTrackIndexes as? [NSNumber] ?? []
+        let subtitles = player.videoSubTitlesNames as? [String] ?? []
+        let subtitleIDs = player.videoSubTitlesIndexes as? [NSNumber] ?? []
+        let audio = zip(audioIDs, audioNames).map { PlayerTrackChoice(id: $0.0.intValue, name: $0.1) }
+            .filter { $0.id >= 0 }
+        let text = zip(subtitleIDs, subtitles).map { PlayerTrackChoice(id: $0.0.intValue, name: $0.1) }
+            .filter { $0.id >= 0 }
+        if audioChoices != audio { audioChoices = audio }
+        if subtitleChoices != text { subtitleChoices = text }
+        if selectedAudio != Int(player.currentAudioTrackIndex) { selectedAudio = Int(player.currentAudioTrackIndex) }
+        if selectedSubtitle != Int(player.currentVideoSubTitleIndex) { selectedSubtitle = Int(player.currentVideoSubTitleIndex) }
+    }
+    func selectAudio(_ id: Int) {
+        guard active, audioChoices.contains(where: { $0.id == id }), let value = Int32(exactly: id) else { return }
+        player.currentAudioTrackIndex = value
+        refreshTracks()
+    }
+    func selectSubtitle(_ id: Int) {
+        guard active, id == -1 || subtitleChoices.contains(where: { $0.id == id }), let value = Int32(exactly: id) else { return }
+        player.currentVideoSubTitleIndex = value
+        refreshTracks()
     }
 
     func togglePause() {
@@ -165,6 +196,7 @@ final class CompatiblePlaybackModel: NSObject, ObservableObject, VLCMediaPlayerD
         timeout?.cancel(); timeout = nil
         instance?.stop(); instance?.media = nil
         playing = false; waiting = false
+        audioChoices = []; subtitleChoices = []; selectedAudio = -1; selectedSubtitle = -1
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 }

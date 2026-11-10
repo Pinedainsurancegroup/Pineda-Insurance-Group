@@ -1,5 +1,9 @@
 # Equivalencia con PIMFLEX TV Android 4.0.2
 
+## Candidata 0.4.0
+
+Conserva los recursos y la reproducción de 0.3.3/build 6. El usuario confirma inicio de sesión y reproducción actuales; falta validar estos cambios en dispositivos reales. Android 4.0.1 no pudo inspeccionarse: su ZIP supera el límite de transferencia de 32 MiB. El reproductor nuevo es una adaptación iOS; la documentación 4.0.2 no contiene medidas o capturas verificadas de todos sus controles. No afirmar paridad total.
+
 ## Referencia verificable
 
 - APK SHA-256: `c1fa614b2e2aec9399bbde9ca91491b8a4f03e010bd47a4074e57d7b0f6f6a36`
@@ -21,7 +25,9 @@
 | Favoritos y reanudar | Separados por cuenta | Ciclos de vida reales |
 | EPG | Guía corta Xtream | XMLTV completo y datos reales |
 | Pantalla múltiple | Dos/cuatro canales, un audio, selección y limpieza | Codecs, carga de dispositivo y límite de conexiones del proveedor |
-| Audio/subtítulos/AirPlay | Controles de AVPlayer cuando el medio los ofrece; modo compatible con controles básicos propios | Selector de pistas en modo compatible, dispositivo y pistas reales; no equivale a Chromecast |
+| Audio/subtítulos/AirPlay | Candidata 0.4.0: controles propios, pistas publicadas por AVPlayer/VLC y AirPlay nativo | Cambio audible/visible con pistas reales, AirPlay y ambos motores en dispositivo; no equivale a Chromecast |
+| Ocultación de controles | Candidata: cuatro segundos de inactividad; interacción, opciones y accesibilidad mantienen acceso | Tests UI de la candidata y dispositivos reales |
+| Calidad | Candidata: Automático y límites preferidos derivados de variantes HLS de AVPlayer; sin calidades inventadas en VLC | Verificar adaptación efectiva con un master multivariante real |
 | Catch up | Entrada visible marcada no disponible | Archivo, ventana de retención, zona horaria y ruta del proveedor |
 | Grabación/descargas | Pendiente | Implementación y límites iOS |
 | Control parental | Pendiente | PIN, bloqueo efectivo y pruebas |
