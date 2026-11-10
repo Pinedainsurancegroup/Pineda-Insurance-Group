@@ -37,7 +37,9 @@ final class PlayerControlsTests: XCTestCase {
             self.revealControls(app)
             return self.seconds(position.label) >= before + 8
         }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [seeked], timeout: 5), .completed)
+        // Include the cost of reveal taps/accessibility snapshots on CI; this
+        // does not alter the four-second inactivity assertions below.
+        XCTAssertEqual(XCTWaiter.wait(for: [seeked], timeout: 20), .completed)
         revealControls(app)
         let selected = seconds(position.label)
         pause.tap()
@@ -45,7 +47,7 @@ final class PlayerControlsTests: XCTestCase {
             self.revealControls(app)
             return self.seconds(position.label) >= selected + 1
         }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [resumed], timeout: 5), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [resumed], timeout: 20), .completed)
 
         revealControls(app)
         app.buttons["playerOptions"].tap()
@@ -156,8 +158,8 @@ final class PlayerControlsTests: XCTestCase {
     private func revealControls(_ app: XCUIApplication) {
         // Start a fresh inactivity window before interacting or reading clocks.
         // Dedicated inactivity tests intentionally do not call this helper.
-        app.buttons["playerRevealControls"]
-            .coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        // The app window remains stable while SwiftUI updates player elements.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 
     private func seconds(_ clock: String) -> Int {

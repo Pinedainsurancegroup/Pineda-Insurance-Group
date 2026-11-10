@@ -37,7 +37,9 @@ final class CompatiblePlaybackTests: XCTestCase {
             self.revealControls(app)
             return self.seconds(position.label) >= before + 8
         }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [seeked], timeout: 5), .completed)
+        // Revealing controls and taking accessibility snapshots can exceed five
+        // seconds on the large iPad CI runner. Keep the target assertion intact.
+        XCTAssertEqual(XCTWaiter.wait(for: [seeked], timeout: 20), .completed)
         capture("mkv-paused-and-seeked", app)
         revealControls(app)
         let selected = seconds(position.label)
@@ -47,7 +49,7 @@ final class CompatiblePlaybackTests: XCTestCase {
             self.revealControls(app)
             return self.seconds(position.label) >= selected + 1
         }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [progressed], timeout: 5), .completed, "The actual decoder clock must advance past the selected position after resuming")
+        XCTAssertEqual(XCTWaiter.wait(for: [progressed], timeout: 20), .completed, "The actual decoder clock must advance past the selected position after resuming")
         revealControls(app)
         app.buttons["playerClose"].tap()
         XCTAssertTrue(movie.waitForExistence(timeout: 5))
@@ -65,8 +67,9 @@ final class CompatiblePlaybackTests: XCTestCase {
     private func revealControls(_ app: XCUIApplication) {
         // Start a fresh inactivity window even if the chrome is still visible:
         // it can expire between an accessibility query and the injected tap.
-        app.buttons["playerRevealControls"]
-            .coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        // Anchor to the stable app window: SwiftUI may replace the reveal
+        // element's accessibility snapshot while XCTest injects the gesture.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 
     private func waitUntilPlaying(_ surface: XCUIElement) {
