@@ -1,0 +1,9 @@
+platform :ios, '16.0'
+project 'PimflexTV.xcodeproj'
+
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+target 'PimflexTV' do
+  # Exact official specification and archive SHA-256 are committed locally.
+  pod 'MobileVLCKit', :podspec => 'Vendor/MobileVLCKit.podspec.json'
+end

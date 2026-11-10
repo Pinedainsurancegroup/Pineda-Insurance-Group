@@ -1,0 +1,194 @@
+name: PIMFLEX TV protected signed export
+on:
+  push:
+    branches: [pimflextv-ios-20261029]
+    paths: ['pimflextv-ios/SIGNING_REQUEST.json']
+permissions:
+  contents: read
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+concurrency:
+  group: pimflextv-apple-signing
+  cancel-in-progress: false
+jobs:
+  preflight:
+    if: github.repository == 'Pinedainsurancegroup/Pineda-Insurance-Group' && github.ref == 'refs/heads/pimflextv-ios-20261029'
+    runs-on: macos-15
+    timeout-minutes: 30
+    outputs:
+      build_number: ${{ steps.request.outputs.build_number }}
+    defaults:
+      run:
+        working-directory: pimflextv-ios
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify App Store Connect toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          python3 - <<'PY'
+          import re, subprocess
+          xcode = subprocess.check_output(['xcodebuild', '-version'], text=True)
+          sdk = subprocess.check_output(['xcrun', '--sdk', 'iphoneos', '--show-sdk-version'], text=True)
+          if int(re.search(r'Xcode ([0-9]+)', xcode).group(1)) < 26 or int(sdk.split('.')[0]) < 26:
+              raise SystemExit('App Store Connect requires Xcode 26 and iOS 26 SDK or later.')
+          PY
+      - name: Validate signing request
+        id: request
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          request = json.loads(Path('SIGNING_REQUEST.json').read_text())
+          build = str(request.get('build_number', ''))
+          if not re.fullmatch(r'[1-9][0-9]{0,3}', build):
+              raise SystemExit('A build number from 1 to 9999 is required.')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
+              stream.write('build_number=' + build + '\n')
+          PY
+      - name: Core and signing regression checks
+        run: |
+          swift test
+          python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+          bash -n scripts/archive-signed.sh
+      - name: Unsigned universal Release validation
+        run: |
+          brew install xcodegen
+          bash scripts/prepare-ios.sh
+          xcodebuild -workspace PimflexTV.xcworkspace -scheme PimflexTV -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath DeviceBuild CODE_SIGNING_ALLOWED=NO build
+  signed-export:
+    needs: preflight
+    runs-on: macos-15
+    timeout-minutes: 35
+    environment: pimflextv-apple-signing
+    env:
+      PIMFLEX_SIGNING_IDENTITY: 8C2189D902AEA4E06493D80603886E98E1A35BD6
+      PIMFLEX_BUILD_NUMBER: ${{ needs.preflight.outputs.build_number }}
+    defaults:
+      run:
+        working-directory: pimflextv-ios
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify App Store Connect toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          python3 - <<'PY'
+          import re, subprocess
+          xcode = subprocess.check_output(['xcodebuild', '-version'], text=True)
+          sdk = subprocess.check_output(['xcrun', '--sdk', 'iphoneos', '--show-sdk-version'], text=True)
+          if int(re.search(r'Xcode ([0-9]+)', xcode).group(1)) < 26 or int(sdk.split('.')[0]) < 26:
+              raise SystemExit('App Store Connect requires Xcode 26 and iOS 26 SDK or later.')
+          PY
+      - name: Prepare private paths and build tooling before importing credentials
+        run: |
+          printf 'SIGNING_DIR=%s/pimflex-private-signing\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'PIMFLEX_EXPORT_DIR=%s/pimflex-signed\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'PIMFLEX_PROFILE_PATH=%s/pimflex-private-signing/PIMFLEXTV.mobileprovision\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          brew install xcodegen openssl@3
+          bash scripts/prepare-ios.sh
+          printf 'PIMFLEX_OPENSSL_3=%s/bin/openssl\n' "$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
+      - name: Import private signing identity into temporary keychain
+        env:
+          P12_B64: ${{ secrets.PIMFLEX_SIGNING_P12_B64 }}
+          P12_PASSWORD: ${{ secrets.PIMFLEX_SIGNING_P12_PASSWORD }}
+          PROFILE_B64: ${{ secrets.PIMFLEX_PROFILE_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import base64, json, os, secrets, shlex, subprocess
+          from pathlib import Path
+          def checked(args, **kwargs):
+              try:
+                  return subprocess.run(args, check=True, **kwargs)
+              except subprocess.CalledProcessError:
+                  raise SystemExit('Temporary signing identity setup failed; secret arguments are withheld.') from None
+          directory = Path(os.environ['SIGNING_DIR'])
+          directory.mkdir(mode=0o700, exist_ok=False)
+          for variable, filename in [('P12_B64', 'distribution.p12'), ('PROFILE_B64', 'PIMFLEXTV.mobileprovision')]:
+              value = os.environ.get(variable, '')
+              if not value:
+                  raise SystemExit('Required signing secret is not configured: ' + variable)
+              (directory / filename).write_bytes(base64.b64decode(value, validate=True))
+          password = os.environ.get('P12_PASSWORD', '')
+          if len(password) < 32 or '\n' in password or '\r' in password:
+              raise SystemExit('The existing signing recovery password is required.')
+          (directory / 'artifact-password.txt').write_text(password)
+          original = subprocess.check_output(['security', 'list-keychains', '-d', 'user'], text=True)
+          keychains = shlex.split(original)
+          (directory / 'original-keychains.json').write_text(json.dumps(keychains))
+          keychain = str(directory / 'signing.keychain-db')
+          keychain_password = secrets.token_urlsafe(40)
+          checked(['security', 'create-keychain', '-p', keychain_password, keychain])
+          checked(['security', 'set-keychain-settings', '-lut', '21600', keychain])
+          checked(['security', 'unlock-keychain', '-p', keychain_password, keychain])
+          # Apple's importer requires the older PKCS12 envelope. Keep the stored P12
+          # modern; convert only in the ephemeral runner, without writing plaintext keys.
+          openssl = os.environ['PIMFLEX_OPENSSL_3']
+          password_source = 'file:' + str(directory / 'artifact-password.txt')
+          pem = checked([openssl, 'pkcs12', '-in', str(directory / 'distribution.p12'),
+              '-passin', password_source, '-nodes'], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+          certificates = directory / 'distribution-public-chain.pem'
+          checked([openssl, 'pkcs12', '-in', str(directory / 'distribution.p12'),
+              '-passin', password_source, '-nokeys', '-out', str(certificates)],
+              stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+          compatible = directory / 'distribution-compatible.p12'
+          checked([openssl, 'pkcs12', '-export', '-inkey', '/dev/stdin',
+              '-in', str(certificates), '-out', str(compatible),
+              '-passout', password_source, '-keypbe', 'PBE-SHA1-3DES',
+              '-certpbe', 'PBE-SHA1-3DES', '-macalg', 'sha1', '-iter', '200000'],
+              input=pem, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+          del pem
+          checked(['security', 'import', str(compatible), '-k', keychain,
+              '-P', password, '-T', '/usr/bin/codesign', '-T', '/usr/bin/security'],
+              stdout=subprocess.DEVNULL)
+          checked(['security', 'set-key-partition-list', '-S', 'apple-tool:,apple:,codesign:',
+              '-s', '-k', keychain_password, keychain], stdout=subprocess.DEVNULL)
+          checked(['security', 'list-keychains', '-d', 'user', '-s', keychain, *keychains])
+          compatible.unlink()
+          certificates.unlink()
+          (directory / 'distribution.p12').unlink()
+          PY
+      - name: Archive, sign and verify universal IPA
+        run: bash scripts/archive-signed.sh
+      - name: Encrypt signed result for private retrieval
+        run: |
+          set -euo pipefail
+          umask 077
+          ditto -c -k --keepParent "$PIMFLEX_EXPORT_DIR" "$SIGNING_DIR/PIMFLEXTV-signed.zip"
+          python3 scripts/signing_artifact.py encrypt "$SIGNING_DIR/PIMFLEXTV-signed.zip" \
+            "$RUNNER_TEMP/pimflex-encrypted-output" "$SIGNING_DIR/artifact-password.txt"
+      - name: Upload encrypted result only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: PIMFLEXTV-SIGNED-ENCRYPTED-${{ github.run_id }}
+          path: ${{ runner.temp }}/pimflex-encrypted-output/
+          retention-days: 1
+          if-no-files-found: error
+      - name: Remove temporary identity and plaintext files
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os, shutil, subprocess
+          from pathlib import Path
+          directory = Path(os.environ['SIGNING_DIR'])
+          saved = directory / 'original-keychains.json'
+          if saved.exists():
+              subprocess.run(['security', 'list-keychains', '-d', 'user', '-s', *json.loads(saved.read_text())], check=False)
+          keychain = directory / 'signing.keychain-db'
+          if keychain.exists():
+              subprocess.run(['security', 'delete-keychain', str(keychain)], check=False)
+          shutil.rmtree(directory, ignore_errors=True)
+          shutil.rmtree(os.environ['PIMFLEX_EXPORT_DIR'], ignore_errors=True)
+          shutil.rmtree(Path(os.environ['RUNNER_TEMP']) / 'pimflex-encrypted-output', ignore_errors=True)
+          PY

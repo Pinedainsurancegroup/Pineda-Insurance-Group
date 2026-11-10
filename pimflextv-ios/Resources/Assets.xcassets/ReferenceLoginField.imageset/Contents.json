@@ -1,0 +1,12 @@
+{
+  "images": [
+    {
+      "filename": "login_field.png",
+      "idiom": "universal"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}

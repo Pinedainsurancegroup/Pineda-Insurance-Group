@@ -1,0 +1,7 @@
+{
+  "build_number": 6,
+  "purpose": "PIMFLEX TV iPhone and iPad private signed export",
+  "owner_authorized": true,
+  "attempt": 3,
+  "reason": "Add pinned MobileVLCKit 3.7.5 playback for MKV and other provider containers, preserving native HLS/MP4 playback"
+}
