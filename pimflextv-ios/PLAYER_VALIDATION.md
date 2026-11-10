@@ -43,7 +43,7 @@ Código `4a22b4668896191d893657291ff46930659e9534`, [CI 42918344913](https://git
 
 Las muestras de reproducción se copiaron en Debug y no en Release. Los tres destinos aprobaron MKV/AAC y MP4 locales, además de las pruebas separadas de ocultación, recuperación, reinicio del plazo y opciones. El archivo de recursos existente conserva sus 60 archivos sin cambios; tampoco se modificaron núcleo, cuentas, transporte ni configuración de firma.
 
-El [artefacto de fuentes/proyecto generado y app de simulador](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42918344913/artifacts/13809983125) corresponde a ese SHA; no contiene una IPA instalable. El cierre posterior sólo actualiza Markdown con esta evidencia, sin cambiar los insumos de compilación ni lanzar otra ejecución.
+El [artefacto de fuentes/proyecto generado y app de simulador](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42918344913/artifacts/13809983125) corresponde a ese SHA; no contiene una IPA instalable. El cierre posterior sólo actualiza Markdown con esta evidencia, sin cambiar los insumos de compilación. La sincronización del PR por documentación activó automáticamente [CI 42921449204](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42921449204); no se despachó manualmente otro workflow. El resultado validado de esta entrega es el del código `4a22b46` indicado arriba.
 
 ## Inspección visual realizada
 
