@@ -12,6 +12,10 @@ Código validado `4a22b4668896191d893657291ff46930659e9534`, [CI 42918344913](ht
 
 La comparación se apoya en la evidencia 4.0.2 conservada en `REFERENCE_402.md` y en la captura de simulador aportada. El adjunto Android 4.0.1 supera el límite de transferencia de 32 MiB del entorno y no se pudo inspeccionar. No se ha ejecutado ninguna de las dos apps Android en esta revisión ni se certifica equivalencia visual del nuevo reproductor.
 
+## Preparación para TestFlight
+
+La preparación de exportación/carga de esta candidata está en [`TESTFLIGHT_CANDIDATE.md`](TESTFLIGHT_CANDIDATE.md). El script genera primero un plan privado del commit exacto y reutiliza la identidad existente únicamente cuando se solicita la ejecución en Mac. La sincronización del código no equivale a una carga a TestFlight. El mapa Android/iOS se mantiene interno; el nuevo ZIP Android 4.0.2 adjunto supera el límite de transferencia de 32 MiB y sus fuentes todavía no se han incorporado.
+
 ## Adaptación para iPad
 
 El mismo producto Apple `com.pimflextv.ios` admite iPhone y iPad (familias 1 y 2). Se conserva el diseño, los recursos y el núcleo existentes. En ventanas de al menos 900 puntos aparece una lista lateral de categorías; en ventanas menores vuelve el selector compacto. Búsqueda, categoría y favoritos conservan su estado al rotar o cambiar el ancho. Las carátulas mantienen proporción 2:3 y la grilla distribuye las columnas según el espacio disponible. La vista de cuatro pantallas ajusta su ancho a la altura disponible en horizontal para mantener visibles los controles, conservando el video 16:9. Se conservan las cuatro orientaciones de iPad y la configuración que permite ventanas de distintos tamaños.

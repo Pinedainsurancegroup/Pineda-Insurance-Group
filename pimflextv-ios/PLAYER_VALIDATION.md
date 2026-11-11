@@ -59,6 +59,8 @@ No se ejecutaron las apps Android originales ni medios del proveedor. Esta inspe
 
 ## Preparación para TestFlight
 
+Continuación de preparación: [`TESTFLIGHT_CANDIDATE.md`](TESTFLIGHT_CANDIDATE.md) describe los nuevos scripts para exportar desde un Mac con la identidad existente y cargar la IPA en un paso posterior. Añaden plan/hash del candidato y verificación previa; no cambian el código de la app validado arriba ni habilitan otra rama en el workflow protegido.
+
 Versión 0.4.0/build 7, mismo identificador y familias iPhone/iPad. Proyecto generado mediante `bash scripts/prepare-ios.sh`; abrir `PimflexTV.xcworkspace` por la dependencia VLC. CI prepara Debug y Release sin firma y prueba los tres simuladores en una rama separada. La configuración permite validar PR hacia la rama iOS, además de la base original; no activa firma.
 
 El workflow de firma existente y su entorno protegido sólo admiten `pimflextv-ios-20261029`, y firman el SHA del evento de esa rama. La candidata permanece en `pimflextv-ios-controls-20261110`; cambiar únicamente el número de `SIGNING_REQUEST.json` allí no activa la firma. Para exportarla sin reemplazar la rama estable hace falta preparar y aprobar un proceso protegido para el SHA exacto de la candidata, reutilizando la identidad/perfil actuales. Ese cambio queda fuera de esta entrega; no se ha ampliado la política del entorno ni modificado el workflow de firma.

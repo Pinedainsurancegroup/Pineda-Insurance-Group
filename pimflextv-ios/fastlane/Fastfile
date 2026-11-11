@@ -1,0 +1,80 @@
+require "digest"
+require "json"
+require "open3"
+require "pathname"
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Upload one locally verified IPA to App Store Connect; do not distribute it"
+  lane :upload_verified do |options|
+    # Loading this file never signs or uploads. A direct lane invocation must
+    # explicitly opt in and pass the same verification as the Python wrapper.
+    unless options[:execute] == true || options[:execute].to_s == "true"
+      UI.user_error!("Upload requires execute:true. Prefer scripts/testflight_candidate.py upload --execute.")
+    end
+
+    project_root = File.realpath(File.expand_path("..", __dir__))
+    repository_root = File.realpath(File.join(project_root, ".."))
+    paths = {}
+    [:plan, :export_dir, :ipa].each do |name|
+      value = options[name].to_s
+      unless !value.empty? && Pathname.new(value).absolute? && File.exist?(value)
+        UI.user_error!("#{name}: must be an existing absolute path.")
+      end
+      paths[name] = File.realpath(value)
+    end
+    unless File.file?(paths[:plan]) && File.directory?(paths[:export_dir]) && File.file?(paths[:ipa])
+      UI.user_error!("Expected a plan file, export directory and IPA file.")
+    end
+    expected_ipa = File.join(paths[:export_dir], "PimflexTV.ipa")
+    unless File.file?(expected_ipa) && File.realpath(expected_ipa) == paths[:ipa]
+      UI.user_error!("ipa: must identify the export directory's verified PimflexTV.ipa.")
+    end
+
+    # Pass argv directly: no shell interpolation, no credentials in the command.
+    output, errors, result = Open3.capture3(
+      "python3", File.join(project_root, "scripts", "testflight_candidate.py"),
+      "verify", "--plan", paths[:plan], "--export-dir", paths[:export_dir],
+      chdir: project_root
+    )
+    unless result.success?
+      UI.user_error!("Candidate verification failed before Apple authentication:\n#{output}\n#{errors}")
+    end
+    report = JSON.parse(File.read(File.join(paths[:export_dir], "verification.json")))
+    unless Digest::SHA256.file(paths[:ipa]).hexdigest == report.fetch("ipa_sha256")
+      UI.user_error!("The IPA changed after verification; upload cancelled.")
+    end
+
+    key_path = ENV.fetch("PIMFLEX_ASC_KEY_PATH", "")
+    key_id = ENV.fetch("PIMFLEX_ASC_KEY_ID", "").strip
+    issuer_id = ENV.fetch("PIMFLEX_ASC_ISSUER_ID", "").strip
+    unless !key_id.empty? && !issuer_id.empty? && Pathname.new(key_path).absolute? && File.file?(key_path)
+      UI.user_error!("Set PIMFLEX_ASC_KEY_ID, PIMFLEX_ASC_ISSUER_ID and an absolute PIMFLEX_ASC_KEY_PATH to the existing external .p8 file.")
+    end
+    key_path = File.realpath(key_path)
+    if File.extname(key_path) != ".p8" || key_path.start_with?(repository_root + File::SEPARATOR)
+      UI.user_error!("The existing .p8 key must remain outside the repository.")
+    end
+
+    # This lane only uploads an already signed artifact. It does not invoke
+    # match/cert/sigh, modify a keychain, or obtain provisioning profiles.
+    api_key = app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_filepath: key_path,
+      duration: 1200,
+      in_house: false,
+      set_spaceship_token: false
+    )
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: "com.pimflextv.ios",
+      ipa: paths[:ipa],
+      skip_waiting_for_build_processing: true,
+      skip_submission: true,
+      distribute_external: false
+    )
+    UI.success("IPA uploaded to App Store Connect. Processing was not awaited; no tester/group assignment or external distribution was requested.")
+  end
+end
