@@ -257,7 +257,14 @@ final class PlayerControlsTests: XCTestCase {
             predicate = NSPredicate(format: "value BEGINSWITH %@", "audio=\(audio);subtitle=")
         }
         let selected = XCTNSPredicateExpectation(predicate: predicate, object: status)
-        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 20), .completed, file: file, line: line)
+        let result = XCTWaiter.wait(for: [selected], timeout: 20)
+        var details = ""
+        if result != .completed {
+            let exists = status.exists
+            let actual = exists ? String(describing: status.value) : "<element absent>"
+            details = "AVPlayer selection was not confirmed: expected audio=\(audio);subtitle=\(subtitle ?? "<any>"); diagnostic exists=\(exists), value=\(actual)"
+        }
+        XCTAssertEqual(result, .completed, details, file: file, line: line)
     }
 
     private func captureSubtitleAfterProgress(_ name: String, surface: XCUIElement) {

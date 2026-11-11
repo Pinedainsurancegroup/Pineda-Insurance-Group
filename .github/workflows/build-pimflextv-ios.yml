@@ -94,3 +94,12 @@ jobs:
             pimflextv-ios/UITests.xcresult
             pimflextv-ios/ui-tests.log
             pimflextv-ios/Screenshots/
+      - name: Upload compact UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PIMFLEXTV-Screenshots-${{ matrix.device }}
+          path: |
+            pimflextv-ios/Screenshots/**/*.png
+            pimflextv-ios/Screenshots/**/*.json
+          if-no-files-found: warn

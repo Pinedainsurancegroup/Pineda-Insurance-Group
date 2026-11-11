@@ -495,14 +495,6 @@ struct PlayerScreen: View {
         NavigationStack {
             List {
                 if preview { Text("Opciones ficticias para pruebas de interfaz; sin transmisión.").font(.footnote) }
-                #if DEBUG
-                if trackSelectionFixture, !usesCompatible {
-                    Text("Selección nativa del archivo de prueba")
-                        .font(.footnote).foregroundStyle(.secondary)
-                        .accessibilityIdentifier("nativeTrackSelection")
-                        .accessibilityValue(playback.actualTrackSelection)
-                }
-                #endif
                 Section("Audio") {
                     let choices = usesCompatible ? compatible.audioChoices : playback.audioChoices
                     if !usesCompatible, playback.audioOptionsState != .loaded {
@@ -555,7 +547,21 @@ struct PlayerScreen: View {
                         Text("Preferencia de ancho de banda entre las variantes disponibles. El reproductor puede ajustar la calidad según la conexión.").font(.footnote).foregroundStyle(.secondary)
                     }
                 }
-            }.navigationTitle("Reproducción").navigationBarTitleDisplayMode(.inline)
+            }
+            #if DEBUG
+            // Keep the real-engine diagnostic outside List's virtualized rows.
+            // Scrolling to the final subtitle must not remove the observed value.
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if trackSelectionFixture, !usesCompatible {
+                    Text("Selección nativa del archivo de prueba")
+                        .font(.footnote).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                        .accessibilityIdentifier("nativeTrackSelection")
+                        .accessibilityValue(playback.actualTrackSelection)
+                }
+            }
+            #endif
+                .navigationTitle("Reproducción").navigationBarTitleDisplayMode(.inline)
                 .toolbar { Button("Listo") { optionsVisible = false }.accessibilityIdentifier("playerOptionsDone") }
         }
     }
