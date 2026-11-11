@@ -103,6 +103,20 @@ final class LoginTests: XCTestCase {
         XCTAssertTrue(app.buttons["dashboard-live"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Otra vista previa"].exists)
     }
+    func testCompactHomeMenuOpensAccountInformation() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing", "--preview-account"]
+        app.launchEnvironment["PIMFLEX_TEST_CONTENT_WIDTH"] = "390"
+        app.launch()
+        let menu = app.buttons["compactHomeMenu"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 10))
+        XCTAssertTrue(menu.isHittable)
+        menu.tap()
+        app.buttons["Mi Información"].tap()
+        XCTAssertTrue(app.buttons["Actualizar información"].waitForExistence(timeout: 5))
+        // LabeledContent may expose the label and value as one accessibility element.
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Vista previa")).firstMatch.exists)
+    }
     private func fixtureApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--preview-account"]

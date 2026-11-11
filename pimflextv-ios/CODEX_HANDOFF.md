@@ -1,5 +1,11 @@
 # Continuidad de APP PIMFLEXTV en Codex
 
+## Candidata de controles — 2026-11-10
+
+Base remota actual recuperada y cotejada por hash de cada blob: `56e66e8ac785b45d84f2ba3df955858d91a5c64f`. Continuar desde esta base y sus cambios posteriores, no desde los ZIP antiguos 0.2. El usuario confirma acceso y reproducción actuales. Se prepara 0.4.0/build 7 por separado, con ocultación de controles a cuatro segundos, opciones de pistas/variantes disponibles y menú compacto. La beta 0.3.3/build 6 y su firma se conservan. No cambiar certificados, claves, perfiles ni secretos; no fusionar ni publicar en App Store. `SIGNING_REQUEST.json` conserva la solicitud histórica y no autoriza una nueva exportación de este código por sí solo.
+
+El ZIP Android 4.0.1 no pudo transferirse por superar 32 MiB; la evidencia 4.0.2 procede del documento existente. La comparación directa de originales y la prueba de estos nuevos controles con el proveedor en iPhone/iPad reales siguen pendientes. Ver `PLAYER_VALIDATION.md`; los resultados históricos que siguen no validan automáticamente 0.4.0.
+
 ## Compatibilidad de reproducción — 0.3.3 / build 6
 
 El propietario confirmó el login físico y reportó el rechazo local `unsupportedFormat` al abrir un video. Se conserva AVPlayer para HLS/MP4 y se incorpora MobileVLCKit 3.7.5 oficial para MKV/AVI/FLV/WMV/WebM/TS/M2TS/MPEG/MPG. Los errores nativos ofrecen «Probar modo compatible». El modo compatible incluye pausa, búsqueda, avance/retroceso, guardado de posición y cierre/limpieza; recibe URLs validadas y suprime logs que podrían contener credenciales. No se modifica Android.

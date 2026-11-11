@@ -256,6 +256,16 @@ struct HomeView: View {
                 NavigationLink { SettingsView() } label: {
                     Image(systemName: "gearshape").font(.title2).frame(width: 44, height: 44)
                 }.accessibilityLabel("Ajustes").accessibilityIdentifier("settingsButton")
+                Menu {
+                    NavigationLink { AccountInfoView() } label: { Label("Mi Información", systemImage: "person.circle") }
+                    NavigationLink { SavedAccountsView() } label: { Label("Lista de Usuarios", systemImage: "person.2") }
+                    NavigationLink { FavoritesView() } label: { Label("Favoritos", systemImage: "star.fill") }
+                    Button { refresh() } label: { Label("Actualizar catálogos", systemImage: "arrow.clockwise") }
+                        .disabled(refreshing)
+                    Button("Cerrar sesión", role: .destructive) { confirmSignOut = true }
+                } label: {
+                    Image(systemName: "ellipsis").font(.title2).frame(width: 44, height: 44)
+                }.accessibilityLabel("Más opciones").accessibilityIdentifier("compactHomeMenu")
             }
         }.foregroundStyle(.white)
     }
