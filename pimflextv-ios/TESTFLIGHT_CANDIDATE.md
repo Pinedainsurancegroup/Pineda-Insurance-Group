@@ -1,5 +1,7 @@
 # Preparación de TestFlight — 0.4.0 (7)
 
+> Registro histórico de 0.4.0. Para la candidata actual 5.0.0 (8), consultar `V5_VALIDATION.md` y `TESTFLIGHT_500.md`; los scripts de esta rama ya requieren la versión nueva.
+
 La candidata continúa en `pimflextv-ios-controls-20261110`, PR borrador #11, separada de `pimflextv-ios-20261029` y de Android. La automatización de exportación y carga conserva certificados, perfiles, credenciales y el workflow protegido de firma. La continuación del reproductor añade estados de carga de pistas y una prueba local de selección real, por lo que exige validar y preparar un nuevo SHA. No se ha firmado ni enviado esta candidata a Apple.
 
 ## Fuente y continuidad

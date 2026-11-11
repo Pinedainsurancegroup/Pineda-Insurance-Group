@@ -1,5 +1,7 @@
 # Candidata 0.4.0 / build 7 — controles de reproducción
 
+> Registro histórico de 0.4.0. Para la candidata actual 5.0.0 (8), consultar `V5_VALIDATION.md` y `TESTFLIGHT_500.md`; los scripts de esta rama ya requieren la versión nueva.
+
 Base: `56e66e8ac785b45d84f2ba3df955858d91a5c64f`, 0.3.3/build 6. El propietario confirma que la app actual inicia sesión y reproduce contenido. Esta candidata conserva APIClient, importación M3U, Keychain, selección de motor, MobileVLCKit 3.7.5, URL de reproducción, recursos visuales y firma/configuración Apple existentes. La versión entregada en TestFlight sigue siendo 0.3.3/build 6 hasta completar la validación y distribución de la candidata.
 
 ## Comparación y alcance

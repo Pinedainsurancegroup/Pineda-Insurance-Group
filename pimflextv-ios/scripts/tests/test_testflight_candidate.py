@@ -26,8 +26,8 @@ class TestFlightCandidateTests(unittest.TestCase):
         self.plan_path = self.root / "candidate.json"
         self.export_dir = self.root / "export with spaces"
         (self.project / "project.yml").write_text("""settings:
-  MARKETING_VERSION: '0.4.0'
-  CURRENT_PROJECT_VERSION: '7'
+  MARKETING_VERSION: '5.0.0'
+  CURRENT_PROJECT_VERSION: '8'
   DEVELOPMENT_TEAM: FIXTURETEAM
   PRODUCT_BUNDLE_IDENTIFIER: com.example.fixture
   EXCLUDED_SOURCE_FILE_NAMES: 'PlaybackFixture.mkv PlaybackFixture.mp4 TrackSelectionFixture.mp4'
@@ -61,8 +61,8 @@ class TestFlightCandidateTests(unittest.TestCase):
 
     def make_export(self, info_changes=None, report_changes=None, extra=None):
         self.export_dir.mkdir(exist_ok=True)
-        info = {"CFBundleIdentifier": self.plan["bundle_id"], "CFBundleShortVersionString": "0.4.0",
-                "CFBundleVersion": "7", "CFBundlePackageType": "APPL", "CFBundleExecutable": "PimflexTV",
+        info = {"CFBundleIdentifier": self.plan["bundle_id"], "CFBundleShortVersionString": "5.0.0",
+                "CFBundleVersion": "8", "CFBundlePackageType": "APPL", "CFBundleExecutable": "PimflexTV",
                 "CFBundleSupportedPlatforms": ["iPhoneOS"], "UIDeviceFamily": [1, 2], "DTSDKName": "iphoneos26.2"}
         info.update(info_changes or {})
         ipa = self.export_dir / candidate.IPA_NAME
@@ -95,7 +95,7 @@ class TestFlightCandidateTests(unittest.TestCase):
             candidate.main(["--plan", str(new_plan)])
         self.assertTrue(all(call.args[0][0] == "git" for call in commands.call_args_list))
         self.assertEqual(new_plan.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(json.loads(new_plan.read_text())["build"], "7")
+        self.assertEqual(json.loads(new_plan.read_text())["build"], "8")
         with self.assertRaises(FileExistsError):
             candidate.prepare(self.project, new_plan)
         with self.assertRaisesRegex(ValueError, "outside the repository"):
@@ -155,7 +155,7 @@ class TestFlightCandidateTests(unittest.TestCase):
 
     def test_simulator_wrong_version_build_family_and_debug_fixtures_are_rejected(self):
         changes = [{"CFBundleSupportedPlatforms": ["iPhoneSimulator"], "DTSDKName": "iphonesimulator26.2"},
-                   {"CFBundleVersion": "6"}, {"CFBundleShortVersionString": "0.3.3"},
+                   {"CFBundleVersion": "7"}, {"CFBundleShortVersionString": "0.4.0"},
                    {"CFBundleIdentifier": "com.other.app"}, {"UIDeviceFamily": [1]}, {"DTSDKName": "iphoneos18.5"}]
         for change in changes:
             with self.subTest(change=change):
@@ -214,7 +214,7 @@ class TestFlightCandidateTests(unittest.TestCase):
         archive_calls = [call for call in calls if call[0][0] == "bash"]
         self.assertEqual(len(archive_calls), 1)
         self.assertEqual(archive_calls[0][0][1], str(self.project / "scripts/archive-signed.sh"))
-        self.assertEqual(archive_calls[0][1]["env"]["PIMFLEX_BUILD_NUMBER"], "7")
+        self.assertEqual(archive_calls[0][1]["env"]["PIMFLEX_BUILD_NUMBER"], "8")
         # macOS temporary paths may enter through /var and resolve to /private/var.
         self.assertEqual(archive_calls[0][1]["env"]["PIMFLEX_EXPORT_DIR"], str(self.export_dir.resolve()))
         self.assertTrue(archive_calls[0][1]["env"]["PATH"].startswith(str(self.root / "ruby user gems/bin") + os.pathsep))

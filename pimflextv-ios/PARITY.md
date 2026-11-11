@@ -1,6 +1,12 @@
-# Equivalencia con PIMFLEX TV Android 4.0.2
+# Paridad de PIMFLEX TV — referencias Android 4.0.2 y Smarters 5.0
 
-## Candidata 0.4.0
+## Candidata 5.0.0 (8)
+
+Continúa desde 0.4.0 sin sustituir el login, las rutas, el almacenamiento por cuenta ni los recursos PIMFLEX. La nueva referencia Android 5.0/código 108 se analiza estáticamente en `REFERENCE_500.md`; el paquete compilado no aporta un proyecto iOS ni los servicios WHMCS. El selector nativo se actualiza al abrirse, conserva sus elecciones y concilia las opciones con AVPlayer. Se añade una prueba de ocultación completa a cuatro segundos con MP4 local real. `V5_VALIDATION.md` identifica los resultados del nuevo SHA; la CI de 0.4.0 que sigue abajo es histórica.
+
+No se ha firmado ni enviado 5.0.0 (8) a TestFlight. Continúan pendientes proveedor/dispositivo real, calidad HLS efectiva, AirPlay, Catchup, XMLTV completo, grabación/descargas, control parental y el resto de la tabla. No hay migración automática de favoritos Android ni implementación nueva de WHMCS, Stalker o servicios de la APK.
+
+## Antecedente 0.4.0
 
 Conserva los recursos y la reproducción de 0.3.3/build 6. El usuario confirma inicio de sesión y reproducción actuales; falta validar los cambios de la candidata en dispositivos reales. El ZIP descompilado Android 4.0.2 ya se reconstruyó de cinco partes y se revisó estáticamente. El reproductor es una adaptación iOS; no afirmar paridad total.
 
@@ -40,7 +46,7 @@ Conserva los recursos y la reproducción de 0.3.3/build 6. El usuario confirma i
 | MKV/AVI y otros contenedores | MobileVLCKit 3.7.5; MKV H.264/AAC decodificado en CI iPhone/mini/Pro con pausa, búsqueda, progreso real y reapertura | Formatos/códecs y medios reales del proveedor en dispositivo |
 | Stalker, WHMCS, notificaciones, código TV | Pendiente | Servicios y configuración propios |
 | Respaldo Android `.pimbackup` | No importado | Compatibilidad de formato y cifrado |
-| Distribución | 0.3.3/build 6 firmada y en TestFlight; acceso/reproducción actuales confirmados por el propietario. Candidata 0.4.0/build 7 con CI sin firma | Exportar/cargar el SHA candidato mediante proceso protegido sin sustituir la rama estable; prueba física de estos cambios; ficha/privacidad pública |
+| Distribución | 0.3.3/build 6 firmada y en TestFlight; acceso/reproducción actuales confirmados por el propietario. Antecedente 0.4.0/build 7 con CI sin firma; candidata actual 5.0.0/build 8 según `V5_VALIDATION.md` | Exportar/cargar el SHA candidato mediante proceso protegido sin sustituir la rama estable; prueba física de estos cambios; ficha/privacidad pública |
 
 La pantalla de acceso muestra la URL del servidor porque todavía no se ha establecido una configuración de proveedor verificable para ocultarla. Algunos controles de la referencia se adaptan a navegación y controles nativos de iOS. Los datos de muestra usados para pruebas están aislados detrás de `#if DEBUG` y no demuestran funcionamiento de un servicio real.
 

@@ -84,12 +84,14 @@ final class PlayerControlsTests: XCTestCase {
         // an MP4 stream index cannot identify a language in group.options.
         let selection = app.descendants(matching: .any)["nativeTrackSelection"]
         XCTAssertTrue(selection.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["playerAudio-\(spanishAudio)"].waitForExistence(timeout: 5))
         app.buttons["playerAudio-\(spanishAudio)"].tap()
         waitForTrackSelection(selection, audio: "spa")
         app.buttons["playerAudio-\(englishAudio)"].tap()
         waitForTrackSelection(selection, audio: "eng")
         assertSelected(app.buttons["playerAudio-\(englishAudio)"])
 
+        XCTAssertTrue(app.buttons["playerSubtitle-\(spanishSubtitle)"].waitForExistence(timeout: 5))
         app.buttons["playerSubtitle-\(spanishSubtitle)"].tap()
         waitForTrackSelection(selection, audio: "eng", subtitle: "spa")
         assertSelected(app.buttons["playerSubtitle-\(spanishSubtitle)"])
@@ -99,6 +101,10 @@ final class PlayerControlsTests: XCTestCase {
         app.buttons["playerOptions"].tap()
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         waitForTrackSelection(selection, audio: "eng", subtitle: "spa")
+        XCTAssertTrue(app.buttons["playerSubtitle-\(spanishSubtitle)"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["playerAudio-\(englishAudio)"].waitForExistence(timeout: 5))
+        assertSelected(app.buttons["playerAudio-\(englishAudio)"])
+        assertSelected(app.buttons["playerSubtitle-\(spanishSubtitle)"])
         app.buttons["playerSubtitle-\(englishSubtitle)"].tap()
         waitForTrackSelection(selection, audio: "eng", subtitle: "eng")
         assertSelected(app.buttons["playerSubtitle-\(englishSubtitle)"])
@@ -107,6 +113,7 @@ final class PlayerControlsTests: XCTestCase {
 
         app.buttons["playerOptions"].tap()
         XCTAssertTrue(done.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["playerSubtitle--1"].waitForExistence(timeout: 5))
         app.buttons["playerSubtitle--1"].tap()
         waitForTrackSelection(selection, audio: "eng", subtitle: "off")
         assertSelected(app.buttons["playerSubtitle--1"])
@@ -114,8 +121,65 @@ final class PlayerControlsTests: XCTestCase {
         app.buttons["playerOptions"].tap()
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         waitForTrackSelection(selection, audio: "eng", subtitle: "off")
+        XCTAssertTrue(app.buttons["playerSubtitle--1"].waitForExistence(timeout: 5))
+        assertSelected(app.buttons["playerSubtitle--1"])
+        XCTAssertTrue(app.buttons["playerAudio--2"].waitForExistence(timeout: 5))
+        app.buttons["playerAudio--2"].tap()
+        assertSelected(app.buttons["playerAudio--2"])
+        done.tap()
+        app.buttons["playerOptions"].tap()
+        XCTAssertTrue(app.buttons["playerAudio--2"].waitForExistence(timeout: 5))
+        assertSelected(app.buttons["playerAudio--2"])
+        XCTAssertTrue(app.buttons["playerSubtitle--1"].waitForExistence(timeout: 5))
+        assertSelected(app.buttons["playerSubtitle--1"])
         done.tap()
         app.buttons["playerClose"].tap()
+        XCTAssertTrue(app.buttons["movie-movie:1"].waitForExistence(timeout: 5))
+    }
+
+    func testNativeLocalPlaybackContinuesWithAllControlsHidden() {
+        // This real-decoder case deliberately omits keep-playback-controls-visible.
+        let app = openPreviewPlayer(arguments: ["--test-native-playback"])
+        let surface = app.otherElements["nativeVideoSurface"]
+        XCTAssertTrue(surface.waitForExistence(timeout: 10))
+        let started = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "Reproduciendo ·"), object: surface)
+        XCTAssertEqual(XCTWaiter.wait(for: [started], timeout: 20), .completed)
+        XCTAssertFalse(app.descendants(matching: .any)["playerFixture"].exists)
+        guard let initial = seconds(surface) else { return }
+        let decoding = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            guard let current = self.seconds(surface) else { return false }
+            return current >= initial + 1
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [decoding], timeout: 20), .completed)
+
+        let identifiers = ["playerClose", "playerOptions", "playerTimeline", "playerPlayPause",
+                           "playerSeekBackward", "playerSeekForward", "playerAspect", "playbackPosition"]
+        let controls = app.descendants(matching: .any).matching(NSPredicate(format: "identifier IN %@", identifiers))
+        let close = app.buttons["playerClose"]
+        revealControls(app)
+        XCTAssertEqual(controls.count, identifiers.count, "The real VOD must expose its complete control overlay")
+        // AX queries above can take time. Start the inactivity observation from
+        // a fresh interaction, without touching the player again until it hides.
+        revealControls(app)
+        assertRemainsPresent(close, for: 2)
+        waitForDisappearance(close)
+        XCTAssertEqual(controls.count, 0, "Timeline, pause and the remaining overlay must all disappear")
+        guard let hiddenAt = seconds(surface) else { return }
+        let continued = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            guard let current = self.seconds(surface) else { return false }
+            return current >= hiddenAt + 2
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [continued], timeout: 10), .completed)
+        XCTAssertEqual(controls.count, 0, "Playback progress must not reopen the controls")
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "native-local-controls-hidden"; attachment.lifetime = .keepAlways
+        add(attachment)
+
+        revealControls(app)
+        XCTAssertTrue(close.waitForExistence(timeout: 3))
+        XCTAssertEqual(controls.count, identifiers.count, "A tap must restore the complete overlay")
+        revealControls(app)
+        close.tap()
         XCTAssertTrue(app.buttons["movie-movie:1"].waitForExistence(timeout: 5))
     }
 

@@ -20,7 +20,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 FORMAT = "pimflex-testflight-plan-v1"
-VERSION, BUILD = "0.4.0", "7"
+VERSION, BUILD = "5.0.0", "8"
 IPA_NAME = "PimflexTV.ipa"
 REPORT_NAME = "verification.json"
 RECEIPT_NAME = "upload-attempt.json"

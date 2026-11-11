@@ -131,6 +131,12 @@ final class PlaybackModel: ObservableObject {
         }
         armTimeout(for: item)
     }
+    func refreshOptions() {
+        guard let item = player.currentItem else { return }
+        // Reopening the selector must query the current stream again. Do not
+        // change AVPlayer's selection or reuse a previous group's track index.
+        for section in PlayerOptionSection.allCases { loadOptions(section, for: item) }
+    }
     func retryOptions(_ section: PlayerOptionSection) {
         guard let item = player.currentItem, optionsState(section) == .failed else { return }
         loadOptions(section, for: item)
@@ -170,7 +176,9 @@ final class PlaybackModel: ObservableObject {
                         if self.selectedAudio >= 0 { self.selectedAudio = selectedIndex ?? -2 }
                     } else {
                         self.subtitleGroup = group; self.subtitleChoices = choices
-                        if self.selectedSubtitle >= 0 { self.selectedSubtitle = selectedIndex ?? -2 }
+                        if self.selectedSubtitle >= 0 {
+                            self.selectedSubtitle = selectedIndex ?? (group?.allowsEmptySelection == true ? -1 : -2)
+                        }
                     }
                     self.setOptionsState(.loaded, for: section)
                     #if DEBUG
@@ -187,7 +195,14 @@ final class PlaybackModel: ObservableObject {
                     self.qualityChoices = rates.count > 1 ? rates.enumerated().map {
                         PlayerQualityChoice(id: $0.offset + 1, name: String(format: "Hasta %.2f Mb/s", $0.element / 1_000_000), bitRate: $0.element)
                     } : []
-                    self.selectedQuality = self.qualityChoices.first(where: { $0.bitRate == preferredRate })?.id ?? 0
+                    if let choice = self.qualityChoices.first(where: { $0.bitRate == preferredRate }) {
+                        self.selectedQuality = choice.id
+                    } else {
+                        // A removed variant must not leave a hidden bandwidth
+                        // limit behind while the selector reports Automatic.
+                        item.preferredPeakBitRate = 0
+                        self.selectedQuality = 0
+                    }
                     self.setOptionsState(.loaded, for: section)
                 }
             } catch {
@@ -456,6 +471,7 @@ struct PlayerScreen: View {
                 Spacer(minLength: 8)
                 Button {
                     if usesCompatible { compatible.refreshTracks() }
+                    else { playback.refreshOptions() }
                     optionsVisible = true; showControls()
                 } label: {
                     Image(systemName: "slider.horizontal.3").frame(width: 48, height: 48)
