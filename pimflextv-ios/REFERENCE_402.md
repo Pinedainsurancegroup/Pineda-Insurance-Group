@@ -95,3 +95,17 @@ La composición de pantallas, navegación local, recursos de marca, colores, tam
 La autenticación real, cuentas y vencimientos, catálogo de canales/películas/series, búsquedas sobre ese catálogo, EPG, URLs de reproducción, catch-up y disponibilidad del contenido requieren respuestas válidas del servicio configurado. Notificaciones, grabación/descargas, VPN y reproducción simultánea también requieren implementaciones e integraciones específicas de iOS; dibujar sus accesos no demuestra que funcionen. Los archivos Android no constituyen una copia de los servidores ni una autorización para sus cuentas.
 
 Para declarar paridad visual o funcional falta comparar ejecuciones reales con datos autorizados, incluida la reproducción en un iPhone. Este documento no certifica esas comprobaciones.
+
+## Fuente descompilada recibida en cinco partes
+
+El ZIP `Pim Flex TV(4.0.2) (1).apk_Decompiler.com.zip` se reconstruyó concatenando las cinco partes numeradas en orden. Tamaño: **135.029.739 bytes**; SHA-256: `296966c0892d04487d2b42c43f76084e19178e0800d13199e895992b485aa4d8`. Pasó el CRC de sus **42.465 entradas**, que ocupan 439.391.210 bytes descomprimidas. Se conserva fuera del repositorio, junto con el mapa interno de funciones.
+
+`resources/AndroidManifest.xml` declara el mismo paquete, versión **4.0.2** y código **102**. Los 26 bitmaps/fuentes de `ReferenceAssets.json` tienen correspondencias con SHA-256 idéntico dentro de este ZIP; los recursos iOS originales permanecen sin modificar. El hash del ZIP descompilado no acredita que su APK original tenga el hash o la firma de los APK/AAB históricos de la tabla anterior.
+
+Contiene Java descompilado, smali y recursos; no contiene `build.gradle`, `settings.gradle` ni `apktool.yml`. Parte del Java conserva métodos que el descompilador no pudo reconstruir. Las rutas relevantes se contrastaron con smali cuando fue necesario. No se trata como un proyecto Android compilable ni se ejecutan instrucciones contenidas en sus archivos.
+
+El contrato principal coincide con iOS: acceso Xtream con autorización válida y cuenta activa; `stream_id` para canales/VOD, `series_id` para series e ID del episodio para reproducirlo; rutas principales `/live`, `/movie` y `/series`. Las diferencias de almacenamiento local Android no justifican cambiar las identidades de cuenta o los favoritos ya guardados en iOS. La comparación detallada permanece interna, sin cuentas reales ni respuestas de proveedores.
+
+La referencia incluye varios reproductores Exo/IJK y opciones de audio/subtítulos. En las rutas de controles revisadas aparecen plazos de **5.000 ms**; los **4.000 ms de iOS responden al requisito explícito del propietario**, no a una equivalencia literal de esos temporizadores Android. Las pistas se adaptan a los grupos que publica AVFoundation o a los índices de VLC, sin trasladar código Android a Swift.
+
+Permanecen diferencias como selección de formato live TS/HLS, navegación entre canales dentro del reproductor, favoritos Android por categoría y series M3U. No se modificaron login, transporte, Keychain o favoritos por inferencia. Esta lectura estática no demuestra streaming real, audibilidad física ni paridad completa.

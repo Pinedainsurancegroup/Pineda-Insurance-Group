@@ -30,7 +30,7 @@ class TestFlightCandidateTests(unittest.TestCase):
   CURRENT_PROJECT_VERSION: '7'
   DEVELOPMENT_TEAM: FIXTURETEAM
   PRODUCT_BUNDLE_IDENTIFIER: com.example.fixture
-  EXCLUDED_SOURCE_FILE_NAMES: 'PlaybackFixture.mkv PlaybackFixture.mp4'
+  EXCLUDED_SOURCE_FILE_NAMES: 'PlaybackFixture.mkv PlaybackFixture.mp4 TrackSelectionFixture.mp4'
 """)
         for name, content in {
             "App/App.swift": "// Fixture source\n", "Sources/Core.swift": "// Fixture core\n",
@@ -38,6 +38,7 @@ class TestFlightCandidateTests(unittest.TestCase):
             "scripts/signing_profile.py": "# Fixture profile validator\n",
             "Resources/PlaybackTests/PlaybackFixture.mkv": "DEBUG fixture",
             "Resources/PlaybackTests/PlaybackFixture.mp4": "DEBUG fixture",
+            "Resources/PlaybackTests/TrackSelectionFixture.mp4": "DEBUG track fixture",
             "README.md": "Fixture documentation\n", ".gitignore": "DerivedData/\n*.p8\nGemfile.lock\nfastlane/report.xml\n",
             "Gemfile": "# Fixture dependency manifest\n", "fastlane/Fastfile": "# Fixture lane\n",
         }.items():
@@ -112,6 +113,7 @@ class TestFlightCandidateTests(unittest.TestCase):
         original = candidate.source_snapshot(self.project)
         (self.project / "README.md").write_text("Updated documentation")
         (self.project / "Resources/PlaybackTests/PlaybackFixture.mp4").write_text("Updated DEBUG media")
+        (self.project / "Resources/PlaybackTests/TrackSelectionFixture.mp4").write_text("Updated DEBUG tracks")
         generated = self.project / "DerivedData/anything"
         generated.parent.mkdir()
         generated.write_text("Build output")
@@ -160,9 +162,17 @@ class TestFlightCandidateTests(unittest.TestCase):
                 report = self.make_export(info_changes=change)
                 with self.assertRaises(ValueError):
                     candidate.validate_ipa(self.export_dir / candidate.IPA_NAME, report, self.plan)
-        report = self.make_export(extra={"Payload/PimflexTV.app/PlaybackFixture.mp4": b"DEBUG"})
-        with self.assertRaisesRegex(ValueError, "DEBUG"):
-            candidate.validate_ipa(self.export_dir / candidate.IPA_NAME, report, self.plan)
+        for name in ["PlaybackFixture.mkv", "PlaybackFixture.mp4", "TrackSelectionFixture.mp4"]:
+            with self.subTest(debug_fixture=name):
+                report = self.make_export(extra={f"Payload/PimflexTV.app/{name}": b"DEBUG"})
+                with self.assertRaisesRegex(ValueError, "DEBUG"):
+                    candidate.validate_ipa(self.export_dir / candidate.IPA_NAME, report, self.plan)
+
+    def test_release_cannot_omit_track_fixture_exclusion(self):
+        project = self.project / "project.yml"
+        project.write_text(project.read_text().replace(" TrackSelectionFixture.mp4", ""))
+        with self.assertRaisesRegex(ValueError, "All local playback fixtures"):
+            candidate.project_settings(self.project)
 
     def test_tampered_ipa_unbound_report_and_wrong_plan_hash_are_rejected(self):
         self.make_export()

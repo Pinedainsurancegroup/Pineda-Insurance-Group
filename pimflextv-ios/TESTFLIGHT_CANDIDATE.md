@@ -1,14 +1,14 @@
 # Preparación de TestFlight — 0.4.0 (7)
 
-La candidata continúa en `pimflextv-ios-controls-20261110`, PR borrador #11, separada de `pimflextv-ios-20261029` y de Android. Esta preparación agrega automatización de exportación y carga; no cambia la aplicación, la versión estable, certificados, perfiles, credenciales ni el workflow protegido de firma. No se ha firmado ni enviado esta candidata a Apple.
+La candidata continúa en `pimflextv-ios-controls-20261110`, PR borrador #11, separada de `pimflextv-ios-20261029` y de Android. La automatización de exportación y carga conserva certificados, perfiles, credenciales y el workflow protegido de firma. La continuación del reproductor añade estados de carga de pistas y una prueba local de selección real, por lo que exige validar y preparar un nuevo SHA. No se ha firmado ni enviado esta candidata a Apple.
 
 ## Fuente y continuidad
 
-El código de la app es el validado en `4a22b4668896191d893657291ff46930659e9534`: [CI 42918344913](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42918344913), 37 core, 10 Python anteriores, 14 UI iPhone, 18 UI mini y 18 UI Pro, sin fallos; cuatro pruebas exclusivas de iPad omitidas en iPhone. Debug simulador y Release universal sin firma aprobados. La ejecución automática posterior por documentación, [CI 42921449204](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42921449204), también terminó correctamente. Esas ejecuciones no prueban los nuevos scripts de esta preparación ni una firma/carga de 0.4.0.
+La validación anterior de la app corresponde a `4a22b4668896191d893657291ff46930659e9534`: [CI 42918344913](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42918344913), 37 core, 10 Python anteriores, 14 UI iPhone, 18 UI mini y 18 UI Pro, sin fallos; cuatro pruebas exclusivas de iPad omitidas en iPhone. Debug simulador y Release universal sin firma aprobados. La ejecución automática posterior por documentación, [CI 42921449204](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42921449204), también terminó correctamente. Esas ejecuciones no prueban los cambios posteriores del reproductor, estos scripts ni una firma/carga de 0.4.0. Consultar `PLAYER_VALIDATION.md` para el resultado asociado al nuevo código.
 
 Las fuentes, recursos, pruebas y generadores están versionados. `PimflexTV.xcworkspace` y el proyecto Xcode se generan en Mac con `bash scripts/prepare-ios.sh`; Pods, DerivedData, apps compiladas, IPA, planes privados y llaves no se incorporan al repositorio. Una app de simulador no se convierte en una IPA de dispositivo añadiéndole una firma.
 
-El mapa comparativo Android/iOS se conserva internamente. El propietario corrigió la referencia a Android 4.0.2 y adjuntó un nuevo ZIP descompilado. Su transferencia fue rechazada por superar 32 MiB; no se ha podido abrir ni incorporar ese código. La rama de referencia 4.0.2 está disponible para contrastarlo cuando pueda recibirse por partes o en un ZIP reducido. Mientras tanto se mantienen el acceso, las rutas, los identificadores y los favoritos iOS existentes; no se afirma equivalencia exacta ni se migra almacenamiento basándose en otra versión Android.
+El ZIP Android 4.0.2 se reconstruyó de cinco partes y pasó el CRC de sus 42.465 entradas. Su manifiesto declara 4.0.2/código 102; `REFERENCE_402.md` registra el SHA-256 y la comparación. El mapa detallado y las fuentes descompiladas se conservan internamente. Se mantienen el acceso, las rutas, los identificadores y los favoritos iOS existentes; no se afirma equivalencia completa ni se migra el almacenamiento Android a iOS por inferencia. Cada cambio posterior requiere un plan nuevo del SHA que finalmente se vaya a exportar.
 
 ## Qué hace la automatización
 
@@ -64,6 +64,6 @@ Ese último comando también es sólo preparación. Para la carga efectiva del s
 
 ## Comprobaciones de esta preparación
 
-En Linux se aprobaron 22 tests Python (10 existentes y 12 nuevos) con archivos ficticios: preparación sin credenciales, fuente modificada, contenido privado ignorado por Git, plataforma/versión/build incorrectos, IPA alterada, vinculación de exportación y ausencia de reintentos implícitos. Los ZIP mínimos usados por esos tests no son ejecutables ni están firmados.
+En Linux se aprobaron 23 tests Python con archivos ficticios: preparación sin credenciales, fuente modificada, contenido privado ignorado por Git, plataforma/versión/build incorrectos, IPA alterada, vinculación de exportación, exclusión de las tres muestras DEBUG y ausencia de reintentos implícitos. Los ZIP mínimos usados por esos tests no son ejecutables ni están firmados.
 
 La sintaxis de `Gemfile` y `fastlane/Fastfile` se comprobó con Ruby 3.3.8 aislado; Bundler resolvió y analizó el lockfile de 112 specs sin instalar Fastlane. No se ejecutaron Xcode, `codesign`, importación de llaves, Fastlane contra Apple ni carga real. Las pruebas físicas, el proveedor real, la paridad restante y los límites de capturas siguen en `PLAYER_VALIDATION.md` y `PARITY.md`.

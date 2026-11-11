@@ -2,7 +2,7 @@
 
 ## Candidata 0.4.0
 
-Conserva los recursos y la reproducción de 0.3.3/build 6. El usuario confirma inicio de sesión y reproducción actuales; falta validar estos cambios en dispositivos reales. Android 4.0.1 no pudo inspeccionarse: su ZIP supera el límite de transferencia de 32 MiB. El reproductor nuevo es una adaptación iOS; la documentación 4.0.2 no contiene medidas o capturas verificadas de todos sus controles. No afirmar paridad total.
+Conserva los recursos y la reproducción de 0.3.3/build 6. El usuario confirma inicio de sesión y reproducción actuales; falta validar los cambios de la candidata en dispositivos reales. El ZIP descompilado Android 4.0.2 ya se reconstruyó de cinco partes y se revisó estáticamente. El reproductor es una adaptación iOS; no afirmar paridad total.
 
 `4a22b4668896191d893657291ff46930659e9534` aprobó [CI 42918344913](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42918344913): 37 core, 10 Python, 14 UI iPhone (4 exclusivas iPad omitidas), 18 mini, 18 Pro, Debug y Release universal sin firma. Véase `PLAYER_VALIDATION.md` para distinguir decodificación local, selecciones sintéticas y revisión de capturas.
 
@@ -10,6 +10,7 @@ Conserva los recursos y la reproducción de 0.3.3/build 6. El usuario confirma i
 
 - APK SHA-256: `c1fa614b2e2aec9399bbde9ca91491b8a4f03e010bd47a4074e57d7b0f6f6a36`
 - AAB SHA-256: `852be7a751dfb44264deccb2f85aa0b2a2375f7d1146ca1a71d5d4d410ef6fe9`
+- ZIP descompilado reconstruido: `296966c0892d04487d2b42c43f76084e19178e0800d13199e895992b485aa4d8`; manifiesto 4.0.2/código 102, CRC correcto en 42.465 entradas.
 
 `REFERENCE_402.md` explica la selección real de layouts y recursos. `Resources/ReferenceAssets.json` registra los hashes de los assets copiados y la composición del icono. El análisis original documenta la inspección de recursos y DEX; esta revisión usa esa evidencia y no ejecutó las apps Android. No se afirma equivalencia pixel por pixel ni completa equivalencia funcional.
 
@@ -24,12 +25,13 @@ Conserva los recursos y la reproducción de 0.3.3/build 6. El usuario confirma i
 | M3U | Importa cuenta de get.php de proveedores conocidos; acceso físico confirmado; listas genéricas con categorías/enlaces relativos y límite 32 MiB, error de tamaño específico | Variantes genéricas y archivo local pendiente |
 | TV, Cine y Series | Catálogo, categorías, grilla, búsqueda y episodios | Datos y streams reales |
 | Búsqueda maestra | TV/Cine/Series en una vista | Volumen y velocidad con catálogo real |
-| Favoritos y reanudar | Separados por cuenta | Ciclos de vida reales |
+| Favoritos y reanudar | Separados por cuenta; conserva identidades iOS. Android 4.0.2 usa almacenamiento local distinto | Ciclos de vida reales; importación/sincronización Android no implementada |
 | EPG | Guía corta Xtream | XMLTV completo y datos reales |
 | Pantalla múltiple | Dos/cuatro canales, un audio, selección y limpieza | Codecs, carga de dispositivo y límite de conexiones del proveedor |
 | Audio/subtítulos/AirPlay | Candidata 0.4.0: controles propios, pistas publicadas por AVPlayer/VLC y AirPlay nativo | Cambio audible/visible con pistas reales, AirPlay y ambos motores en dispositivo; no equivale a Chromecast |
 | Ocultación de controles | Cuatro segundos de inactividad; ocultación, recuperación, reinicio y opciones aprobados en CI iPhone/mini/Pro | Dispositivos reales, VoiceOver y AirPlay físicos |
 | Calidad | Candidata: Automático y límites preferidos derivados de variantes HLS de AVPlayer; sin calidades inventadas en VLC | Verificar adaptación efectiva con un master multivariante real |
+| Formato live / navegación del reproductor | iOS conserva HLS Xtream y selección desde el catálogo | Selector TS/HLS y canal anterior/siguiente dentro del reproductor; comportamiento exacto y proveedor real |
 | Catch up | Entrada visible marcada no disponible | Archivo, ventana de retención, zona horaria y ruta del proveedor |
 | Grabación/descargas | Pendiente | Implementación y límites iOS |
 | Control parental | Pendiente | PIN, bloqueo efectivo y pruebas |

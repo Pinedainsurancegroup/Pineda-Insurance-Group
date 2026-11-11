@@ -24,6 +24,7 @@ VERSION, BUILD = "0.4.0", "7"
 IPA_NAME = "PimflexTV.ipa"
 REPORT_NAME = "verification.json"
 RECEIPT_NAME = "upload-attempt.json"
+DEBUG_PLAYBACK_FIXTURES = {"PlaybackFixture.mkv", "PlaybackFixture.mp4", "TrackSelectionFixture.mp4"}
 PROJECT = Path(__file__).resolve().parents[1]
 
 
@@ -88,8 +89,8 @@ def project_settings(project):
     if len(apps) != 1:
         raise ValueError("Expected one explicit application bundle identifier.")
     excluded = re.findall(r"EXCLUDED_SOURCE_FILE_NAMES:\s*['\"]([^'\"]+)['\"]", text)
-    if not any({"PlaybackFixture.mkv", "PlaybackFixture.mp4"} <= set(value.split()) for value in excluded):
-        raise ValueError("Both local playback fixtures must be excluded from Release.")
+    if not any(DEBUG_PLAYBACK_FIXTURES <= set(value.split()) for value in excluded):
+        raise ValueError("All local playback fixtures must be excluded from Release.")
     return {"version": version, "build": build, "bundle_id": apps[0],
             "team_id": setting("DEVELOPMENT_TEAM"), "device_families": [1, 2]}
 
@@ -131,7 +132,7 @@ def source_snapshot(project):
             continue
         if relative.parts[0] not in archived_roots and path.suffix.lower() in {".md", ".pyc"}:
             continue
-        if relative.as_posix() in {"Resources/PlaybackTests/PlaybackFixture.mkv", "Resources/PlaybackTests/PlaybackFixture.mp4"}:
+        if relative.parent.as_posix() == "Resources/PlaybackTests" and relative.name in DEBUG_PLAYBACK_FIXTURES:
             continue
         if path.is_symlink():
             raise ValueError("Symlinks are not supported in candidate inputs.")
@@ -183,7 +184,7 @@ def validate_ipa(ipa, report, plan):
             path = PurePosixPath(entry.filename)
             if path.is_absolute() or ".." in path.parts or "\\" in entry.filename:
                 raise ValueError("Unsafe IPA path.")
-            if path.name in {"PlaybackFixture.mkv", "PlaybackFixture.mp4"}:
+            if path.name in DEBUG_PLAYBACK_FIXTURES:
                 raise ValueError("Release IPA contains a DEBUG playback fixture.")
         app_infos = [name for name in names if re.fullmatch(r"Payload/[^/]+\.app/Info\.plist", name)]
         if len(app_infos) != 1:

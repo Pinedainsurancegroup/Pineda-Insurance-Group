@@ -18,6 +18,9 @@ struct PlayerQualityChoice: Identifiable {
     let bitRate: Double
 }
 
+enum PlayerOptionSection: CaseIterable, Hashable { case audio, subtitles, quality }
+enum PlayerOptionLoadState: Equatable { case loading, loaded, failed }
+
 @MainActor
 final class PlaybackModel: ObservableObject {
     let player = AVPlayer()
@@ -32,11 +35,16 @@ final class PlaybackModel: ObservableObject {
     @Published var selectedAudio = -2
     @Published var selectedSubtitle = -2
     @Published var selectedQuality = 0
+    @Published private(set) var audioOptionsState: PlayerOptionLoadState = .loading
+    @Published private(set) var subtitleOptionsState: PlayerOptionLoadState = .loading
+    @Published private(set) var qualityOptionsState: PlayerOptionLoadState = .loading
     private var audioGroup: AVMediaSelectionGroup?
     private var subtitleGroup: AVMediaSelectionGroup?
-    private var optionsTask: Task<Void, Never>?
+    private var optionsTasks: [PlayerOptionSection: Task<Void, Never>] = [:]
     #if DEBUG
     private var preview = false
+    private var inspectTrackSelection = false
+    @Published private(set) var actualTrackSelection = "audio=unknown;subtitle=unknown"
     #endif
     private var status: NSKeyValueObservation?
     private var timeControl: NSKeyValueObservation?
@@ -56,7 +64,11 @@ final class PlaybackModel: ObservableObject {
         let item = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: item)
         player.allowsExternalPlayback = true
-        loadOptions(for: item)
+        #if DEBUG
+        inspectTrackSelection = url.isFileURL && url.lastPathComponent == "TrackSelectionFixture.mp4"
+            && ProcessInfo.processInfo.arguments.contains("--test-track-selection")
+        #endif
+        for section in PlayerOptionSection.allCases { loadOptions(section, for: item) }
         status = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             Task { @MainActor [weak self] in
                 guard let self, self.player.currentItem === item else { return }
@@ -97,6 +109,9 @@ final class PlaybackModel: ObservableObject {
                 guard let self, self.player.currentItem === item else { return }
                 self.seconds = time.seconds.isFinite ? max(0, time.seconds) : 0
                 self.duration = item.duration.seconds.isFinite ? max(0, item.duration.seconds) : 0
+                #if DEBUG
+                self.updateTrackSelectionSnapshot()
+                #endif
                 if !self.ended, abs(self.seconds - self.lastSavedSeconds) >= 10 { self.save?(self.seconds); self.lastSavedSeconds = self.seconds }
             }
         }
@@ -115,25 +130,63 @@ final class PlaybackModel: ObservableObject {
         }
         armTimeout(for: item)
     }
-    private func loadOptions(for item: AVPlayerItem) {
-        optionsTask?.cancel()
-        optionsTask = Task { [weak self] in
-            let audio = try? await item.asset.loadMediaSelectionGroup(for: .audible)
-            let subtitles = try? await item.asset.loadMediaSelectionGroup(for: .legible)
-            let variants: [AVAssetVariant]
-            if let asset = item.asset as? AVURLAsset { variants = (try? await asset.load(.variants)) ?? [] }
-            else { variants = [] }
-            guard let self, !Task.isCancelled, self.player.currentItem === item else { return }
-            self.audioGroup = audio
-            self.subtitleGroup = subtitles
-            self.audioChoices = audio?.options.enumerated().map { PlayerTrackChoice(id: $0.offset, name: $0.element.displayName) } ?? []
-            self.subtitleChoices = subtitles?.options.enumerated().map { PlayerTrackChoice(id: $0.offset, name: $0.element.displayName) } ?? []
-            // These are upper bandwidth preferences, not a guarantee that AVPlayer
-            // selects one exact rendition. Only advertise rates in this asset.
-            let rates = Set(variants.compactMap(\.peakBitRate).filter { $0.isFinite && $0 > 0 }).sorted()
-            self.qualityChoices = rates.count > 1 ? rates.enumerated().map {
-                PlayerQualityChoice(id: $0.offset + 1, name: String(format: "Hasta %.2f Mb/s", $0.element / 1_000_000), bitRate: $0.element)
-            } : []
+    func retryOptions(_ section: PlayerOptionSection) {
+        guard let item = player.currentItem, optionsState(section) == .failed else { return }
+        loadOptions(section, for: item)
+    }
+    private func optionsState(_ section: PlayerOptionSection) -> PlayerOptionLoadState {
+        switch section {
+        case .audio: return audioOptionsState
+        case .subtitles: return subtitleOptionsState
+        case .quality: return qualityOptionsState
+        }
+    }
+    private func setOptionsState(_ state: PlayerOptionLoadState, for section: PlayerOptionSection) {
+        switch section {
+        case .audio: audioOptionsState = state
+        case .subtitles: subtitleOptionsState = state
+        case .quality: qualityOptionsState = state
+        }
+    }
+    private func loadOptions(_ section: PlayerOptionSection, for item: AVPlayerItem) {
+        optionsTasks[section]?.cancel()
+        setOptionsState(.loading, for: section)
+        // Independent tasks publish available tracks without waiting for variant metadata.
+        optionsTasks[section] = Task { [weak self] in
+            do {
+                switch section {
+                case .audio, .subtitles:
+                    let group = try await item.asset.loadMediaSelectionGroup(for: section == .audio ? .audible : .legible)
+                    guard let self, !Task.isCancelled, self.player.currentItem === item else { return }
+                    let choices = group?.options.enumerated().map { PlayerTrackChoice(id: $0.offset, name: $0.element.displayName) } ?? []
+                    let current = group.flatMap { item.currentMediaSelection.selectedMediaOption(in: $0) }
+                    let selectedIndex = current.flatMap { group?.options.firstIndex(of: $0) }
+                    if section == .audio {
+                        self.audioGroup = group; self.audioChoices = choices
+                        if self.selectedAudio >= 0 { self.selectedAudio = selectedIndex ?? -2 }
+                    } else {
+                        self.subtitleGroup = group; self.subtitleChoices = choices
+                        if self.selectedSubtitle >= 0 { self.selectedSubtitle = selectedIndex ?? -2 }
+                    }
+                    self.setOptionsState(.loaded, for: section)
+                case .quality:
+                    let variants: [AVAssetVariant]
+                    if let asset = item.asset as? AVURLAsset { variants = try await asset.load(.variants) }
+                    else { variants = [] }
+                    guard let self, !Task.isCancelled, self.player.currentItem === item else { return }
+                    // Upper bandwidth preferences, not a guarantee of one exact rendition.
+                    let rates = Set(variants.compactMap(\.peakBitRate).filter { $0.isFinite && $0 > 0 }).sorted()
+                    let preferredRate = item.preferredPeakBitRate
+                    self.qualityChoices = rates.count > 1 ? rates.enumerated().map {
+                        PlayerQualityChoice(id: $0.offset + 1, name: String(format: "Hasta %.2f Mb/s", $0.element / 1_000_000), bitRate: $0.element)
+                    } : []
+                    self.selectedQuality = self.qualityChoices.first(where: { $0.bitRate == preferredRate })?.id ?? 0
+                    self.setOptionsState(.loaded, for: section)
+                }
+            } catch {
+                guard let self, !Task.isCancelled, self.player.currentItem === item else { return }
+                self.setOptionsState(.failed, for: section)
+            }
         }
     }
 
@@ -196,12 +249,29 @@ final class PlaybackModel: ObservableObject {
                     toleranceBefore: .zero, toleranceAfter: .zero)
     }
     #if DEBUG
+    private func updateTrackSelectionSnapshot() {
+        guard inspectTrackSelection, let item = player.currentItem else { return }
+        func language(in group: AVMediaSelectionGroup?) -> String {
+            guard let group else { return "unknown" }
+            guard let option = item.currentMediaSelection.selectedMediaOption(in: group) else { return "off" }
+            let language = (option.extendedLanguageTag ?? option.locale?.languageCode ?? "unknown")
+                .lowercased().split(separator: "-").first.map(String.init) ?? "unknown"
+            switch language {
+            case "es", "spa": return "spa"
+            case "en", "eng": return "eng"
+            default: return language
+            }
+        }
+        let value = "audio=\(language(in: audioGroup));subtitle=\(language(in: subtitleGroup))"
+        if actualTrackSelection != value { actualTrackSelection = value }
+    }
     func showPreview() {
         stop(); preview = true; error = nil; waiting = false; playing = true; duration = 300
         audioChoices = [PlayerTrackChoice(id: 0, name: "Español"), PlayerTrackChoice(id: 1, name: "Inglés")]
         subtitleChoices = [PlayerTrackChoice(id: 0, name: "Español")]
         qualityChoices = [PlayerQualityChoice(id: 1, name: "Hasta 2.00 Mb/s", bitRate: 2_000_000),
                           PlayerQualityChoice(id: 2, name: "Hasta 5.00 Mb/s", bitRate: 5_000_000)]
+        audioOptionsState = .loaded; subtitleOptionsState = .loaded; qualityOptionsState = .loaded
     }
     #endif
 
@@ -214,13 +284,15 @@ final class PlaybackModel: ObservableObject {
         }
     }
     func stop() {
-        optionsTask?.cancel(); optionsTask = nil
+        for task in optionsTasks.values { task.cancel() }; optionsTasks = [:]
         audioGroup = nil; subtitleGroup = nil
         audioChoices = []; subtitleChoices = []; qualityChoices = []
+        audioOptionsState = .loading; subtitleOptionsState = .loading; qualityOptionsState = .loading
         selectedAudio = -2; selectedSubtitle = -2; selectedQuality = 0
         playing = false; seconds = 0; duration = 0; lastSavedSeconds = 0
         #if DEBUG
-        preview = false
+        preview = false; inspectTrackSelection = false
+        actualTrackSelection = "audio=unknown;subtitle=unknown"
         #endif
         if !ended { save?(player.currentTime().seconds) }
         ended = false; save = nil; player.pause()
@@ -285,11 +357,20 @@ struct PlayerScreen: View {
     private var canSeek: Bool { item.kind != .live && duration > 0 && (!usesCompatible || compatible.seekable) }
     private var preview: Bool {
         #if DEBUG
-        return model.usesTestFixtures && !ProcessInfo.processInfo.arguments.contains("--test-mkv-playback") && !ProcessInfo.processInfo.arguments.contains("--test-native-playback")
+        return model.usesTestFixtures && !ProcessInfo.processInfo.arguments.contains("--test-mkv-playback")
+            && !ProcessInfo.processInfo.arguments.contains("--test-native-playback")
+            && !ProcessInfo.processInfo.arguments.contains("--test-track-selection")
         #else
         return false
         #endif
     }
+    #if DEBUG
+    private var trackSelectionFixture: Bool {
+        let arguments = ProcessInfo.processInfo.arguments
+        return model.usesTestFixtures && arguments.contains("--test-track-selection")
+            && !arguments.contains("--test-mkv-playback") && !arguments.contains("--test-native-playback")
+    }
+    #endif
 
     var body: some View {
         ZStack {
@@ -414,9 +495,19 @@ struct PlayerScreen: View {
         NavigationStack {
             List {
                 if preview { Text("Opciones ficticias para pruebas de interfaz; sin transmisión.").font(.footnote) }
+                #if DEBUG
+                if trackSelectionFixture, !usesCompatible {
+                    Text("Selección nativa del archivo de prueba")
+                        .font(.footnote).foregroundStyle(.secondary)
+                        .accessibilityIdentifier("nativeTrackSelection")
+                        .accessibilityValue(playback.actualTrackSelection)
+                }
+                #endif
                 Section("Audio") {
                     let choices = usesCompatible ? compatible.audioChoices : playback.audioChoices
-                    if choices.isEmpty { Text("Esta transmisión no ofrece pistas de audio seleccionables.") }
+                    if !usesCompatible, playback.audioOptionsState != .loaded {
+                        optionLoadStatus(playback.audioOptionsState, section: .audio, name: "audio", identifier: "playerAudioLoad")
+                    } else if choices.isEmpty { Text("Esta transmisión no ofrece pistas de audio seleccionables.") }
                     else {
                         if !usesCompatible {
                             optionRow("Automático", id: "playerAudio--2", selected: playback.selectedAudio == -2) { playback.selectAudio(-2) }
@@ -430,7 +521,9 @@ struct PlayerScreen: View {
                 }
                 Section("Subtítulos") {
                     let choices = usesCompatible ? compatible.subtitleChoices : playback.subtitleChoices
-                    if choices.isEmpty { Text("Esta transmisión no ofrece subtítulos seleccionables.") }
+                    if !usesCompatible, playback.subtitleOptionsState != .loaded {
+                        optionLoadStatus(playback.subtitleOptionsState, section: .subtitles, name: "subtítulos", identifier: "playerSubtitleLoad")
+                    } else if choices.isEmpty { Text("Esta transmisión no ofrece subtítulos seleccionables.") }
                     else {
                         if !usesCompatible {
                             optionRow("Automático", id: "playerSubtitle--2", selected: playback.selectedSubtitle == -2) { playback.selectSubtitle(-2) }
@@ -450,6 +543,8 @@ struct PlayerScreen: View {
                 Section("Calidad") {
                     if usesCompatible {
                         Text("El modo compatible gestiona la calidad de esta transmisión; no expone selección de variantes.")
+                    } else if playback.qualityOptionsState != .loaded {
+                        optionLoadStatus(playback.qualityOptionsState, section: .quality, name: "calidad", identifier: "playerQualityLoad")
                     } else if playback.qualityChoices.isEmpty {
                         Text("Automática. Esta transmisión no ofrece varias calidades seleccionables.")
                     } else {
@@ -465,6 +560,16 @@ struct PlayerScreen: View {
         }
     }
 
+    @ViewBuilder
+    private func optionLoadStatus(_ state: PlayerOptionLoadState, section: PlayerOptionSection, name: String, identifier: String) -> some View {
+        if state == .loading {
+            ProgressView("Cargando opciones de \(name)…").accessibilityIdentifier(identifier)
+        } else if state == .failed {
+            Text("No se pudieron cargar las opciones de \(name).")
+            Button("Reintentar \(name)") { playback.retryOptions(section) }
+                .accessibilityIdentifier(identifier + "Retry")
+        }
+    }
     private func optionRow(_ name: String, id: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack { Text(name); Spacer(); if selected { Image(systemName: "checkmark") } }
@@ -481,7 +586,8 @@ struct PlayerScreen: View {
         // delivery exceeds four seconds. Inactivity tests omit this flag.
         let arguments = ProcessInfo.processInfo.arguments
         if model.usesTestFixtures, arguments.contains("--keep-playback-controls-visible"),
-           arguments.contains("--test-mkv-playback") || arguments.contains("--test-native-playback") { return }
+           arguments.contains("--test-mkv-playback") || arguments.contains("--test-native-playback")
+            || arguments.contains("--test-track-selection") { return }
         #endif
         guard scenePhase == .active, !optionsVisible, !routePickerActive, !scrubbing, !voiceOverEnabled, !waiting, error == nil else { return }
         hideTask = Task { @MainActor in
@@ -506,6 +612,9 @@ struct PlayerScreen: View {
                 url = fixture
             } else if model.usesTestFixtures, ProcessInfo.processInfo.arguments.contains("--test-native-playback") {
                 guard let fixture = Bundle.main.url(forResource: "PlaybackFixture", withExtension: "mp4") else { throw PimflexError.invalidResponse }
+                url = fixture
+            } else if model.usesTestFixtures, ProcessInfo.processInfo.arguments.contains("--test-track-selection") {
+                guard let fixture = Bundle.main.url(forResource: "TrackSelectionFixture", withExtension: "mp4") else { throw PimflexError.invalidResponse }
                 url = fixture
             } else { url = try Endpoint.playback(account, item: item) }
             #else

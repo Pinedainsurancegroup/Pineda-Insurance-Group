@@ -27,7 +27,17 @@ El 2026-11-10 el propietario autorizó expresamente publicar el MP4 de prueba de
 - En el entorno local Linux no existen Swift/Xcode/XcodeGen. Las verificaciones locales de estructura y los tests Python no constituyen una compilación iOS. La validación Mac de esta candidata se identifica por SHA a continuación; los resultados históricos de 0.3.3 no la validan.
 - Revisar manualmente las capturas iPhone portrait/landscape, iPad mini/Pro, ventanas estrechas y texto accesible. Probar pistas múltiples reales, subtítulos forzados, errores/redirecciones multimedia, AirPlay, calidad HLS, fondo/retorno y reanudación con el proveedor autorizado en dispositivo.
 
-## Validación Mac de la candidata
+## Continuación desde el ZIP Android 4.0.2
+
+Se reconstruyeron las cinco partes y se verificaron los CRC de las 42.465 entradas. El manifiesto declara 4.0.2/código 102 y los 26 recursos originales documentados coinciden por hash. `REFERENCE_402.md` registra la procedencia; las fuentes descompiladas y la comparación detallada permanecen privadas. La lectura confirma las rutas e identificadores principales de iOS; no se cambian acceso, favoritos, transporte o credenciales. Los temporizadores Android revisados son de 5.000 ms; iOS conserva 4.000 ms por el requisito explícito del usuario.
+
+La carga nativa de audio, subtítulos y calidad ahora es independiente. Cada apartado distingue carga, resultado vacío y fallo con reintento, sin reiniciar el video. Las tareas canceladas o de un elemento anterior no publican resultados.
+
+Se añade `TrackSelectionFixture.mp4`, una muestra original generada sin red ni recursos Android: video H.264, dos tonos AAC y dos pistas mov_text de 300 segundos. El nuevo test selecciona ambos audios, ambos subtítulos y desactivación; verifica `currentMediaSelection` del AVPlayer real, reapertura del menú y avance del reloj, y exporta capturas. Esta tercera prueba local también usa la excepción DEBUG de controles visibles, independiente de las pruebas de cuatro segundos. Las tres muestras quedan excluidas de Release y el verificador rechaza cualquier IPA que las contenga. Esto no demuestra audibilidad física ni pistas de un proveedor real.
+
+Comprobaciones locales: 23 tests Python aprobados, decodificación FFmpeg de la nueva muestra sin errores y diff sin errores de formato. La nueva prueba UI y el código Swift requieren Mac CI del nuevo SHA; el entorno Linux no puede compilarlos. Los resultados siguientes son históricos hasta registrar esa ejecución.
+
+## Validación Mac anterior de la candidata
 
 Código `4a22b4668896191d893657291ff46930659e9534`, [CI 42918344913](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42918344913), resultado **success**, cero fallos. Xcode 16.4, simuladores iOS/iPadOS 18.5:
 
@@ -59,7 +69,7 @@ No se ejecutaron las apps Android originales ni medios del proveedor. Esta inspe
 
 ## Preparación para TestFlight
 
-Continuación de preparación: [`TESTFLIGHT_CANDIDATE.md`](TESTFLIGHT_CANDIDATE.md) describe los nuevos scripts para exportar desde un Mac con la identidad existente y cargar la IPA en un paso posterior. Añaden plan/hash del candidato y verificación previa; no cambian el código de la app validado arriba ni habilitan otra rama en el workflow protegido.
+[`TESTFLIGHT_CANDIDATE.md`](TESTFLIGHT_CANDIDATE.md) describe los scripts para exportar desde un Mac con la identidad existente y cargar la IPA en un paso posterior. Vinculan el plan y los hashes al commit que se exportará y verifican la IPA; no habilitan otra rama en el workflow protegido. Los cambios posteriores del reproductor requieren un plan nuevo y su propia validación.
 
 Versión 0.4.0/build 7, mismo identificador y familias iPhone/iPad. Proyecto generado mediante `bash scripts/prepare-ios.sh`; abrir `PimflexTV.xcworkspace` por la dependencia VLC. CI prepara Debug y Release sin firma y prueba los tres simuladores en una rama separada. La configuración permite validar PR hacia la rama iOS, además de la base original; no activa firma.
 

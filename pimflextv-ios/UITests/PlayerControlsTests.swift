@@ -62,6 +62,58 @@ final class PlayerControlsTests: XCTestCase {
         XCTAssertTrue(app.buttons["movie-movie:1"].waitForExistence(timeout: 5))
     }
 
+    func testNativeLocalAudioAndSubtitleSelectionsReachAVPlayer() {
+        let app = openPreviewPlayer(arguments: ["--test-track-selection", "--keep-playback-controls-visible"])
+        let surface = app.otherElements["nativeVideoSurface"]
+        XCTAssertTrue(surface.waitForExistence(timeout: 10))
+        let playing = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "Reproduciendo ·"), object: surface)
+        XCTAssertEqual(XCTWaiter.wait(for: [playing], timeout: 20), .completed)
+        XCTAssertFalse(app.descendants(matching: .any)["playerFixture"].exists)
+        app.buttons["playerOptions"].tap()
+        let done = app.buttons["playerOptionsDone"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["playerAudio-1"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["playerSubtitle-1"].waitForExistence(timeout: 20))
+
+        // These are actual bundled AAC/mov_text tracks. The diagnostic reads
+        // currentMediaSelection, independently of the requested UI selection.
+        let selection = app.descendants(matching: .any)["nativeTrackSelection"]
+        XCTAssertTrue(selection.waitForExistence(timeout: 5))
+        app.buttons["playerAudio-0"].tap()
+        waitForTrackSelection(selection, audio: "spa")
+        app.buttons["playerAudio-1"].tap()
+        waitForTrackSelection(selection, audio: "eng")
+        assertSelected(app.buttons["playerAudio-1"])
+
+        app.buttons["playerSubtitle-0"].tap()
+        waitForTrackSelection(selection, audio: "eng", subtitle: "spa")
+        assertSelected(app.buttons["playerSubtitle-0"])
+        done.tap()
+        captureSubtitleAfterProgress("native-subtitle-spanish", surface: surface)
+
+        app.buttons["playerOptions"].tap()
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        waitForTrackSelection(selection, audio: "eng", subtitle: "spa")
+        app.buttons["playerSubtitle-1"].tap()
+        waitForTrackSelection(selection, audio: "eng", subtitle: "eng")
+        assertSelected(app.buttons["playerSubtitle-1"])
+        done.tap()
+        captureSubtitleAfterProgress("native-subtitle-english", surface: surface)
+
+        app.buttons["playerOptions"].tap()
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        app.buttons["playerSubtitle--1"].tap()
+        waitForTrackSelection(selection, audio: "eng", subtitle: "off")
+        assertSelected(app.buttons["playerSubtitle--1"])
+        done.tap()
+        app.buttons["playerOptions"].tap()
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        waitForTrackSelection(selection, audio: "eng", subtitle: "off")
+        done.tap()
+        app.buttons["playerClose"].tap()
+        XCTAssertTrue(app.buttons["movie-movie:1"].waitForExistence(timeout: 5))
+    }
+
     func testControlsHideAfterInactivityAndTapRestoresThem() {
         let app = openPreviewPlayer()
         let close = app.buttons["playerClose"]
@@ -194,6 +246,33 @@ final class PlayerControlsTests: XCTestCase {
     private func assertSelected(_ row: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(row.exists, file: file, line: line)
         XCTAssertEqual(row.value as? String, "Seleccionado", file: file, line: line)
+    }
+
+    private func waitForTrackSelection(_ status: XCUIElement, audio: String, subtitle: String? = nil,
+                                       file: StaticString = #filePath, line: UInt = #line) {
+        let predicate: NSPredicate
+        if let subtitle {
+            predicate = NSPredicate(format: "value == %@", "audio=\(audio);subtitle=\(subtitle)")
+        } else {
+            predicate = NSPredicate(format: "value BEGINSWITH %@", "audio=\(audio);subtitle=")
+        }
+        let selected = XCTNSPredicateExpectation(predicate: predicate, object: status)
+        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 20), .completed, file: file, line: line)
+    }
+
+    private func captureSubtitleAfterProgress(_ name: String, surface: XCUIElement) {
+        guard let before = seconds(surface) else { return }
+        // Cues repeat every five seconds. Observe a new cue interval after the
+        // sheet closes; the saved image requires visual inspection to establish
+        // rendered text, independently of the engine-selection assertions.
+        let progressed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            guard let current = self.seconds(surface) else { return false }
+            return current >= before + 5
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [progressed], timeout: 20), .completed)
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name; attachment.lifetime = .keepAlways
+        add(attachment)
     }
 
     private func assertRemainsPresent(_ element: XCUIElement, for seconds: TimeInterval,
