@@ -72,31 +72,36 @@ final class PlayerControlsTests: XCTestCase {
         app.buttons["playerOptions"].tap()
         let done = app.buttons["playerOptionsDone"]
         XCTAssertTrue(done.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["playerAudio-1"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.buttons["playerSubtitle-1"].waitForExistence(timeout: 20))
+        guard let options = nativeTrackOptions(app),
+              let spanishAudio = uniqueFullTrack(options.audio, language: "spa", section: "audio"),
+              let englishAudio = uniqueFullTrack(options.audio, language: "eng", section: "audio"),
+              let spanishSubtitle = uniqueFullTrack(options.subtitles, language: "spa", section: "subtitles"),
+              let englishSubtitle = uniqueFullTrack(options.subtitles, language: "eng", section: "subtitles") else { return }
 
         // These are actual bundled AAC/mov_text tracks. The diagnostic reads
         // currentMediaSelection, independently of the requested UI selection.
+        // AVFoundation may expose additional forced-only subtitle options, so
+        // an MP4 stream index cannot identify a language in group.options.
         let selection = app.descendants(matching: .any)["nativeTrackSelection"]
         XCTAssertTrue(selection.waitForExistence(timeout: 5))
-        app.buttons["playerAudio-0"].tap()
+        app.buttons["playerAudio-\(spanishAudio)"].tap()
         waitForTrackSelection(selection, audio: "spa")
-        app.buttons["playerAudio-1"].tap()
+        app.buttons["playerAudio-\(englishAudio)"].tap()
         waitForTrackSelection(selection, audio: "eng")
-        assertSelected(app.buttons["playerAudio-1"])
+        assertSelected(app.buttons["playerAudio-\(englishAudio)"])
 
-        app.buttons["playerSubtitle-0"].tap()
+        app.buttons["playerSubtitle-\(spanishSubtitle)"].tap()
         waitForTrackSelection(selection, audio: "eng", subtitle: "spa")
-        assertSelected(app.buttons["playerSubtitle-0"])
+        assertSelected(app.buttons["playerSubtitle-\(spanishSubtitle)"])
         done.tap()
         captureSubtitleAfterProgress("native-subtitle-spanish", surface: surface)
 
         app.buttons["playerOptions"].tap()
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         waitForTrackSelection(selection, audio: "eng", subtitle: "spa")
-        app.buttons["playerSubtitle-1"].tap()
+        app.buttons["playerSubtitle-\(englishSubtitle)"].tap()
         waitForTrackSelection(selection, audio: "eng", subtitle: "eng")
-        assertSelected(app.buttons["playerSubtitle-1"])
+        assertSelected(app.buttons["playerSubtitle-\(englishSubtitle)"])
         done.tap()
         captureSubtitleAfterProgress("native-subtitle-english", surface: surface)
 
@@ -246,6 +251,66 @@ final class PlayerControlsTests: XCTestCase {
     private func assertSelected(_ row: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(row.exists, file: file, line: line)
         XCTAssertEqual(row.value as? String, "Seleccionado", file: file, line: line)
+    }
+
+    private struct NativeTrackOption: Decodable {
+        let id: Int
+        let language: String
+        let forcedOnly: Bool
+    }
+
+    private struct NativeTrackOptions: Decodable {
+        let audio: [NativeTrackOption]
+        let subtitles: [NativeTrackOption]
+    }
+
+    private func nativeTrackOptions(_ app: XCUIApplication, file: StaticString = #filePath,
+                                    line: UInt = #line) -> NativeTrackOptions? {
+        let diagnostic = app.descendants(matching: .any)["nativeTrackOptions"]
+        guard diagnostic.waitForExistence(timeout: 5) else {
+            XCTFail("AVFoundation option metadata diagnostic is absent", file: file, line: line)
+            return nil
+        }
+        let loaded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            guard let json = diagnostic.value as? String,
+                  let options = try? JSONDecoder().decode(NativeTrackOptions.self, from: Data(json.utf8)) else { return false }
+            return !options.audio.isEmpty && !options.subtitles.isEmpty
+        }, object: nil)
+        let result = XCTWaiter.wait(for: [loaded], timeout: 20)
+        XCTAssertEqual(result, .completed, "Both real AVFoundation media-selection groups must load", file: file, line: line)
+        guard let json = diagnostic.value as? String else {
+            XCTFail("AVFoundation option metadata has no JSON value", file: file, line: line)
+            return nil
+        }
+        let attachment = XCTAttachment(string: json)
+        attachment.name = "native-track-options"; attachment.lifetime = .keepAlways
+        add(attachment)
+        guard result == .completed,
+              let options = try? JSONDecoder().decode(NativeTrackOptions.self, from: Data(json.utf8)) else {
+            XCTFail("Missing or malformed AVFoundation option metadata: \(json)", file: file, line: line)
+            return nil
+        }
+        for group in [options.audio, options.subtitles] {
+            guard group.allSatisfy({ $0.id >= 0 }), Set(group.map(\.id)).count == group.count else {
+                XCTFail("AVFoundation option IDs must be nonnegative and unique within each group", file: file, line: line)
+                return nil
+            }
+        }
+        func summary(_ group: [NativeTrackOption]) -> String {
+            group.map { "\($0.id):\($0.language):\($0.forcedOnly ? "forced-only" : "full")" }.joined(separator: ",")
+        }
+        print("AVFoundation options: audio=[\(summary(options.audio))]; subtitles=[\(summary(options.subtitles))]")
+        return options
+    }
+
+    private func uniqueFullTrack(_ options: [NativeTrackOption], language: String, section: String,
+                                 file: StaticString = #filePath, line: UInt = #line) -> Int? {
+        let matches = options.filter { $0.language == language && !$0.forcedOnly }
+        guard matches.count == 1 else {
+            XCTFail("Expected exactly one non-forced-only \(language) option in \(section); found \(matches.count)", file: file, line: line)
+            return nil
+        }
+        return matches[0].id
     }
 
     private func waitForTrackSelection(_ status: XCUIElement, audio: String, subtitle: String? = nil,

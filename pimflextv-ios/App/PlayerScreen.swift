@@ -45,6 +45,7 @@ final class PlaybackModel: ObservableObject {
     private var preview = false
     private var inspectTrackSelection = false
     @Published private(set) var actualTrackSelection = "audio=unknown;subtitle=unknown"
+    @Published private(set) var actualTrackOptions = "{\"audio\":[],\"subtitles\":[]}"
     #endif
     private var status: NSKeyValueObservation?
     private var timeControl: NSKeyValueObservation?
@@ -158,7 +159,10 @@ final class PlaybackModel: ObservableObject {
                 case .audio, .subtitles:
                     let group = try await item.asset.loadMediaSelectionGroup(for: section == .audio ? .audible : .legible)
                     guard let self, !Task.isCancelled, self.player.currentItem === item else { return }
-                    let choices = group?.options.enumerated().map { PlayerTrackChoice(id: $0.offset, name: $0.element.displayName) } ?? []
+                    let choices = group?.options.enumerated().map { index, option in
+                        let suffix = option.hasMediaCharacteristic(.containsOnlyForcedSubtitles) ? " · Solo forzados" : ""
+                        return PlayerTrackChoice(id: index, name: option.displayName + suffix)
+                    } ?? []
                     let current = group.flatMap { item.currentMediaSelection.selectedMediaOption(in: $0) }
                     let selectedIndex = current.flatMap { group?.options.firstIndex(of: $0) }
                     if section == .audio {
@@ -169,6 +173,9 @@ final class PlaybackModel: ObservableObject {
                         if self.selectedSubtitle >= 0 { self.selectedSubtitle = selectedIndex ?? -2 }
                     }
                     self.setOptionsState(.loaded, for: section)
+                    #if DEBUG
+                    self.updateTrackOptionsSnapshot()
+                    #endif
                 case .quality:
                     let variants: [AVAssetVariant]
                     if let asset = item.asset as? AVURLAsset { variants = try await asset.load(.variants) }
@@ -249,18 +256,33 @@ final class PlaybackModel: ObservableObject {
                     toleranceBefore: .zero, toleranceAfter: .zero)
     }
     #if DEBUG
+    private func trackLanguage(_ option: AVMediaSelectionOption) -> String {
+        let language = (option.extendedLanguageTag ?? option.locale?.languageCode ?? "unknown")
+            .lowercased().split(separator: "-").first.map(String.init) ?? "unknown"
+        switch language {
+        case "es", "spa": return "spa"
+        case "en", "eng": return "eng"
+        default: return language
+        }
+    }
+    private func updateTrackOptionsSnapshot() {
+        guard inspectTrackSelection else { return }
+        func descriptors(_ group: AVMediaSelectionGroup?) -> [[String: Any]] {
+            (group?.options ?? []).enumerated().map { index, option in
+                ["id": index, "language": trackLanguage(option),
+                 "forcedOnly": option.hasMediaCharacteristic(.containsOnlyForcedSubtitles)]
+            }
+        }
+        let options = ["audio": descriptors(audioGroup), "subtitles": descriptors(subtitleGroup)]
+        if let data = try? JSONSerialization.data(withJSONObject: options, options: [.sortedKeys]),
+           let value = String(data: data, encoding: .utf8) { actualTrackOptions = value }
+    }
     private func updateTrackSelectionSnapshot() {
         guard inspectTrackSelection, let item = player.currentItem else { return }
         func language(in group: AVMediaSelectionGroup?) -> String {
             guard let group else { return "unknown" }
             guard let option = item.currentMediaSelection.selectedMediaOption(in: group) else { return "off" }
-            let language = (option.extendedLanguageTag ?? option.locale?.languageCode ?? "unknown")
-                .lowercased().split(separator: "-").first.map(String.init) ?? "unknown"
-            switch language {
-            case "es", "spa": return "spa"
-            case "en", "eng": return "eng"
-            default: return language
-            }
+            return trackLanguage(option)
         }
         let value = "audio=\(language(in: audioGroup));subtitle=\(language(in: subtitleGroup))"
         if actualTrackSelection != value { actualTrackSelection = value }
@@ -293,6 +315,7 @@ final class PlaybackModel: ObservableObject {
         #if DEBUG
         preview = false; inspectTrackSelection = false
         actualTrackSelection = "audio=unknown;subtitle=unknown"
+        actualTrackOptions = "{\"audio\":[],\"subtitles\":[]}"
         #endif
         if !ended { save?(player.currentTime().seconds) }
         ended = false; save = nil; player.pause()
@@ -553,11 +576,15 @@ struct PlayerScreen: View {
             // Scrolling to the final subtitle must not remove the observed value.
             .safeAreaInset(edge: .top, spacing: 0) {
                 if trackSelectionFixture, !usesCompatible {
-                    Text("Selección nativa del archivo de prueba")
-                        .font(.footnote).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Selección nativa del archivo de prueba")
+                            .accessibilityIdentifier("nativeTrackSelection")
+                            .accessibilityValue(playback.actualTrackSelection)
+                        Text("Pistas nativas del archivo de prueba")
+                            .accessibilityIdentifier("nativeTrackOptions")
+                            .accessibilityValue(playback.actualTrackOptions)
+                    }.font(.footnote).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(12)
-                        .accessibilityIdentifier("nativeTrackSelection")
-                        .accessibilityValue(playback.actualTrackSelection)
                 }
             }
             #endif
