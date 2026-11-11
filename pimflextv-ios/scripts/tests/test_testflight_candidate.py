@@ -215,7 +215,8 @@ class TestFlightCandidateTests(unittest.TestCase):
         self.assertEqual(len(archive_calls), 1)
         self.assertEqual(archive_calls[0][0][1], str(self.project / "scripts/archive-signed.sh"))
         self.assertEqual(archive_calls[0][1]["env"]["PIMFLEX_BUILD_NUMBER"], "7")
-        self.assertEqual(archive_calls[0][1]["env"]["PIMFLEX_EXPORT_DIR"], str(self.export_dir))
+        # macOS temporary paths may enter through /var and resolve to /private/var.
+        self.assertEqual(archive_calls[0][1]["env"]["PIMFLEX_EXPORT_DIR"], str(self.export_dir.resolve()))
         self.assertTrue(archive_calls[0][1]["env"]["PATH"].startswith(str(self.root / "ruby user gems/bin") + os.pathsep))
         pod_calls = [call for call in calls if call[0][0] == "pod"]
         self.assertEqual(pod_calls[0][0], ["pod", "_1.16.2_", "--version"])
@@ -271,7 +272,7 @@ class TestFlightCandidateTests(unittest.TestCase):
                 candidate.upload_candidate(self.project, self.plan_path, self.export_dir, execute=True)
         self.assertEqual(len(calls), 1)
         self.assertIn("execute:true", calls[0][0])
-        self.assertIn("ipa:" + str(self.export_dir / candidate.IPA_NAME), calls[0][0])
+        self.assertIn("ipa:" + str((self.export_dir / candidate.IPA_NAME).resolve()), calls[0][0])
         self.assertNotIn(key.read_text(), repr(calls[0][0]))
         receipt = json.loads((self.export_dir / candidate.RECEIPT_NAME).read_text())
         self.assertEqual(receipt["state"], "outcome_unknown_check_apple_before_retry")
