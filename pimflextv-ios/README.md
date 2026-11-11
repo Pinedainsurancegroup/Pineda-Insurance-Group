@@ -1,6 +1,6 @@
 # PIMFLEX TV para iPhone y iPad — 5.0.0 candidata (8)
 
-Aplicación nativa SwiftUI para iOS / iPadOS 16 o posterior. Conserva AVFoundation para HLS/MP4 y MobileVLCKit 3.7.5 para contenedores adicionales, el acceso y los recursos PIMFLEX existentes. Esta candidata continúa desde `f7f3cb43b5c287ee776f39f751e1a138f690ea80` en `pimflextv-ios-smarters5-20261110`; la rama estable `pimflextv-ios-20261029` y la candidata 0.4.0 del PR #11 se conservan.
+Aplicación nativa SwiftUI para iOS / iPadOS 16 o posterior. Conserva AVFoundation para HLS/MP4 y MobileVLCKit 3.7.5 para contenedores adicionales, el acceso y los recursos PIMFLEX existentes. Esta candidata continúa desde `f7f3cb43b5c287ee776f39f751e1a138f690ea80` en `pimflextv-ios-smarters5-20261110`, [PR borrador #12](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/pull/12); la rama estable `pimflextv-ios-20261029` y la candidata 0.4.0 del PR #11 se conservan.
 
 ## Referencia Smarters 5.0 y controles
 
@@ -10,7 +10,7 @@ La numeración 5.0.0 identifica esta candidata PIMFLEX; no acredita paridad comp
 
 Los controles de reproducción se ocultan a los cuatro segundos de inactividad. Audio y subtítulos se obtienen de los grupos reales de AVPlayer; el selector vuelve a consultarlos al abrirse y conserva Automático, Desactivados y la selección manual. Los idiomas sólo aparecen cuando el medio los publica. La calidad HLS ofrece Automático y un límite preferido de bitrate según las variantes disponibles; no garantiza una resolución fija. El modo compatible mantiene sus opciones reales de VLC.
 
-`V5_VALIDATION.md` registra la evidencia del SHA de esta candidata. La CI anterior `42952718270` valida la candidata 0.4.0, no los cambios posteriores. Las pruebas usan muestras locales propias y datos ficticios; falta comprobar cuenta, streaming, pistas y calidad con el proveedor en dispositivos físicos.
+Código validado: `76cff20fdfac694a9bbe2b49c20760d0fc862f41`, [CI 42984142698](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42984142698), resultado final **success**: 37 core, 23 Python, 16 UI iPhone (4 exclusivas iPad omitidas), 20 mini y 20 Pro; Debug simulador y Release universal sin firma. iPhone aprobó tras un único reintento por una lectura de accesibilidad ausente en la prueba MKV existente, con código y aserciones idénticos. `V5_VALIDATION.md` conserva ambos resultados y la inspección de controles ocultos/subtítulos en los tres destinos. Este cierre sólo actualiza documentación; la CI anterior `42952718270` corresponde a 0.4.0. Las pruebas usan muestras locales propias y datos ficticios; falta comprobar cuenta, streaming, pistas y calidad con el proveedor en dispositivos físicos.
 
 ## Preparación para TestFlight
 

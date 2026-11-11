@@ -2,7 +2,7 @@
 
 Se reconstruyeron en orden `.001`, `.002`, `.003` las tres partes aportadas por el propietario. Archivo: `iptv-smarters-5.0.zip`; tamaño 77.156.195 bytes; SHA-256 `b0db9468428b537719f45fcfb1e0981b41e36ea9bc3772e06daff76c335f90a9`. Las 6.012 entradas pasan CRC; se comprobaron las rutas antes de extraer.
 
-El manifiesto binario decodificado identifica `com.nst.iptvsmarterstvbox`, `versionName=5.0`, `versionCode=108`, SDK objetivo 35. El contenido tiene estructura de APK: cuatro DEX, recursos Android y bibliotecas `.so`. No incluye fuentes de proyecto Xcode, Gradle original ni una biblioteca nativa iOS. JADX 1.5.6 se obtuvo de su distribución oficial y se verificó su SHA-256 `545ea2be9c242511bc145755cf4bda2485ade42966e096f8b4d3da2a230e8974` antes del análisis. La descompilación es una representación parcial; no equivale a recuperar el proyecto original completo.
+El manifiesto binario decodificado identifica `com.nst.iptvsmarterstvbox`, `versionName=5.0`, `versionCode=108`, SDK objetivo 35. El contenido tiene estructura de APK: cuatro DEX, recursos Android y bibliotecas `.so`. No incluye fuentes de proyecto Xcode, Gradle original ni una biblioteca nativa iOS. El nombre del paquete y su versión no certifican la firma ni la procedencia oficial del editor. JADX 1.5.6 se obtuvo de su distribución oficial y se verificó su SHA-256 `545ea2be9c242511bc145755cf4bda2485ade42966e096f8b4d3da2a230e8974` antes del análisis. La descompilación es una representación parcial; no equivale a recuperar el proyecto original completo.
 
 ## Reproductor
 
@@ -14,7 +14,7 @@ La adaptación iOS mantiene AVPlayer y sus grupos `.audible`/`.legible`, con sel
 
 ## Continuidad entre plataformas
 
-El código iOS vive en `pimflextv-ios-smarters5-20261110`, derivado de la candidata 0.4.0 `f7f3cb43b5c287ee776f39f751e1a138f690ea80`. La referencia Android existente está en `pimflextv-reference-402-20261007`, commit `2e898d2a6c1aaeb757b5797c4f9826f8939d5afa`. Este último es un proyecto de reconstrucción anterior, no las fuentes originales de la APK 5.0 recibida. El nuevo paquete y su análisis detallado permanecen en el entorno privado; no se publica el volcado compilado ni se reemplaza Android estable.
+El código iOS vive en `pimflextv-ios-smarters5-20261110`, derivado de la candidata 0.4.0 `f7f3cb43b5c287ee776f39f751e1a138f690ea80`. La referencia Android existente está en `pimflextv-reference-402-20261007`, commit `2e898d2a6c1aaeb757b5797c4f9826f8939d5afa`. Este último es un proyecto de reconstrucción anterior, no las fuentes originales de la APK 5.0 recibida. La nueva rama paralela [`pimflextv-android-smarters5-reference-20261110`](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/tree/pimflextv-android-smarters5-reference-20261110/pimflextv-rebuild/REFERENCE_SMARTERS_500.md), commit `1dd9f6561b6947a4eb286d88e2b19ff7c8289c59`, añade únicamente la trazabilidad y el enlace al PR iOS #12, sin cambiar el ejecutable Android. El nuevo paquete y su análisis detallado permanecen en el entorno privado; no se publica el volcado compilado ni se reemplaza Android estable.
 
 La interfaz Retrofit `validateLogin` usa `GET player_api.php` con `username`/`password`; los catálogos utilizan `action`, `category_id` y `series_id` según la operación. Los reproductores revisados construyen rutas `/live/`, `/movie/` y `/series/` con identificador/formato. `DatabaseHandler` asocia favoritos a stream, categoría, tipo y usuario; OneStream tiene almacenamiento separado. Estos contratos no justifican alterar las rutas ni convertir índices locales entre plataformas.
 
