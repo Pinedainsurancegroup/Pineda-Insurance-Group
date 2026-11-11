@@ -4,7 +4,7 @@
 
 Conserva los recursos y la reproducción de 0.3.3/build 6. El usuario confirma inicio de sesión y reproducción actuales; falta validar los cambios de la candidata en dispositivos reales. El ZIP descompilado Android 4.0.2 ya se reconstruyó de cinco partes y se revisó estáticamente. El reproductor es una adaptación iOS; no afirmar paridad total.
 
-`4a22b4668896191d893657291ff46930659e9534` aprobó [CI 42918344913](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42918344913): 37 core, 10 Python, 14 UI iPhone (4 exclusivas iPad omitidas), 18 mini, 18 Pro, Debug y Release universal sin firma. Véase `PLAYER_VALIDATION.md` para distinguir decodificación local, selecciones sintéticas y revisión de capturas.
+`4da1a91abef19ffdd159deaf6adc8ce000a52440` tiene [CI 42952718270](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42952718270): resultado final **success**, con 37 core, 23 Python, 15 UI iPhone (4 exclusivas iPad omitidas), 19 mini y 19 Pro, Debug y Release universal sin firma. Pro aprobó tras un único reintento por una lectura de accesibilidad transitoria en el test MKV existente. Véase `PLAYER_VALIDATION.md` para distinguir selección real de pistas locales, opciones sintéticas y revisión de capturas.
 
 ## Referencia verificable
 
@@ -28,7 +28,7 @@ Conserva los recursos y la reproducción de 0.3.3/build 6. El usuario confirma i
 | Favoritos y reanudar | Separados por cuenta; conserva identidades iOS. Android 4.0.2 usa almacenamiento local distinto | Ciclos de vida reales; importación/sincronización Android no implementada |
 | EPG | Guía corta Xtream | XMLTV completo y datos reales |
 | Pantalla múltiple | Dos/cuatro canales, un audio, selección y limpieza | Codecs, carga de dispositivo y límite de conexiones del proveedor |
-| Audio/subtítulos/AirPlay | Candidata 0.4.0: controles propios, pistas publicadas por AVPlayer/VLC y AirPlay nativo | Cambio audible/visible con pistas reales, AirPlay y ambos motores en dispositivo; no equivale a Chromecast |
+| Audio/subtítulos/AirPlay | Pistas publicadas por AVPlayer/VLC, carga/error/reintento por apartado y variantes nativas «Solo forzados» identificadas; AirPlay nativo | Cambio audible en dispositivo, medios del proveedor, subtítulos forzados efectivos y AirPlay físico; no equivale a Chromecast |
 | Ocultación de controles | Cuatro segundos de inactividad; ocultación, recuperación, reinicio y opciones aprobados en CI iPhone/mini/Pro | Dispositivos reales, VoiceOver y AirPlay físicos |
 | Calidad | Candidata: Automático y límites preferidos derivados de variantes HLS de AVPlayer; sin calidades inventadas en VLC | Verificar adaptación efectiva con un master multivariante real |
 | Formato live / navegación del reproductor | iOS conserva HLS Xtream y selección desde el catálogo | Selector TS/HLS y canal anterior/siguiente dentro del reproductor; comportamiento exacto y proveedor real |

@@ -35,7 +35,33 @@ La carga nativa de audio, subtítulos y calidad ahora es independiente. Cada apa
 
 Se añade `TrackSelectionFixture.mp4`, una muestra original generada sin red ni recursos Android: video H.264, dos tonos AAC y dos pistas mov_text de 300 segundos. El nuevo test selecciona ambos audios, ambos subtítulos y desactivación; verifica `currentMediaSelection` del AVPlayer real, reapertura del menú y avance del reloj, y exporta capturas. Esta tercera prueba local también usa la excepción DEBUG de controles visibles, independiente de las pruebas de cuatro segundos. Las tres muestras quedan excluidas de Release y el verificador rechaza cualquier IPA que las contenga. Esto no demuestra audibilidad física ni pistas de un proveedor real.
 
-Comprobaciones locales: 23 tests Python aprobados, decodificación FFmpeg de la nueva muestra sin errores y diff sin errores de formato. La nueva prueba UI y el código Swift requieren Mac CI del nuevo SHA; el entorno Linux no puede compilarlos. Los resultados siguientes son históricos hasta registrar esa ejecución.
+Comprobaciones locales: 23 tests Python aprobados, decodificación FFmpeg de la nueva muestra sin errores y diff sin errores de formato. El entorno Linux no tiene Swift/Xcode/SDK Apple; la compilación se comprueba en Mac CI.
+
+Las opciones auxiliares que AVFoundation identifica con `containsOnlyForcedSubtitles` conservan su ID y se etiquetan «Solo forzados». No se filtran pistas ni se cambia Automático. La prueba obtiene el catálogo real de opciones, busca una pista completa por idioma y después verifica `currentMediaSelection`; nunca identifica inglés suponiendo que sea el índice 1. El diagnóstico DEBUG permanece fijo fuera de las filas desplazables de la lista.
+
+## Validación Mac de esta continuación
+
+Código `4da1a91abef19ffdd159deaf6adc8ce000a52440`, [CI 42952718270](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42952718270), resultado final **success**, intento 2. Xcode 16.4 y simuladores iOS/iPadOS 18.5. Se repitió únicamente el trabajo iPad Pro, con el mismo código y pruebas; los demás resultados se conservaron del primer intento:
+
+| Comprobación | Resultado |
+| --- | --- |
+| Núcleo Swift | 37 aprobadas |
+| Python de exportación | 23 aprobadas |
+| UI iPhone 16 Pro | 15 aprobadas; 4 exclusivas iPad omitidas |
+| UI iPad mini (A17 Pro) | 19 aprobadas |
+| UI iPad Pro 13-inch (M4) | 19 aprobadas en el reintento |
+| Debug universal, simulador | Compilación aprobada |
+| Release universal, iPhone/iPad | Compilación sin firma aprobada |
+
+El [artefacto de fuentes/proyecto Xcode y app de simulador](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42952718270/artifacts/13825787488) corresponde a ese código. No contiene una IPA instalable. CI conserva todos los diagnósticos y añade artefactos PNG compactos por destino para inspeccionar las capturas sin descargar vídeos completos de diagnóstico.
+
+Las ejecuciones intermedias detectaron dos expectativas de rutas temporales que necesitaban normalización macOS y una inferencia Swift que necesitaba el tipo explícito de la lista. Ambas correcciones están comprobadas por el build actual.
+
+El log actual del iPad mini confirma que AVFoundation expone cuatro opciones de subtítulos para las dos pistas de la muestra: 0 español completo, 1 español sólo forzados, 2 inglés completo y 3 inglés sólo forzados. La prueba inicial confundía el índice 1 con inglés; por eso seguía informando español y no mostraba texto ordinario. La prueba corregida elige el idioma y característica reales, sin cambiar `select`, Automático o el motor. El iPhone aprobó 15 pruebas (4 exclusivas iPad omitidas) y el iPad mini las 19. La prueba nueva de pistas también aprobó en iPad Pro. Se inspeccionaron las seis capturas actuales de ambos subtítulos en iPhone, mini y Pro: texto español e inglés visible, sin usar una transmisión del proveedor. La muestra usa tonos, no voces; no acredita cambio audible en hardware físico.
+
+El primer intento de iPad Pro tuvo una lectura de accesibilidad sin valor durante la aserción de pausa del MKV existente; las comprobaciones posteriores de búsqueda, avance y reapertura aprobaron. El único reintento del trabajo Pro aprobó sus 19 pruebas con el mismo SHA y las mismas aserciones estrictas, sin modificar la app compatible ni sustituir valores ausentes por cero. Se conserva constancia del fallo transitorio; no se atribuye una ejecución inicial sin fallos a ese destino.
+
+El cierre posterior sólo actualiza Markdown con estos resultados y no modifica los insumos de compilación. El plan de TestFlight debe generarse desde el commit limpio elegido para exportar; la validación del código continúa vinculada a `4da1a91`.
 
 ## Validación Mac anterior de la candidata
 
@@ -55,7 +81,7 @@ Las muestras de reproducción se copiaron en Debug y no en Release. Los tres des
 
 El [artefacto de fuentes/proyecto generado y app de simulador](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42918344913/artifacts/13809983125) corresponde a ese SHA; no contiene una IPA instalable. El cierre posterior sólo actualiza Markdown con esta evidencia, sin cambiar los insumos de compilación. La sincronización del PR por documentación activó automáticamente [CI 42921449204](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42921449204); no se despachó manualmente otro workflow. El resultado validado de esta entrega es el del código `4a22b46` indicado arriba.
 
-## Inspección visual realizada
+## Inspección visual anterior (4a22b46)
 
 Se inspeccionaron capturas de simulador iPhone de esta candidata: dashboard vertical/horizontal, acceso vertical/horizontal, favoritos, series/episodios, pantalla múltiple y reproducción local. El dashboard conserva los bitmaps originales y las proporciones de las tarjetas; los controles visibles del reproductor no muestran recortes en las capturas revisadas. La imagen horizontal del acceso muestra una parte del formulario desplazable: por sí sola no demuestra que se pueda llegar al final.
 
