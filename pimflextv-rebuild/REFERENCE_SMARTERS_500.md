@@ -1,0 +1,11 @@
+# Referencia Smarters Android 5.0 y candidata nativa iOS
+
+Esta rama de referencia continúa `2e898d2a6c1aaeb757b5797c4f9826f8939d5afa` sin modificar el ejecutable, configuración, credenciales ni firma Android existentes. El proyecto de reconstrucción de esta base no es el código fuente original del paquete Smarters 5.0 recibido.
+
+Las tres partes `iptv-smarters-5.0.zip.001`, `.002`, `.003` se reconstruyeron en el entorno privado: 77.156.195 bytes, 6.012 entradas con CRC válido, SHA-256 `b0db9468428b537719f45fcfb1e0981b41e36ea9bc3772e06daff76c335f90a9`. El manifiesto declara `com.nst.iptvsmarterstvbox`, versión 5.0, código 108. Contiene DEX y bibliotecas Android compiladas, no un proyecto Gradle original ni fuentes iOS. No se publica ese paquete ni sus datos de servicios embebidos.
+
+La adaptación iPhone/iPad continúa en la rama [`pimflextv-ios-smarters5-20261110`](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/tree/pimflextv-ios-smarters5-20261110/pimflextv-ios), [PR borrador #12](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/pull/12). Su revisión `76cff20fdfac694a9bbe2b49c20760d0fc862f41` prepara PIMFLEX 5.0.0/build 8: conserva login/rutas/favoritos y recursos PIMFLEX; actualiza pistas nativas al abrir el selector y prueba ocultación completa de controles con MP4 local. El plazo de cuatro segundos es requisito expreso del propietario; los caminos Android analizados usan cinco o siete segundos según el reproductor.
+
+Los contratos revisados de Xtream/M3U distinguen IDs del proveedor, categorías y URLs, y favoritos asociados al usuario. Se conservan esos conceptos en iOS sin copiar índices de pistas ni SQLite Android. Calidad nativa iOS significa preferencia adaptativa de bitrate según variantes HLS disponibles, no resolución garantizada ni calidades inventadas.
+
+`REFERENCE_500.md`, `V5_VALIDATION.md` y `PARITY.md` en la candidata iOS documentan alcance, validación y pendientes. Esta vinculación entre ramas respalda la continuidad; no demuestra una nueva compilación Android 5.0, migración de favoritos, integración WHMCS o paridad total. No se ejecutó ni reconstruyó la APK original y no se sustituyó Android estable. La candidata iOS necesita su propia firma/carga TestFlight y pruebas físicas/proveedor. Sin merge ni publicación App Store.
