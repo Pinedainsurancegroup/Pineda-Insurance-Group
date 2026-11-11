@@ -159,7 +159,7 @@ final class PlaybackModel: ObservableObject {
                 case .audio, .subtitles:
                     let group = try await item.asset.loadMediaSelectionGroup(for: section == .audio ? .audible : .legible)
                     guard let self, !Task.isCancelled, self.player.currentItem === item else { return }
-                    let choices = group?.options.enumerated().map { index, option in
+                    let choices: [PlayerTrackChoice] = group?.options.enumerated().map { index, option in
                         let suffix = option.hasMediaCharacteristic(.containsOnlyForcedSubtitles) ? " · Solo forzados" : ""
                         return PlayerTrackChoice(id: index, name: option.displayName + suffix)
                     } ?? []
