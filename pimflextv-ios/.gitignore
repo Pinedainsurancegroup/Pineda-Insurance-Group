@@ -1,5 +1,6 @@
 .build/
 .swiftpm/
+__pycache__/
 DerivedData/
 DeviceBuild/
 SourcePackage/
@@ -10,5 +11,12 @@ PIMFLEXTV-iOS-*.zip
 *.xcarchive/
 *.ipa
 *.p12
+*.p8
 *.mobileprovision
 build.log
+.bundle/
+vendor/bundle/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/

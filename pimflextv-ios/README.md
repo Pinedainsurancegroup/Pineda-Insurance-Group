@@ -1,6 +1,20 @@
-# PIMFLEX TV para iPhone y iPad — 0.3.3
+# PIMFLEX TV para iPhone y iPad — 0.4.0 candidata
 
-Aplicación nativa SwiftUI para iOS / iPadOS 16 o posterior. Conserva AVFoundation para HLS/MP4 e incorpora MobileVLCKit 3.7.5 para contenedores adicionales. Continúa la candidata de iPhone del PR #6 y usa la versión Android 4.0.2 aportada por el propietario como referencia. El desarrollo permanece en `pimflextv-ios-20261029`, sin integrar a producción.
+Aplicación nativa SwiftUI para iOS / iPadOS 16 o posterior. Conserva AVFoundation para HLS/MP4 e incorpora MobileVLCKit 3.7.5 para contenedores adicionales. Continúa la app del PR #6 y usa la versión Android 4.0.2 aportada por el propietario como referencia. La candidata 0.4.0 está en `pimflextv-ios-controls-20261110`, [PR borrador #11](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/pull/11), separada de `pimflextv-ios-20261029` y sin integrar a producción.
+
+## Candidata de controles — 0.4.0 / build 7
+
+Continúa desde `56e66e8ac785b45d84f2ba3df955858d91a5c64f`, preservando el acceso y los motores de 0.3.3/build 6. El propietario confirma que la versión actual inicia sesión y reproduce contenido. La candidata tiene validación Mac en una rama separada; falta exportarla con la identidad Apple existente para TestFlight y validar estos cambios en dispositivos reales. No reemplaza la beta instalada ni modifica certificados, perfiles, credenciales o `SIGNING_REQUEST.json`.
+
+Se incorporan controles propios de reproducción con ocultación tras cuatro segundos de inactividad, selección de pistas disponibles, opciones de subtítulos y calidad HLS cuando el medio publica variantes. La calidad de AVPlayer se presenta como límite preferido, con modo Automático; no garantiza forzar una variante exacta. El menú compacto recupera accesos a cuenta, usuarios, favoritos, actualización y cierre de sesión. Véase `PLAYER_VALIDATION.md` para cobertura, excepciones de interacción/accesibilidad y límites.
+
+Código actual de esta continuación: `4da1a91abef19ffdd159deaf6adc8ce000a52440`, [CI 42952718270](https://github.com/Pinedainsurancegroup/Pineda-Insurance-Group/actions/runs/42952718270). Resultado final **success**: 37 pruebas núcleo, 23 Python, 15 UI iPhone (4 exclusivas iPad omitidas), 19 mini y 19 Pro; Debug simulador y Release universal sin firma. Pro requirió un único reintento por una lectura de accesibilidad transitoria en el MKV existente, sin cambios de código o aserciones. La carga de pistas distingue ausencia, carga y fallo con reintento; las variantes «Solo forzados» se identifican explícitamente. Una muestra propia de dos audios y dos subtítulos verifica las opciones reales de AVPlayer, sin asumir el orden de sus índices. Véase `PLAYER_VALIDATION.md` para resultados y evidencia por SHA. El proceso protegido de firma sólo acepta la rama estable; queda pendiente exportar y cargar el SHA exacto de la candidata sin sustituirla. El build 7 es provisional hasta comprobar disponibilidad antes de exportar.
+
+La comparación usa la referencia 4.0.2 conservada en `REFERENCE_402.md` y el ZIP descompilado reconstruido de cinco partes, con CRC correcto y manifiesto 4.0.2/código 102. El adjunto Android 4.0.1 anterior no se inspeccionó. No se ejecutó Android ni se certifica equivalencia visual completa del reproductor.
+
+## Preparación para TestFlight
+
+La preparación de exportación/carga de esta candidata está en [`TESTFLIGHT_CANDIDATE.md`](TESTFLIGHT_CANDIDATE.md). El script genera primero un plan privado del commit exacto y reutiliza la identidad existente únicamente cuando se solicita la ejecución en Mac. La sincronización del código no equivale a una carga a TestFlight. El ZIP Android 4.0.2 ya se reconstruyó y se inspeccionó; su código descompilado y el mapa detallado se mantienen internos como referencia para la adaptación nativa.
 
 ## Adaptación para iPad
 
@@ -42,7 +56,7 @@ bash scripts/prepare-ios.sh
 open PimflexTV.xcworkspace
 ```
 
-El script usa CocoaPods 1.16.2 y el podspec oficial de MobileVLCKit 3.7.5 conservado en `Vendor`, con URL y SHA-256 exactos del archivo de VideoLAN y sin dependencias transitivas. La biblioteca permanece sin modificar. Ajustes incluye licencia y enlaces al código fuente; no se guardan sus binarios en Git. La prueba MKV se incluye sólo en Debug y se excluye de Release.
+El script usa CocoaPods 1.16.2 y el podspec oficial de MobileVLCKit 3.7.5 conservado en `Vendor`, con URL y SHA-256 exactos del archivo de VideoLAN y sin dependencias transitivas. La biblioteca permanece sin modificar. Ajustes incluye licencia y enlaces al código fuente; no se guardan sus binarios en Git. Las muestras MKV y MP4 se incluyen sólo en Debug y se excluyen de Release.
 
 El workflow `.github/workflows/build-pimflextv-ios.yml` ejecuta las pruebas del núcleo, compila para simulador y para iPhone sin firma, ejecuta pruebas UI y exporta capturas mediante `xcresulttool`. Las pruebas UI usan datos explícitamente ficticios compilados sólo en Debug; no abren transmisiones de un proveedor.
 
@@ -50,7 +64,7 @@ Los artefactos de CI incluyen fuente/proyecto generado, aplicación de simulador
 
 ## Continuidad en Codex
 
-Entorno privado: **PIMFLEX TV iOS**. Repositorio: `Pinedainsurancegroup/Pineda-Insurance-Group`. Rama: `pimflextv-ios-20261029`. PR en borrador: **#6**.
+Entorno privado: **PIMFLEX TV iOS**. Repositorio: `Pinedainsurancegroup/Pineda-Insurance-Group`. Base estable: `pimflextv-ios-20261029`, PR borrador **#6**. Candidata: `pimflextv-ios-controls-20261110`, PR borrador **#11**.
 
 El **2026-11-06**, el propietario respondió explícitamente «Si te autorizo» y autorizó publicar las imágenes y fuentes originales junto con el código iOS en el repositorio público `Pinedainsurancegroup/Pineda-Insurance-Group`, actualizar el PR #6 y ejecutar Mac CI. Con esta confirmación queda resuelto el bloqueo previo de publicación por falta de autorización para esos recursos. El PR permanece en borrador; la autorización no incluye merge ni publicación en App Store. No incorporar APK/AAB, DEX, secretos, claves de firma, sesiones, credenciales ni respuestas de proveedores al repositorio.
 

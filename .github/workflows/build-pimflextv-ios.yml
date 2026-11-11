@@ -1,7 +1,7 @@
 name: PIMFLEX TV iPhone and iPad Preview
 on:
   pull_request:
-    branches: [pimflextv-production-hardening]
+    branches: [pimflextv-production-hardening, pimflextv-ios-20261029]
     paths: ['pimflextv-ios/**', '!pimflextv-ios/**/*.md', '.github/workflows/build-pimflextv-ios.yml']
   workflow_dispatch:
 permissions:
@@ -21,6 +21,8 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_*.py'
           bash -n scripts/archive-signed.sh
+          ruby -c Gemfile
+          ruby -c fastlane/Fastfile
       - name: Generate Xcode project
         run: |
           brew install xcodegen
@@ -37,7 +39,8 @@ jobs:
         run: |
           ditto -c -k --keepParent DerivedData/Build/Products/Debug-iphonesimulator/PimflexTV.app PIMFLEXTV-iOS-Simulator.zip
           mkdir -p SourcePackage
-          cp -R App Sources Tests UITests Resources scripts PimflexTV.xcodeproj Package.swift project.yml Podfile Vendor *.md SourcePackage/
+          cp -R App Sources Tests UITests Resources scripts fastlane PimflexTV.xcodeproj Package.swift project.yml Podfile Vendor Gemfile *.md SourcePackage/
+          if [ -f Gemfile.lock ]; then cp Gemfile.lock SourcePackage/; fi
           ditto -c -k --keepParent SourcePackage PIMFLEXTV-iOS-Source.zip
       - name: Upload simulator and source artifacts
         uses: actions/upload-artifact@v4
@@ -91,3 +94,12 @@ jobs:
             pimflextv-ios/UITests.xcresult
             pimflextv-ios/ui-tests.log
             pimflextv-ios/Screenshots/
+      - name: Upload compact UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PIMFLEXTV-Screenshots-${{ matrix.device }}
+          path: |
+            pimflextv-ios/Screenshots/**/*.png
+            pimflextv-ios/Screenshots/**/*.json
+          if-no-files-found: warn

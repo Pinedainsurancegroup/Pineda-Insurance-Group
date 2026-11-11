@@ -1,0 +1,6 @@
+source "https://rubygems.org"
+
+# fastlane 2.241.2 requires Ruby 3.2 or newer.
+# Verified release: https://github.com/fastlane/fastlane/releases/tag/2.241.2
+ruby ">= 3.2.0"
+gem "fastlane", "2.241.2"
